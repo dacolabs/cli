@@ -1,0 +1,86 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+linters:
+  enable:
+    # Bugs & correctness
+    - errcheck        # Unchecked errors
+    - gosec           # Security issues
+    - govet           # Suspicious constructs
+    - staticcheck     # Static analysis
+
+    # Style & simplicity
+    - gocritic        # Opinionated style checks
+    - revive          # Fast, configurable linter (golint successor)
+
+    # Performance
+    - prealloc        # Slice preallocation suggestions
+
+    # Code quality
+    - unused          # Unused code
+    - ineffassign     # Ineffective assignments
+    - misspell        # Spelling mistakes
+    - unconvert       # Unnecessary type conversions
+    - unparam         # Unused function parameters
+    - nakedret        # Naked returns in large functions
+    - nolintlint      # Ill-formed //nolint directives
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # Too noisy for most projects
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - whyNoLint  # Covered by nolintlint
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+
+    nakedret:
+      max-func-lines: 30
+
+    misspell:
+      locale: US
+
+  exclusions:
+    rules:
+      # Test files can have longer functions
+      - path: _test\.go
+        linters:
+          - gocritic
