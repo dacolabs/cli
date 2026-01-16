@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "required": ["id", "email", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 50
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive", "suspended", "deleted"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

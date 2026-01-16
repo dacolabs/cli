@@ -1,0 +1,14 @@
+# Deeply nested schema - refs a schema in parent directory
+type: object
+properties:
+  id:
+    type: string
+  address:
+    $ref: "../address.yaml"
+  metadata:
+    type: object
+    properties:
+      tags:
+        type: array
+        items:
+          type: string

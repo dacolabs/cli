@@ -1,0 +1,60 @@
+# Test case: Circular references between components
+# A refs B, B refs A - should not infinite loop
+
+opendpi: "1.0.0"
+
+info:
+  title: Circular Refs Test
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  nodes:
+    description: Tree nodes with parent/child refs
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: nodes
+    schema:
+      $ref: "#/components/schemas/Node"
+
+components:
+  schemas:
+    Node:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parent:
+          $ref: "#/components/schemas/Node"
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Node"
+
+    # Mutual circular: Person has Company, Company has Person
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+        employer:
+          $ref: "#/components/schemas/Company"
+
+    Company:
+      type: object
+      properties:
+        name:
+          type: string
+        ceo:
+          $ref: "#/components/schemas/Person"
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"

@@ -1,0 +1,46 @@
+# Test case: Schema that is only a $ref with no other properties
+# Common pattern - just wrapping another schema
+
+opendpi: "1.0.0"
+
+info:
+  title: Ref Only Schema
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  users:
+    description: Uses ref-only wrapper
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: users
+    schema:
+      $ref: "#/components/schemas/UserWrapper"
+
+  direct:
+    description: Uses the base schema directly
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: direct
+    schema:
+      $ref: "#/components/schemas/BaseUser"
+
+components:
+  schemas:
+    # Just a ref, no other properties
+    UserWrapper:
+      $ref: "#/components/schemas/BaseUser"
+
+    BaseUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
