@@ -7,5 +7,5 @@ import "github.com/google/jsonschema-go/jsonschema"
 
 // Components contains reusable definitions for the OpenDPI document.
 type Components struct {
-	Schemas map[string]*jsonschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Schemas map[string]*jsonschema.Schema
 }

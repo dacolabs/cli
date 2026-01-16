@@ -6,12 +6,12 @@ package opendpi
 
 // Spec represents the root structure of an OpenDPI specification file.
 type Spec struct {
-	OpenDPI     string                `yaml:"opendpi" json:"opendpi"`
-	Info        Info                  `yaml:"info" json:"info"`
-	Tags        []Tag                 `yaml:"tags,omitempty" json:"tags,omitempty"`
-	Connections map[string]Connection `yaml:"connections" json:"connections"`
-	Ports       map[string]Port       `yaml:"ports" json:"ports"`
-	Components  *Components           `yaml:"components,omitempty" json:"components,omitempty"`
+	OpenDPI     string
+	Info        Info
+	Tags        []Tag
+	Connections map[string]Connection
+	Ports       map[string]Port
+	rawSpec     *rawSpec
 }
 
 // NewSpec creates a new spec with provided info and empty collections.

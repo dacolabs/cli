@@ -5,7 +5,7 @@ package opendpi
 
 // Info contains metadata about the data product.
 type Info struct {
-	Title       string `yaml:"title" json:"title"`
-	Version     string `yaml:"version" json:"version"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+	Title       string
+	Version     string
+	Description string
 }

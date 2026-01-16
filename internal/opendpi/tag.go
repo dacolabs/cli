@@ -5,6 +5,6 @@ package opendpi
 
 // Tag is used for categorizing ports.
 type Tag struct {
-	Name        string `yaml:"name" json:"name"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+	Name        string
+	Description string
 }
