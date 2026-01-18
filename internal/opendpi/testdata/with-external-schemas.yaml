@@ -1,0 +1,36 @@
+# Example with External Schema Files
+# Demonstrates using $ref to load schemas from separate files
+
+opendpi: "1.0.0"
+
+info:
+  title: User Management Platform
+  version: "3.1.0"
+  description: User data with external schema files
+
+connections:
+  users_db:
+    protocol: postgresql
+    host: users.db.example.com:5432
+    variables:
+      database: users
+      schema: public
+
+ports:
+  users:
+    description: User account data
+    connections:
+      - connection:
+          $ref: "#/connections/users_db"
+        location: users
+    schema:
+      $ref: "schemas/user.yaml"
+
+  user_profiles:
+    description: Extended user profile information
+    connections:
+      - connection:
+          $ref: "#/connections/users_db"
+        location: user_profiles
+    schema:
+      $ref: "schemas/user-profile.yaml"

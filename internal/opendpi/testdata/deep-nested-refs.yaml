@@ -1,0 +1,54 @@
+# Test case: Deeply nested external refs with relative paths
+# Tests path resolution across multiple levels
+
+opendpi: "1.0.0"
+
+info:
+  title: Deep Nested Refs
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  entities:
+    description: Uses schema from nested directory that refs parent directory
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: entities
+    schema:
+      $ref: "schemas/nested/deep-schema.yaml"
+
+  mixed:
+    description: Inline schema with mix of external and component refs
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: mixed
+    schema:
+      type: object
+      properties:
+        direct_address:
+          $ref: "schemas/address.yaml"
+        component_timestamp:
+          $ref: "#/components/schemas/Timestamp"
+        nested_data:
+          type: object
+          properties:
+            inner_address:
+              $ref: "schemas/address.yaml"
+
+components:
+  schemas:
+    Timestamp:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

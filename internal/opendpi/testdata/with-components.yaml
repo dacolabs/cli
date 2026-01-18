@@ -1,0 +1,215 @@
+# Example with Reusable Components
+# Demonstrates using $ref for DRY schema definitions
+
+opendpi: "1.0.0"
+
+info:
+  title: User Management Platform
+  version: "3.1.0"
+  description: User data and activity tracking
+
+connections:
+  users_db:
+    protocol: postgresql
+    host: users.db.example.com:5432
+    variables:
+      database: users
+      schema: public
+
+  activity_stream:
+    protocol: kafka
+    host: kafka.example.com:9092
+
+ports:
+  users:
+    description: User account data
+    connections:
+      - connection:
+          $ref: "#/connections/users_db"
+        location: users
+    schema:
+      $ref: "#/components/schemas/User"
+
+  user_profiles:
+    description: Extended user profile information
+    connections:
+      - connection:
+          $ref: "#/connections/users_db"
+        location: user_profiles
+    schema:
+      $ref: "#/components/schemas/UserProfile"
+
+  activity_log:
+    description: User activity events
+    connections:
+      - connection:
+          $ref: "#/connections/activity_stream"
+        location: user-activity-v1
+    schema:
+      $ref: "#/components/schemas/ActivityEvent"
+
+  login_events:
+    description: User login/logout events
+    connections:
+      - connection:
+          $ref: "#/connections/activity_stream"
+        location: user-auth-events
+    schema:
+      $ref: "#/components/schemas/AuthEvent"
+
+components:
+  schemas:
+    # Reusable base schemas
+    Timestamp:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          pattern: "^[A-Z]{2}$"
+
+    # Main schemas that use components
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - suspended
+            - deleted
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        billing_address:
+          $ref: "#/components/schemas/Address"
+        shipping_address:
+          $ref: "#/components/schemas/Address"
+        preferences:
+          type: object
+          properties:
+            language:
+              type: string
+            timezone:
+              type: string
+            notifications:
+              type: boolean
+
+    # Event schemas
+    BaseEvent:
+      type: object
+      required:
+        - event_id
+        - timestamp
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+
+    ActivityEvent:
+      allOf:
+        - $ref: "#/components/schemas/BaseEvent"
+        - type: object
+          required:
+            - user_id
+            - action
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            action:
+              type: string
+            resource_type:
+              type: string
+            resource_id:
+              type: string
+            metadata:
+              type: object
+              additionalProperties: true
+
+    AuthEvent:
+      allOf:
+        - $ref: "#/components/schemas/BaseEvent"
+        - type: object
+          required:
+            - user_id
+            - event_type
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            event_type:
+              type: string
+              enum:
+                - login
+                - logout
+                - password_change
+                - mfa_enabled
+                - mfa_disabled
+            ip_address:
+              type: string
+            user_agent:
+              type: string
+            success:
+              type: boolean
+            failure_reason:
+              type: string

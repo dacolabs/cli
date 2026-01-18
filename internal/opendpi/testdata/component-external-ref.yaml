@@ -1,0 +1,50 @@
+# Test case: Component schema is a $ref to external file
+# Components can themselves be refs to external files
+
+opendpi: "1.0.0"
+
+info:
+  title: Component with External Ref
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  users:
+    description: Users using component that refs external file
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: users
+    schema:
+      $ref: "#/components/schemas/User"
+
+  profiles:
+    description: Profiles using component that refs external file with nested refs
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: profiles
+    schema:
+      $ref: "#/components/schemas/UserProfile"
+
+components:
+  schemas:
+    # Component that is itself a ref to external file
+    User:
+      $ref: "schemas/user.yaml"
+
+    # Component that refs external file which has nested refs
+    UserProfile:
+      $ref: "schemas/user-profile.yaml"
+
+    # Regular inline component
+    Metadata:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time

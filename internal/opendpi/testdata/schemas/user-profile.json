@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "billing_address": {
+      "$ref": "./address.json"
+    },
+    "shipping_address": {
+      "$ref": "./address.json"
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "notifications": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

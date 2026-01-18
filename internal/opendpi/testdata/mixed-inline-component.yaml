@@ -1,0 +1,80 @@
+# Test case: Port has inline schema that references components
+# The port schema is NOT a $ref, but contains $ref to components inside it
+
+opendpi: "1.0.0"
+
+info:
+  title: Mixed Inline and Component Refs
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  orders:
+    description: Orders with inline schema referencing components
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: orders
+    # Inline schema (not a $ref) that references components
+    schema:
+      type: object
+      required:
+        - order_id
+        - customer
+        - items
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        customer:
+          # Reference to component inside inline schema
+          $ref: "#/components/schemas/Customer"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        shipping_address:
+          $ref: "#/components/schemas/Address"
+
+components:
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    OrderItem:
+      type: object
+      properties:
+        product_id:
+          type: string
+        quantity:
+          type: integer
+        price:
+          $ref: "#/components/schemas/Money"
+
+    Money:
+      type: object
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string

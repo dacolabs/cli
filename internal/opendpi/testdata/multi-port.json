@@ -1,0 +1,142 @@
+{
+  "opendpi": "1.0.0",
+  "info": {
+    "title": "E-Commerce Analytics",
+    "version": "2.0.0",
+    "description": "Analytics data for the e-commerce platform"
+  },
+  "tags": [
+    {
+      "name": "orders",
+      "description": "Order-related data"
+    },
+    {
+      "name": "users",
+      "description": "User-related data"
+    },
+    {
+      "name": "real-time",
+      "description": "Streaming data"
+    }
+  ],
+  "connections": {
+    "warehouse": {
+      "protocol": "postgresql",
+      "host": "warehouse.db.example.com:5432",
+      "description": "Main analytics data warehouse",
+      "variables": {
+        "database": "analytics",
+        "schema": "public"
+      }
+    },
+    "event_stream": {
+      "protocol": "kafka",
+      "host": "kafka-1.example.com:9092,kafka-2.example.com:9092",
+      "description": "Real-time event streaming",
+      "variables": {
+        "security.protocol": "SASL_SSL"
+      }
+    }
+  },
+  "ports": {
+    "daily_orders": {
+      "description": "Daily aggregated order metrics",
+      "connections": [
+        {
+          "connection": {
+            "$ref": "#/connections/warehouse"
+          },
+          "location": "daily_order_summary"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "required": ["date", "total_orders", "total_revenue"],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "region": {
+            "type": "string"
+          },
+          "total_orders": {
+            "type": "integer"
+          },
+          "total_revenue": {
+            "type": "number"
+          },
+          "avg_order_value": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "user_segments": {
+      "description": "User segmentation data",
+      "connections": [
+        {
+          "connection": {
+            "$ref": "#/connections/warehouse"
+          },
+          "location": "user_segments"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "segment": {
+            "type": "string",
+            "enum": ["high_value", "regular", "at_risk", "churned"]
+          },
+          "score": {
+            "type": "number"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "order_events": {
+      "description": "Real-time order events",
+      "connections": [
+        {
+          "connection": {
+            "$ref": "#/connections/event_stream"
+          },
+          "location": "order-events-v2"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "required": ["event_id", "order_id", "event_type", "timestamp"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": ["created", "updated", "completed", "cancelled"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}
