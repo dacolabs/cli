@@ -65,7 +65,8 @@ func NewSpecSourceSelect(value *bool) *huh.Select[bool] {
 			huh.NewOption("Create new spec", true),
 			huh.NewOption("Use existing spec", false),
 		).
-		Value(value)
+		Value(value).
+		Height(3)
 }
 
 // SpecPathInput returns an input field for the spec path.
