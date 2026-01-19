@@ -15,17 +15,18 @@ import (
 
 // Writer encodes an OpenDPI spec to a file.
 type Writer struct {
-	write func(path string, v any) error
+	write     func(path string, v any) error
+	extension string
 }
 
 var (
 	// JSONWriter writes OpenDPI specs as JSON.
-	JSONWriter = Writer{writeJSON}
+	JSONWriter = Writer{writeJSON, ".json"}
 	// YAMLWriter writes OpenDPI specs as YAML.
-	YAMLWriter = Writer{writeYaml}
+	YAMLWriter = Writer{writeYaml, ".yaml"}
 )
 
-// Write encodes the spec to cfg.Path/opendpi.yaml.
+// Write encodes the spec to cfg.Path/opendpi.{yaml,json} based on the writer type.
 func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 	if spec == nil {
 		return errors.New("nil spec")
@@ -191,7 +192,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		Components:  components,
 	}
 
-	specFile := filepath.Join(cfg.Path, "opendpi.yaml")
+	specFile := filepath.Join(cfg.Path, "opendpi"+wr.extension)
 	return wr.write(specFile, raw)
 }
 

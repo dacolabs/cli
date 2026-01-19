@@ -23,6 +23,7 @@ type initOptions struct {
 	path           string // path to spec file
 	version        string // spec version
 	schemaOrg      string // schema organization
+	format         string // spec format (yaml/json)
 	nonInteractive bool
 }
 
@@ -43,10 +44,11 @@ Can create a new spec, use an existing one, or extend a parent config.`,
 	}
 
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Project name")
-	cmd.Flags().StringVarP(&opts.path, "path", "p", "spec", "Path to spec folder")
+	cmd.Flags().StringVarP(&opts.path, "path", "p", "./spec", "Path to spec folder")
 	cmd.Flags().StringVarP(&opts.extends, "extends", "e", "", "Path to parent daco.yaml")
 	cmd.Flags().StringVarP(&opts.version, "version", "v", "1.0.0", "Initial spec version")
 	cmd.Flags().StringVarP(&opts.schemaOrg, "schema-organization", "s", "modular", "Schema organization (modular, components, or inline)")
+	cmd.Flags().StringVarP(&opts.format, "format", "f", "yaml", "Spec format (yaml or json)")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts (requires --name or--extends)")
 
 	parent.AddCommand(cmd)
@@ -70,12 +72,13 @@ func runInit(opts *initOptions) error {
 		}
 	} else {
 		extends := false
+		opts.createSpec = true
 		if err := huh.NewForm(
 			huh.NewGroup(
 				prompts.ConfigTypeSelect(&extends),
-			).WithHide(opts.path != ""),
+			),
 			huh.NewGroup(
-				prompts.ParentConfigPathInput(&opts.path),
+				prompts.ParentConfigPathInput(&opts.extends),
 			).WithHideFunc(func() bool { return !extends }),
 			huh.NewGroup(
 				prompts.NewSpecSourceSelect(&opts.createSpec),
@@ -84,11 +87,14 @@ func runInit(opts *initOptions) error {
 				prompts.SpecPathInput(&opts.path, &opts.createSpec),
 			).WithHideFunc(func() bool { return extends }),
 			huh.NewGroup(
+				prompts.SpecFormatSelect(&opts.format),
+			).WithHideFunc(func() bool { return extends || !opts.createSpec }),
+			huh.NewGroup(
 				prompts.ProductNameInput(&opts.name),
-			).WithHideFunc(func() bool { return extends || opts.name != "" }),
+			).WithHideFunc(func() bool { return extends || opts.name != "" || !opts.createSpec }),
 			huh.NewGroup(
 				prompts.SpecVersionInput(&opts.version),
-			).WithHideFunc(func() bool { return extends }),
+			).WithHideFunc(func() bool { return extends || !opts.createSpec }),
 			huh.NewGroup(
 				prompts.SchemaOrganizationSelect(&opts.schemaOrg),
 			).WithHideFunc(func() bool { return extends }),
@@ -125,20 +131,28 @@ func runInit(opts *initOptions) error {
 			Organization: config.SchemaOrganization(opts.schemaOrg),
 		},
 	}
-	specPath := filepath.Join(opts.path, "opendpi.yaml")
-	if !filepath.IsAbs(specPath) {
-		specPath = filepath.Join(cwd, specPath)
+	specFolder := opts.path
+	if !filepath.IsAbs(specFolder) {
+		specFolder = filepath.Join(cwd, specFolder)
 	}
 	if !opts.createSpec {
-		if _, err := os.Stat(specPath); os.IsNotExist(err) {
+		_, err1 := os.Stat(filepath.Join(specFolder, "opendpi.yaml"))
+		_, err2 := os.Stat(filepath.Join(specFolder, "opendpi.json"))
+		if err1 != nil && err2 != nil {
 			return fmt.Errorf("spec file not found in: %s", opts.path)
 		}
 	} else {
+		specFileName := "opendpi.yaml"
+		if opts.format == "json" {
+			specFileName = "opendpi.json"
+		}
+		specPath := filepath.Join(specFolder, specFileName)
+
 		if _, err := os.Stat(specPath); err == nil {
 			return fmt.Errorf("spec file already exists: %s", opts.path)
 		}
 
-		if err := os.MkdirAll(filepath.Dir(opts.path), 0o750); err != nil {
+		if err := os.MkdirAll(specFolder, 0o750); err != nil {
 			return fmt.Errorf("failed to create spec directory: %w", err)
 		}
 
@@ -152,14 +166,24 @@ func runInit(opts *initOptions) error {
 			Ports:       map[string]opendpi.Port{},
 		}
 
-		if err := opendpi.YAMLWriter.Write(spec, &cfg); err != nil {
+		var writer opendpi.Writer
+		if opts.format == "json" {
+			writer = opendpi.JSONWriter
+		} else {
+			writer = opendpi.YAMLWriter
+		}
+
+		if err := writer.Write(spec, &cfg); err != nil {
 			return fmt.Errorf("failed to write spec file: %w", err)
 		}
 	}
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	fmt.Print("Initialization completed")
+	if err := cfg.Save(filepath.Join(cwd, "daco.yaml")); err != nil {
+		return fmt.Errorf("config file couldn't be saved: %w", err)
+	}
+	fmt.Printf("Initialization completed\n")
 
 	return nil
 }

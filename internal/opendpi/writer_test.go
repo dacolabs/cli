@@ -145,7 +145,7 @@ func TestWrite_Inline(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify the spec file was created
-			specFile := filepath.Join(tmpDir, "opendpi.yaml")
+			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 			data, err := os.ReadFile(specFile) //nolint:gosec // test file
 			require.NoError(t, err)
 
@@ -240,7 +240,7 @@ func TestWrite_Modular(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify the opendpi.yaml references the schema file
-			specFile := filepath.Join(tmpDir, "opendpi.yaml")
+			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 			data, err = os.ReadFile(specFile) //nolint:gosec // test file
 			require.NoError(t, err)
 			content := string(data)
@@ -488,7 +488,7 @@ func TestWrite_Components(t *testing.T) {
 			require.NoError(t, err)
 
 			// Read the spec file
-			specFile := filepath.Join(tmpDir, "opendpi.yaml")
+			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 			data, err := os.ReadFile(specFile) //nolint:gosec // test file
 			require.NoError(t, err)
 			content := string(data)
@@ -568,7 +568,7 @@ func TestWrite_Components_NestedRefs(t *testing.T) {
 			require.NoError(t, err)
 
 			// Read the spec file
-			specFile := filepath.Join(tmpDir, "opendpi.yaml")
+			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 			data, err := os.ReadFile(specFile) //nolint:gosec // test file
 			require.NoError(t, err)
 			content := string(data)
@@ -732,7 +732,7 @@ func TestWrite_PortsWithoutSchemas(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify both ports are written
-			specFile := filepath.Join(tmpDir, "opendpi.yaml")
+			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 			data, err := os.ReadFile(specFile) //nolint:gosec // test file
 			require.NoError(t, err)
 
@@ -807,7 +807,7 @@ func TestWrite_MultiplePorts(t *testing.T) {
 				}
 			} else {
 				// Verify all schemas are in components
-				specFile := filepath.Join(tmpDir, "opendpi.yaml")
+				specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
 				data, err := os.ReadFile(specFile) //nolint:gosec // test file
 				require.NoError(t, err)
 

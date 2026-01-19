@@ -112,3 +112,14 @@ func SchemaOrganizationSelect(value *string) *huh.Select[string] {
 		).
 		Value(value)
 }
+
+// SpecFormatSelect returns a select field for choosing spec format.
+func SpecFormatSelect(value *string) *huh.Select[string] {
+	return huh.NewSelect[string]().
+		Title("Spec format").
+		Options(
+			huh.NewOption("YAML (recommended)", "yaml"),
+			huh.NewOption("JSON", "json"),
+		).
+		Value(value)
+}
