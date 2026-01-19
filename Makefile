@@ -6,13 +6,13 @@ help: ## Show this help
 
 ##@ Build
 build: ## Build the CLI binary
-	@go build -o bin/daco ./cmd
+	@go build -o bin/daco ./cmd/daco
 
 run: ## Run the CLI (e.g. make run ARGS="init --help")
-	@go run ./cmd $(ARGS)
+	@go run ./cmd/daco $(ARGS)
 
 install: ## Install to $GOPATH/bin
-	@go install ./cmd
+	@go install ./cmd/daco
 
 ##@ Test & Quality
 test: ## Run tests
