@@ -1,0 +1,27 @@
+# Minimal OpenDPI Example
+# This is the simplest valid OpenDPI document
+
+opendpi: "1.0.0"
+
+info:
+  title: My Data Product
+  version: "1.0.0"
+
+connections:
+  database:
+    protocol: postgresql
+    host: localhost:5432
+
+ports:
+  users:
+    connections:
+      - connection:
+          $ref: "#/connections/database"
+        location: users
+    schema:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
