@@ -21,4 +21,5 @@ func NewRootCmd() *cobra.Command {
 
 func registerCommands(rootCmd *cobra.Command) {
 	registerInitCmd(rootCmd)
+	registerPortCmd(rootCmd)
 }

@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Daco Labs
+
+package commands
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/translate"
+	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/spf13/cobra"
+)
+
+func registerPortTranslateCmd(parent *cobra.Command) {
+	var portName string
+	var format string
+	var outputFile string
+
+	cmd := &cobra.Command{
+		Use:   "translate",
+		Short: "Translate a port schema to a target format",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPortTranslate(portName, format, outputFile)
+		},
+	}
+
+	cmd.Flags().StringVar(&portName, "port-name", "", "Name of the port to translate (translates all ports if not specified)")
+	cmd.Flags().StringVar(&format, "format", "pyspark", "Output format (pyspark)")
+	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
+
+	parent.AddCommand(cmd)
+}
+
+func runPortTranslate(portName, format, outputFile string) error {
+	// Load the spec using the centralized function
+	spec, err := opendpi.LoadSpec()
+	if err != nil {
+		return err
+	}
+
+	// If no port name specified, translate all ports
+	if portName == "" {
+		if outputFile != "" {
+			return fmt.Errorf("--output flag is only valid when translating a single port")
+		}
+		return translateAllPorts(spec, format)
+	}
+
+	// Find the port
+	port, ok := spec.Ports[portName]
+	if !ok {
+		return fmt.Errorf("port %q not found in spec", portName)
+	}
+
+	if port.Schema == nil {
+		return fmt.Errorf("port %q has no schema defined", portName)
+	}
+
+	// Translate single port
+	return translatePort(portName, port.Schema, format, outputFile)
+}
+
+func translateAllPorts(spec *opendpi.Spec, format string) error {
+	if len(spec.Ports) == 0 {
+		return fmt.Errorf("no ports found in spec")
+	}
+
+	fmt.Printf("Translating %d port(s)...\n", len(spec.Ports))
+
+	var errors []string
+	successCount := 0
+
+	for portName, port := range spec.Ports {
+		if port.Schema == nil {
+			fmt.Printf("  Skipping %s (no schema defined)\n", portName)
+			continue
+		}
+
+		err := translatePort(portName, port.Schema, format, "")
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("%s: %v", portName, err))
+		} else {
+			successCount++
+		}
+	}
+
+	fmt.Printf("\nSuccessfully translated %d port(s)\n", successCount)
+
+	if len(errors) > 0 {
+		fmt.Println("\nErrors:")
+		for _, err := range errors {
+			fmt.Printf("  - %s\n", err)
+		}
+		return fmt.Errorf("failed to translate %d port(s)", len(errors))
+	}
+
+	return nil
+}
+
+func translatePort(portName string, schema *jsonschema.Schema, format, outputFile string) error {
+	// Translate the schema
+	var output string
+	var fileExtension string
+	switch format {
+	case "pyspark":
+		translator := translate.NewPySparkTranslator()
+		var err error
+		output, err = translator.Translate(schema)
+		if err != nil {
+			return fmt.Errorf("failed to translate schema: %w", err)
+		}
+		fileExtension = ".py"
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+
+	// Determine output file path
+	if outputFile == "" {
+		// Create schemas directory if it doesn't exist
+		schemasDir := "schemas"
+		if err := os.MkdirAll(schemasDir, 0755); err != nil {
+			return fmt.Errorf("failed to create schemas directory: %w", err)
+		}
+		outputFile = filepath.Join(schemasDir, portName+fileExtension)
+	}
+
+	// Write output to file
+	if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+	fmt.Printf("  ✓ %s\n", outputFile)
+
+	return nil
+}
