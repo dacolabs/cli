@@ -30,9 +30,6 @@ daco --help
 ## Development
 
 ```bash
-# Hot reload during development
-make dev
-
 # Run tests
 make test
 

@@ -19,7 +19,7 @@ import (
 
 // Parser decodes an OpenDPI spec from an io.Reader.
 type Parser struct {
-	parse func(io.Reader, fs.FS) (*Spec, error)
+	parse func(io.Reader) (*rawSpec, error)
 }
 
 var (
@@ -35,102 +35,11 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 	if fsys == nil {
 		return nil, errors.New("fsys is required to resolve external schema references")
 	}
-	return p.parse(r, fsys)
-}
-
-type rawSpec struct {
-	OpenDPI     string                   `yaml:"opendpi" json:"opendpi"`
-	Info        rawInfo                  `yaml:"info" json:"info"`
-	Tags        []rawTag                 `yaml:"tags,omitempty" json:"tags,omitempty"`
-	Connections map[string]rawConnection `yaml:"connections" json:"connections"`
-	Ports       map[string]rawPorts      `yaml:"ports" json:"ports"`
-	Components  *rawComponents           `yaml:"components,omitempty" json:"components,omitempty"`
-}
-
-type rawInfo struct {
-	Title       string `yaml:"title" json:"title"`
-	Version     string `yaml:"version" json:"version"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
-}
-
-type rawTag struct {
-	Name        string `yaml:"name" json:"name"`
-	Description string `yaml:"description,omitempty" json:"description,omitempty"`
-}
-
-type rawConnection struct {
-	Protocol    string         `yaml:"protocol" json:"protocol"`
-	Host        string         `yaml:"host" json:"host"`
-	Description string         `yaml:"description,omitempty" json:"description,omitempty"`
-	Variables   map[string]any `yaml:"variables,omitempty" json:"variables,omitempty"`
-}
-
-type rawPorts struct {
-	Description string              `yaml:"description,omitempty" json:"description,omitempty"`
-	Connections []rawPortConnection `yaml:"connections" json:"connections"`
-	Schema      *jsonschema.Schema  `yaml:"schema" json:"schema"`
-}
-
-type rawPortConnection struct {
-	Connection connectionRef `yaml:"connection" json:"connection"`
-	Location   string        `yaml:"location" json:"location"`
-}
-
-type connectionRef struct {
-	Ref string `yaml:"$ref" json:"$ref"`
-}
-
-type rawComponents struct {
-	Schemas map[string]*jsonschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
-}
-
-func parseJSON(r io.Reader, fsys fs.FS) (*Spec, error) {
-	if r == nil {
-		return nil, errors.New("nil reader")
-	}
-
-	data, err := io.ReadAll(r)
+	raw, err := p.parse(r)
 	if err != nil {
 		return nil, err
 	}
 
-	var raw rawSpec
-	if err = json.Unmarshal(data, &raw); err != nil { //nolint:gocritic
-		return nil, err
-	}
-
-	return resolveRefs(&raw, fsys)
-}
-
-func parseYAML(r io.Reader, fsys fs.FS) (*Spec, error) {
-	if r == nil {
-		return nil, errors.New("nil reader")
-	}
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	var intermediate map[string]any
-	if err = yaml.Unmarshal(data, &intermediate); err != nil { //nolint:gocritic
-		return nil, err
-	}
-
-	jsonData, err := json.Marshal(intermediate)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw rawSpec
-	if err = json.Unmarshal(jsonData, &raw); err != nil { //nolint:gocritic
-		return nil, err
-	}
-
-	return resolveRefs(&raw, fsys)
-}
-
-func resolveRefs(raw *rawSpec, fsys fs.FS) (*Spec, error) {
 	connections := make(map[string]Connection, len(raw.Connections))
 	for name, rc := range raw.Connections {
 		connections[name] = Connection(rc)
@@ -228,6 +137,21 @@ func resolveRefs(raw *rawSpec, fsys fs.FS) (*Spec, error) {
 
 			// Only add component schemas that are actually referenced
 			if raw.Components != nil && len(schemaDefs) > 0 {
+				collectComponentRefs := func(schema *jsonschema.Schema, schemaDefs map[string]*jsonschema.Schema) map[string]struct{} {
+					refs := make(map[string]struct{})
+					resolver := func(ref string) *jsonschema.Schema {
+						if schemaName, ok := strings.CutPrefix(ref, "#/components/schemas/"); ok {
+							return schemaDefs[schemaName]
+						}
+						return nil
+					}
+					for s := range iterNestedRefs(schema, resolver) {
+						if schemaName, ok := strings.CutPrefix(s.Ref, "#/components/schemas/"); ok {
+							refs[schemaName] = struct{}{}
+						}
+					}
+					return refs
+				}
 				refs := collectComponentRefs(schema, schemaDefs)
 				if len(refs) > 0 {
 					if schema.Defs == nil {
@@ -264,20 +188,96 @@ func resolveRefs(raw *rawSpec, fsys fs.FS) (*Spec, error) {
 	}, nil
 }
 
-func collectComponentRefs(schema *jsonschema.Schema, schemaDefs map[string]*jsonschema.Schema) map[string]struct{} {
-	refs := make(map[string]struct{})
-	resolver := func(ref string) *jsonschema.Schema {
-		if name, ok := strings.CutPrefix(ref, "#/components/schemas/"); ok {
-			return schemaDefs[name]
-		}
-		return nil
+type rawSpec struct {
+	OpenDPI     string                   `yaml:"opendpi" json:"opendpi"`
+	Info        rawInfo                  `yaml:"info" json:"info"`
+	Tags        []rawTag                 `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Connections map[string]rawConnection `yaml:"connections" json:"connections"`
+	Ports       map[string]rawPort       `yaml:"ports" json:"ports"`
+	Components  *rawComponents           `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+type rawInfo struct {
+	Title       string `yaml:"title" json:"title"`
+	Version     string `yaml:"version" json:"version"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+}
+
+type rawTag struct {
+	Name        string `yaml:"name" json:"name"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+}
+
+type rawConnection struct {
+	Protocol    string         `yaml:"protocol" json:"protocol"`
+	Host        string         `yaml:"host" json:"host"`
+	Description string         `yaml:"description,omitempty" json:"description,omitempty"`
+	Variables   map[string]any `yaml:"variables,omitempty" json:"variables,omitempty"`
+}
+
+type rawPort struct {
+	Description string              `yaml:"description,omitempty" json:"description,omitempty"`
+	Connections []rawPortConnection `yaml:"connections" json:"connections"`
+	Schema      *jsonschema.Schema  `yaml:"schema" json:"schema"`
+}
+
+type rawPortConnection struct {
+	Connection connectionRef `yaml:"connection" json:"connection"`
+	Location   string        `yaml:"location" json:"location"`
+}
+
+type connectionRef struct {
+	Ref string `yaml:"$ref" json:"$ref"`
+}
+
+type rawComponents struct {
+	Schemas map[string]*jsonschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+}
+
+func parseJSON(r io.Reader) (*rawSpec, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
 	}
-	for s := range iterNestedRefs(schema, resolver) {
-		if name, ok := strings.CutPrefix(s.Ref, "#/components/schemas/"); ok {
-			refs[name] = struct{}{}
-		}
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
 	}
-	return refs
+
+	var raw rawSpec
+	if err = json.Unmarshal(data, &raw); err != nil { //nolint:gocritic
+		return nil, err
+	}
+
+	return &raw, nil
+}
+
+func parseYAML(r io.Reader) (*rawSpec, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
+	}
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var intermediate map[string]any
+	if err = yaml.Unmarshal(data, &intermediate); err != nil { //nolint:gocritic
+		return nil, err
+	}
+
+	jsonData, err := json.Marshal(intermediate)
+	if err != nil {
+		return nil, err
+	}
+
+	var raw rawSpec
+	if err = json.Unmarshal(jsonData, &raw); err != nil { //nolint:gocritic
+		return nil, err
+	}
+
+	return &raw, nil
 }
 
 func loadSchemaFile(fsys fs.FS, filePath string) (*jsonschema.Schema, error) {

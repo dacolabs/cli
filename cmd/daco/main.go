@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dacolabs/cli/cmd/internal"
+	"github.com/dacolabs/cli/cmd/daco/internal"
 )
 
 func main() {
