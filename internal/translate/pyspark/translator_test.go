@@ -108,7 +108,7 @@ func TestTranslator_Translate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			translator := New()
-			got, err := translator.Translate(tt.schema)
+			got, err := translator.Translate("test_port", tt.schema)
 			if err != nil {
 				t.Fatalf("Translate() error = %v", err)
 			}
@@ -148,7 +148,7 @@ func TestTranslator_SchemaWithRefs(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate(schema)
+	got, err := translator.Translate("users", schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -195,7 +195,7 @@ func TestTranslator_AllOf(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate(schema)
+	got, err := translator.Translate("events", schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -248,7 +248,7 @@ func TestTranslator_CircularRefs(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate(schema)
+	got, err := translator.Translate("nodes", schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -286,7 +286,7 @@ func TestTranslator_ComplexSchema(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate(schema)
+	got, err := translator.Translate("daily_sales", schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -333,5 +333,96 @@ func TestTranslator_FileExtension(t *testing.T) {
 	translator := New()
 	if got := translator.FileExtension(); got != ".py" {
 		t.Errorf("FileExtension() = %v, want %v", got, ".py")
+	}
+}
+
+func TestTranslator_ComponentExtraction(t *testing.T) {
+	// Test that components are extracted as variables
+	nodeSchema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"id":   {Type: "string"},
+			"name": {Type: "string"},
+		},
+	}
+
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"root": {
+				Ref: "#/$defs/Node",
+			},
+			"children": {
+				Type: "array",
+				Items: &jsonschema.Schema{
+					Ref: "#/$defs/Node",
+				},
+			},
+		},
+		Defs: map[string]*jsonschema.Schema{
+			"Node": nodeSchema,
+		},
+	}
+
+	translator := New()
+	got, err := translator.Translate("tree", schema)
+	if err != nil {
+		t.Fatalf("Translate() error = %v", err)
+	}
+
+	gotStr := string(got)
+
+	// Verify component schema is extracted as a variable with underscore prefix
+	if !strings.Contains(gotStr, "# Component schemas") {
+		t.Error("Missing '# Component schemas' comment")
+	}
+	if !strings.Contains(gotStr, "_node = StructType([") {
+		t.Error("Missing _node variable declaration")
+	}
+
+	// Verify main schema references the component variable and uses port name
+	if !strings.Contains(gotStr, "# Main schema") {
+		t.Error("Missing '# Main schema' comment")
+	}
+	if !strings.Contains(gotStr, "tree_schema = StructType([") {
+		t.Error("Missing tree_schema variable declaration")
+	}
+	if !strings.Contains(gotStr, `StructField("root", _node`) {
+		t.Error("Should reference _node variable for root field")
+	}
+	if !strings.Contains(gotStr, "ArrayType(_node)") {
+		t.Error("Should reference _node variable in array")
+	}
+
+	// Verify the component is defined before it's used
+	componentIdx := strings.Index(gotStr, "_node = ")
+	mainSchemaIdx := strings.Index(gotStr, "# Main schema")
+	if componentIdx == -1 || mainSchemaIdx == -1 {
+		t.Error("Missing component or main schema sections")
+	} else if componentIdx > mainSchemaIdx {
+		t.Error("Component schema should be defined before main schema")
+	}
+}
+
+func TestTranslator_ToSnakeCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"Node", "node"},
+		{"UserProfile", "user_profile"},
+		{"HTTPResponse", "httpresponse"},
+		{"MySchema", "my_schema"},
+		{"API", "api"},
+		{"APIResponse", "apiresponse"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := toSnakeCase(tt.input)
+			if got != tt.expected {
+				t.Errorf("toSnakeCase(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
 	}
 }

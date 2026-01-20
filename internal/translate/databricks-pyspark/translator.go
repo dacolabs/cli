@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package pyspark provides PySpark schema translation.
-package pyspark
+// Package databricks provides Databricks PySpark schema translation with metadata comments.
+package databricks
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ func init() {
 	translate.Register(New())
 }
 
-// Translator translates JSON schemas to PySpark StructType definitions.
+// Translator translates JSON schemas to Databricks PySpark StructType definitions with metadata.
 type Translator struct {
 	defs            map[string]*jsonschema.Schema
 	visited         map[*jsonschema.Schema]bool
@@ -26,7 +26,7 @@ type Translator struct {
 	currentDefining string            // Name of the component currently being defined
 }
 
-// New creates a new PySpark translator.
+// New creates a new Databricks PySpark translator.
 func New() *Translator {
 	return &Translator{
 		visited:    make(map[*jsonschema.Schema]bool),
@@ -36,7 +36,7 @@ func New() *Translator {
 
 // Name returns the translator's identifier.
 func (t *Translator) Name() string {
-	return "pyspark"
+	return "databricks-pyspark"
 }
 
 // FileExtension returns the file extension for PySpark files.
@@ -44,7 +44,7 @@ func (t *Translator) FileExtension() string {
 	return ".py"
 }
 
-// Translate converts a JSON schema to PySpark Python code.
+// Translate converts a JSON schema to Databricks PySpark Python code with metadata comments.
 // portName is used to name the output schema variable (e.g., "users" -> "users_schema")
 func (t *Translator) Translate(portName string, schema *jsonschema.Schema) ([]byte, error) {
 	var sb strings.Builder
@@ -135,7 +135,16 @@ func (t *Translator) translateSchema(sb *strings.Builder, schema *jsonschema.Sch
 			if !nullable {
 				nullableStr = "False"
 			}
-			sb.WriteString(fmt.Sprintf(", nullable=%s)", nullableStr))
+			sb.WriteString(fmt.Sprintf(", nullable=%s", nullableStr))
+
+			// Add metadata with comment if description exists
+			if propSchema.Description != "" {
+				// Escape any quotes in the description
+				escapedDesc := strings.ReplaceAll(propSchema.Description, `"`, `\"`)
+				sb.WriteString(fmt.Sprintf(`, metadata={"comment": "%s"}`, escapedDesc))
+			}
+
+			sb.WriteString(")")
 
 			if i < len(propNames)-1 {
 				sb.WriteString(",\n")

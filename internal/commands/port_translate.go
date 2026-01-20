@@ -9,12 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dacolabs/cli/internal/context"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 
 	// Import all translators to auto-register them
+	_ "github.com/dacolabs/cli/internal/translate/databricks-dbt"
+	_ "github.com/dacolabs/cli/internal/translate/databricks-pyspark"
 	_ "github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
@@ -30,7 +33,7 @@ func registerPortTranslateCmd(parent *cobra.Command) {
 
 Available formats: %s`, strings.Join(translate.Available(), ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPortTranslate(portName, format, outputFile)
+			return runPortTranslate(cmd, portName, format, outputFile)
 		},
 	}
 
@@ -41,9 +44,9 @@ Available formats: %s`, strings.Join(translate.Available(), ", ")),
 	parent.AddCommand(cmd)
 }
 
-func runPortTranslate(portName, format, outputFile string) error {
-	// Load the spec using the centralized function
-	spec, err := opendpi.LoadSpec()
+func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) error {
+	// Get the project context
+	ctx, err := context.RequireFromCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -53,11 +56,11 @@ func runPortTranslate(portName, format, outputFile string) error {
 		if outputFile != "" {
 			return fmt.Errorf("--output flag is only valid when translating a single port")
 		}
-		return translateAllPorts(spec, format)
+		return translateAllPorts(ctx.Spec, format)
 	}
 
 	// Find the port
-	port, ok := spec.Ports[portName]
+	port, ok := ctx.Spec.Ports[portName]
 	if !ok {
 		return fmt.Errorf("port %q not found in spec", portName)
 	}
@@ -116,7 +119,7 @@ func translatePort(portName string, schema *jsonschema.Schema, format, outputFil
 	}
 
 	// Translate the schema
-	output, err := translator.Translate(schema)
+	output, err := translator.Translate(portName, schema)
 	if err != nil {
 		return fmt.Errorf("failed to translate schema: %w", err)
 	}

@@ -5,6 +5,7 @@
 package commands
 
 import (
+	"github.com/dacolabs/cli/internal/context"
 	"github.com/spf13/cobra"
 )
 
@@ -26,8 +27,9 @@ func registerCommands(rootCmd *cobra.Command) {
 
 func registerPortsCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:   "ports",
-		Short: "Manage data product ports",
+		Use:               "ports",
+		Short:             "Manage data product ports",
+		PersistentPreRunE: context.PreRunLoad,
 	}
 
 	registerPortTranslateCmd(cmd)
