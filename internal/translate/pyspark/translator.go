@@ -1,32 +1,48 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package translate provides schema translation utilities.
-package translate
+// Package pyspark provides PySpark schema translation.
+package pyspark
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-// PySparkTranslator translates JSON schemas to PySpark StructType definitions.
-type PySparkTranslator struct {
+func init() {
+	// Auto-register on import
+	translate.Register(New())
+}
+
+// Translator translates JSON schemas to PySpark StructType definitions.
+type Translator struct {
 	defs    map[string]*jsonschema.Schema
 	visited map[*jsonschema.Schema]bool
 }
 
-// NewPySparkTranslator creates a new PySpark translator.
-func NewPySparkTranslator() *PySparkTranslator {
-	return &PySparkTranslator{
+// New creates a new PySpark translator.
+func New() *Translator {
+	return &Translator{
 		visited: make(map[*jsonschema.Schema]bool),
 	}
 }
 
+// Name returns the translator's identifier.
+func (t *Translator) Name() string {
+	return "pyspark"
+}
+
+// FileExtension returns the file extension for PySpark files.
+func (t *Translator) FileExtension() string {
+	return ".py"
+}
+
 // Translate converts a JSON schema to PySpark Python code.
-func (t *PySparkTranslator) Translate(schema *jsonschema.Schema) (string, error) {
+func (t *Translator) Translate(schema *jsonschema.Schema) ([]byte, error) {
 	var sb strings.Builder
 
 	// Store the defs for reference resolution
@@ -52,14 +68,14 @@ func (t *PySparkTranslator) Translate(schema *jsonschema.Schema) (string, error)
 	// Generate schema definition
 	sb.WriteString("schema = ")
 	if err := t.translateSchema(&sb, schema, 0); err != nil {
-		return "", err
+		return nil, err
 	}
 	sb.WriteString("\n")
 
-	return sb.String(), nil
+	return []byte(sb.String()), nil
 }
 
-func (t *PySparkTranslator) translateSchema(sb *strings.Builder, schema *jsonschema.Schema, depth int) error {
+func (t *Translator) translateSchema(sb *strings.Builder, schema *jsonschema.Schema, depth int) error {
 	indent := strings.Repeat("    ", depth)
 
 	if schema.Type == "object" || (schema.Type == "" && len(schema.Properties) > 0) {
@@ -103,7 +119,7 @@ func (t *PySparkTranslator) translateSchema(sb *strings.Builder, schema *jsonsch
 	return t.translateType(sb, schema, depth)
 }
 
-func (t *PySparkTranslator) translateType(sb *strings.Builder, schema *jsonschema.Schema, depth int) error {
+func (t *Translator) translateType(sb *strings.Builder, schema *jsonschema.Schema, depth int) error {
 	// Handle $ref by resolving from $defs
 	if schema.Ref != "" {
 		// Extract the reference name from "#/components/schemas/Name" or "$defs/Name"

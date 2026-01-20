@@ -21,5 +21,16 @@ func NewRootCmd() *cobra.Command {
 
 func registerCommands(rootCmd *cobra.Command) {
 	registerInitCmd(rootCmd)
-	registerPortCmd(rootCmd)
+	registerPortsCmd(rootCmd)
+}
+
+func registerPortsCmd(parent *cobra.Command) {
+	cmd := &cobra.Command{
+		Use:   "ports",
+		Short: "Manage data product ports",
+	}
+
+	registerPortTranslateCmd(cmd)
+
+	parent.AddCommand(cmd)
 }

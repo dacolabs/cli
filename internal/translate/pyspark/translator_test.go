@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package translate
+package pyspark
 
 import (
 	"strings"
@@ -10,7 +10,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-func TestPySparkTranslator_Translate(t *testing.T) {
+func TestTranslator_Translate(t *testing.T) {
 	tests := []struct {
 		name     string
 		schema   *jsonschema.Schema
@@ -19,7 +19,7 @@ func TestPySparkTranslator_Translate(t *testing.T) {
 		{
 			name: "simple object with primitives",
 			schema: &jsonschema.Schema{
-				Type: "object",
+				Type:     "object",
 				Required: []string{"name", "age"},
 				Properties: map[string]*jsonschema.Schema{
 					"name": {Type: "string"},
@@ -107,22 +107,23 @@ func TestPySparkTranslator_Translate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			translator := NewPySparkTranslator()
+			translator := New()
 			got, err := translator.Translate(tt.schema)
 			if err != nil {
 				t.Fatalf("Translate() error = %v", err)
 			}
 
+			gotStr := string(got)
 			for _, want := range tt.wantCode {
-				if !strings.Contains(got, want) {
-					t.Errorf("Translate() missing expected code snippet:\nwant: %q\ngot:\n%s", want, got)
+				if !strings.Contains(gotStr, want) {
+					t.Errorf("Translate() missing expected code snippet:\nwant: %q\ngot:\n%s", want, gotStr)
 				}
 			}
 		})
 	}
 }
 
-func TestPySparkTranslator_SchemaWithRefs(t *testing.T) {
+func TestTranslator_SchemaWithRefs(t *testing.T) {
 	// Test with a schema that has $ref references
 	addressSchema := &jsonschema.Schema{
 		Type: "object",
@@ -146,28 +147,29 @@ func TestPySparkTranslator_SchemaWithRefs(t *testing.T) {
 		},
 	}
 
-	translator := NewPySparkTranslator()
+	translator := New()
 	got, err := translator.Translate(schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
+	gotStr := string(got)
 	// Should contain the address fields
-	if !strings.Contains(got, `"street"`) {
+	if !strings.Contains(gotStr, `"street"`) {
 		t.Error("Should contain street field from referenced schema")
 	}
-	if !strings.Contains(got, `"city"`) {
+	if !strings.Contains(gotStr, `"city"`) {
 		t.Error("Should contain city field from referenced schema")
 	}
-	if !strings.Contains(got, `"zip"`) {
+	if !strings.Contains(gotStr, `"zip"`) {
 		t.Error("Should contain zip field from referenced schema")
 	}
 }
 
-func TestPySparkTranslator_AllOf(t *testing.T) {
+func TestTranslator_AllOf(t *testing.T) {
 	// Test with allOf composition
 	baseSchema := &jsonschema.Schema{
-		Type: "object",
+		Type:     "object",
 		Required: []string{"id"},
 		Properties: map[string]*jsonschema.Schema{
 			"id":        {Type: "string"},
@@ -179,7 +181,7 @@ func TestPySparkTranslator_AllOf(t *testing.T) {
 		AllOf: []*jsonschema.Schema{
 			{Ref: "#/components/schemas/Base"},
 			{
-				Type: "object",
+				Type:     "object",
 				Required: []string{"name"},
 				Properties: map[string]*jsonschema.Schema{
 					"name": {Type: "string"},
@@ -192,28 +194,29 @@ func TestPySparkTranslator_AllOf(t *testing.T) {
 		},
 	}
 
-	translator := NewPySparkTranslator()
+	translator := New()
 	got, err := translator.Translate(schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
+	gotStr := string(got)
 	// Should contain fields from both schemas
-	if !strings.Contains(got, `"id"`) {
+	if !strings.Contains(gotStr, `"id"`) {
 		t.Error("Should contain id field from base schema")
 	}
-	if !strings.Contains(got, `"timestamp"`) {
+	if !strings.Contains(gotStr, `"timestamp"`) {
 		t.Error("Should contain timestamp field from base schema")
 	}
-	if !strings.Contains(got, `"name"`) {
+	if !strings.Contains(gotStr, `"name"`) {
 		t.Error("Should contain name field from extended schema")
 	}
-	if !strings.Contains(got, `"age"`) {
+	if !strings.Contains(gotStr, `"age"`) {
 		t.Error("Should contain age field from extended schema")
 	}
 }
 
-func TestPySparkTranslator_CircularRefs(t *testing.T) {
+func TestTranslator_CircularRefs(t *testing.T) {
 	// Test with circular references (should not infinite loop)
 	nodeSchema := &jsonschema.Schema{
 		Type: "object",
@@ -244,19 +247,20 @@ func TestPySparkTranslator_CircularRefs(t *testing.T) {
 		},
 	}
 
-	translator := NewPySparkTranslator()
+	translator := New()
 	got, err := translator.Translate(schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
+	gotStr := string(got)
 	// Should not infinite loop and should generate something
-	if !strings.Contains(got, "StructType") {
+	if !strings.Contains(gotStr, "StructType") {
 		t.Error("Should generate StructType")
 	}
 }
 
-func TestPySparkTranslator_ComplexSchema(t *testing.T) {
+func TestTranslator_ComplexSchema(t *testing.T) {
 	// Test with a schema similar to the multi-port example
 	schema := &jsonschema.Schema{
 		Type:     "object",
@@ -281,38 +285,53 @@ func TestPySparkTranslator_ComplexSchema(t *testing.T) {
 		},
 	}
 
-	translator := NewPySparkTranslator()
+	translator := New()
 	got, err := translator.Translate(schema)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
+	gotStr := string(got)
 	// Verify imports
-	if !strings.Contains(got, "from pyspark.sql.types import") {
+	if !strings.Contains(gotStr, "from pyspark.sql.types import") {
 		t.Error("Missing imports")
 	}
 
 	// Verify required fields are not nullable
-	if !strings.Contains(got, `StructField("date", DateType(), nullable=False)`) {
+	if !strings.Contains(gotStr, `StructField("date", DateType(), nullable=False)`) {
 		t.Error("Required field 'date' should be nullable=False")
 	}
-	if !strings.Contains(got, `StructField("total_orders", LongType(), nullable=False)`) {
+	if !strings.Contains(gotStr, `StructField("total_orders", LongType(), nullable=False)`) {
 		t.Error("Required field 'total_orders' should be nullable=False")
 	}
 
 	// Verify optional field is nullable
-	if !strings.Contains(got, `StructField("region", StringType(), nullable=True)`) {
+	if !strings.Contains(gotStr, `StructField("region", StringType(), nullable=True)`) {
 		t.Error("Optional field 'region' should be nullable=True")
 	}
 
 	// Verify correct types
-	if !strings.Contains(got, "DateType()") {
+	if !strings.Contains(gotStr, "DateType()") {
 		t.Error("Missing DateType for date field")
 	}
-	if !strings.Contains(got, "LongType()") {
+	if !strings.Contains(gotStr, "LongType()") {
 		t.Error("Missing LongType for integer field")
 	}
-	if !strings.Contains(got, "DoubleType()") {
+	if !strings.Contains(gotStr, "DoubleType()") {
 		t.Error("Missing DoubleType for number field")
+	}
+}
+
+func TestTranslator_Name(t *testing.T) {
+	translator := New()
+	if got := translator.Name(); got != "pyspark" {
+		t.Errorf("Name() = %v, want %v", got, "pyspark")
+	}
+}
+
+func TestTranslator_FileExtension(t *testing.T) {
+	translator := New()
+	if got := translator.FileExtension(); got != ".py" {
+		t.Errorf("FileExtension() = %v, want %v", got, ".py")
 	}
 }

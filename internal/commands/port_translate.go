@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
+
+	// Import all translators to auto-register them
+	_ "github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
 func registerPortTranslateCmd(parent *cobra.Command) {
@@ -22,13 +26,16 @@ func registerPortTranslateCmd(parent *cobra.Command) {
 	cmd := &cobra.Command{
 		Use:   "translate",
 		Short: "Translate a port schema to a target format",
+		Long: fmt.Sprintf(`Translate a port schema to a target format.
+
+Available formats: %s`, strings.Join(translate.Available(), ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPortTranslate(portName, format, outputFile)
 		},
 	}
 
 	cmd.Flags().StringVar(&portName, "port-name", "", "Name of the port to translate (translates all ports if not specified)")
-	cmd.Flags().StringVar(&format, "format", "pyspark", "Output format (pyspark)")
+	cmd.Flags().StringVar(&format, "format", "pyspark", fmt.Sprintf("Output format (options: %s)", strings.Join(translate.Available(), ", ")))
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
 
 	parent.AddCommand(cmd)
@@ -68,7 +75,7 @@ func translateAllPorts(spec *opendpi.Spec, format string) error {
 		return fmt.Errorf("no ports found in spec")
 	}
 
-	fmt.Printf("Translating %d port(s)...\n", len(spec.Ports))
+	fmt.Printf("Translating %d port(s) to %s...\n", len(spec.Ports), format)
 
 	var errors []string
 	successCount := 0
@@ -101,20 +108,17 @@ func translateAllPorts(spec *opendpi.Spec, format string) error {
 }
 
 func translatePort(portName string, schema *jsonschema.Schema, format, outputFile string) error {
+	// Get the translator from registry
+	translator, err := translate.Get(format)
+	if err != nil {
+		return fmt.Errorf("unsupported format %q. Available formats: %s",
+			format, strings.Join(translate.Available(), ", "))
+	}
+
 	// Translate the schema
-	var output string
-	var fileExtension string
-	switch format {
-	case "pyspark":
-		translator := translate.NewPySparkTranslator()
-		var err error
-		output, err = translator.Translate(schema)
-		if err != nil {
-			return fmt.Errorf("failed to translate schema: %w", err)
-		}
-		fileExtension = ".py"
-	default:
-		return fmt.Errorf("unsupported format: %s", format)
+	output, err := translator.Translate(schema)
+	if err != nil {
+		return fmt.Errorf("failed to translate schema: %w", err)
 	}
 
 	// Determine output file path
@@ -124,11 +128,11 @@ func translatePort(portName string, schema *jsonschema.Schema, format, outputFil
 		if err := os.MkdirAll(schemasDir, 0755); err != nil {
 			return fmt.Errorf("failed to create schemas directory: %w", err)
 		}
-		outputFile = filepath.Join(schemasDir, portName+fileExtension)
+		outputFile = filepath.Join(schemasDir, portName+translator.FileExtension())
 	}
 
 	// Write output to file
-	if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
+	if err := os.WriteFile(outputFile, output, 0644); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", outputFile)
