@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/dacolabs/cli/internal/config"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,9 +130,9 @@ func TestWrite_Inline(t *testing.T) {
 								Variables:   map[string]any{"schema": "public"},
 							}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"id":   {Type: "integer"},
 								"name": {Type: "string"},
 							},
@@ -199,16 +199,16 @@ func TestWrite_Modular(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"id":      {Type: "integer"},
 								"address": {Ref: "#/$defs/Address"},
 							},
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Address": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"street": {Type: "string"},
 									},
 								},
@@ -279,21 +279,21 @@ func TestWrite_Modular_NestedRefs(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"customer": {Ref: "#/$defs/Customer"},
 							},
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Customer": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"address": {Ref: "#/$defs/Address"},
 									},
 								},
 								"Address": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"street": {Type: "string"},
 									},
 								},
@@ -347,15 +347,15 @@ func TestWrite_Modular_ComponentsRefRewrite(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"profile": {Ref: "#/components/schemas/Profile"},
 							},
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Profile": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"bio": {Type: "string"},
 									},
 								},
@@ -415,7 +415,7 @@ func TestWrite_ModularCleansStaleFiles(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{Type: "object"},
+						Schema: &jschema.Schema{Type: "object"},
 					},
 				},
 			}
@@ -465,16 +465,16 @@ func TestWrite_Components(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"id":      {Type: "integer"},
 								"address": {Ref: "#/$defs/Address"},
 							},
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Address": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"street": {Type: "string"},
 									},
 								},
@@ -540,21 +540,21 @@ func TestWrite_Components_NestedRefs(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
+							Properties: map[string]*jschema.Schema{
 								"customer": {Ref: "#/$defs/Customer"},
 							},
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Customer": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"address": {Ref: "#/$defs/Address"},
 									},
 								},
 								"Address": {
 									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
+									Properties: map[string]*jschema.Schema{
 										"street": {Type: "string"},
 									},
 								},
@@ -592,6 +592,8 @@ func TestWrite_DuplicateSchemaNames(t *testing.T) {
 		{"JSON/Modular", JSONWriter, config.SchemaModular},
 		{"YAML/Components", YAMLWriter, config.SchemaComponents},
 		{"JSON/Components", JSONWriter, config.SchemaComponents},
+		{"YAML/Inline", YAMLWriter, config.SchemaInline},
+		{"JSON/Inline", JSONWriter, config.SchemaInline},
 	}
 
 	for _, tt := range tests {
@@ -615,9 +617,9 @@ func TestWrite_DuplicateSchemaNames(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Address": {Type: "object"},
 							},
 						},
@@ -626,9 +628,9 @@ func TestWrite_DuplicateSchemaNames(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.profiles"},
 						},
-						Schema: &jsonschema.Schema{
+						Schema: &jschema.Schema{
 							Type: "object",
-							Defs: map[string]*jsonschema.Schema{
+							Defs: map[string]*jschema.Schema{
 								"Address": {Type: "object"}, // Duplicate!
 							},
 						},
@@ -716,7 +718,7 @@ func TestWrite_PortsWithoutSchemas(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{Type: "object"},
+						Schema: &jschema.Schema{Type: "object"},
 					},
 					"logs": {
 						Description: "No schema",
@@ -777,19 +779,19 @@ func TestWrite_MultiplePorts(t *testing.T) {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
 						},
-						Schema: &jsonschema.Schema{Type: "object"},
+						Schema: &jschema.Schema{Type: "object"},
 					},
 					"orders": {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
 						},
-						Schema: &jsonschema.Schema{Type: "object"},
+						Schema: &jschema.Schema{Type: "object"},
 					},
 					"products": {
 						Connections: []PortConnection{
 							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.products"},
 						},
-						Schema: &jsonschema.Schema{Type: "object"},
+						Schema: &jschema.Schema{Type: "object"},
 					},
 				},
 			}

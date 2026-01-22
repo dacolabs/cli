@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/dacolabs/cli/internal/config"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/cli/internal/jschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,24 +49,21 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		tags[i] = rawTag(t)
 	}
 
-	// For modular/components modes, collect schema names and check for duplicates
-	var schemaNames map[string]string
-	if cfg.Schema.Organization == config.SchemaModular || cfg.Schema.Organization == config.SchemaComponents {
-		schemaNames = make(map[string]string) // name -> port that defined it
-		for name, p := range spec.Ports {
-			if p.Schema == nil {
-				continue
+	// Collect schema names and check for duplicates
+	schemaNames := make(map[string]string) // name -> port that defined it
+	for name, p := range spec.Ports {
+		if p.Schema == nil {
+			continue
+		}
+		if existingPort, ok := schemaNames[name]; ok {
+			return fmt.Errorf("duplicate schema name %q: defined by ports %q and %q", name, existingPort, name)
+		}
+		schemaNames[name] = name
+		for defName := range p.Schema.Defs {
+			if existingPort, ok := schemaNames[defName]; ok {
+				return fmt.Errorf("duplicate schema name %q: defined in port %q and port %q", defName, existingPort, name)
 			}
-			if existingPort, ok := schemaNames[name]; ok {
-				return fmt.Errorf("duplicate schema name %q: defined by ports %q and %q", name, existingPort, name)
-			}
-			schemaNames[name] = name
-			for defName := range p.Schema.Defs {
-				if existingPort, ok := schemaNames[defName]; ok {
-					return fmt.Errorf("duplicate schema name %q: defined in port %q and port %q", defName, existingPort, name)
-				}
-				schemaNames[defName] = name
-			}
+			schemaNames[defName] = name
 		}
 	}
 
@@ -93,13 +90,13 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		}
 
 		for name, p := range spec.Ports {
-			var schema *jsonschema.Schema
+			var schema *jschema.Schema
 			if p.Schema != nil {
 				// Write main schema (without $defs - they go to separate files)
 				schemaToWrite := *p.Schema
 				schemaToWrite.Defs = nil
 				// Rewrite $refs to point to external files
-				for s := range iterNestedRefs(&schemaToWrite, nil) {
+				for s := range jschema.Traverse(&schemaToWrite, nil) {
 					if strings.HasPrefix(s.Ref, "#/components/schemas/") {
 						refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
 						s.Ref = refName + ".yaml"
@@ -109,7 +106,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 					}
 				}
 				schemaFile := filepath.Join(schemasDir, name+".yaml")
-				if err := writeYaml(schemaFile, &schemaToWrite); err != nil {
+				if err := wr.write(schemaFile, &schemaToWrite); err != nil {
 					return fmt.Errorf("failed to write schema file %s: %w", schemaFile, err)
 				}
 
@@ -117,7 +114,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				for defName, defSchema := range p.Schema.Defs {
 					defSchemaToWrite := *defSchema
 					// Rewrite $refs in def schemas too
-					for s := range iterNestedRefs(&defSchemaToWrite, nil) {
+					for s := range jschema.Traverse(&defSchemaToWrite, nil) {
 						if strings.HasPrefix(s.Ref, "#/components/schemas/") {
 							refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
 							s.Ref = refName + ".yaml"
@@ -127,28 +124,28 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 						}
 					}
 					defFile := filepath.Join(schemasDir, defName+".yaml")
-					if err := writeYaml(defFile, &defSchemaToWrite); err != nil {
+					if err := wr.write(defFile, &defSchemaToWrite); err != nil {
 						return fmt.Errorf("failed to write schema file %s: %w", defFile, err)
 					}
 				}
 
-				schema = &jsonschema.Schema{Ref: "schemas/" + name + ".yaml"}
+				schema = &jschema.Schema{Ref: "schemas/" + name + ".yaml"}
 			}
 
 			ports[name] = createRawPort(spec, &p, schema)
 		}
 
 	case config.SchemaComponents:
-		components = &rawComponents{Schemas: make(map[string]*jsonschema.Schema)}
+		components = &rawComponents{Schemas: make(map[string]*jschema.Schema)}
 
 		for name, p := range spec.Ports {
-			var schema *jsonschema.Schema
+			var schema *jschema.Schema
 			if p.Schema != nil {
 				// Add main schema (without $defs)
 				schemaToAdd := *p.Schema
 				schemaToAdd.Defs = nil
 				// Rewrite $refs from $defs to components
-				for s := range iterNestedRefs(&schemaToAdd, nil) {
+				for s := range jschema.Traverse(&schemaToAdd, nil) {
 					if strings.HasPrefix(s.Ref, "#/$defs/") {
 						refName := strings.TrimPrefix(s.Ref, "#/$defs/")
 						s.Ref = "#/components/schemas/" + refName
@@ -160,7 +157,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				for defName, defSchema := range p.Schema.Defs {
 					defSchemaToAdd := *defSchema
 					// Rewrite $refs in def schemas too
-					for s := range iterNestedRefs(&defSchemaToAdd, nil) {
+					for s := range jschema.Traverse(&defSchemaToAdd, nil) {
 						if strings.HasPrefix(s.Ref, "#/$defs/") {
 							refName := strings.TrimPrefix(s.Ref, "#/$defs/")
 							s.Ref = "#/components/schemas/" + refName
@@ -169,7 +166,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 					components.Schemas[defName] = &defSchemaToAdd
 				}
 
-				schema = &jsonschema.Schema{Ref: "#/components/schemas/" + name}
+				schema = &jschema.Schema{Ref: "#/components/schemas/" + name}
 			}
 
 			ports[name] = createRawPort(spec, &p, schema)
@@ -218,7 +215,7 @@ func writeYaml(path string, v any) error {
 	return enc.Encode(v)
 }
 
-func createRawPort(spec *Spec, p *Port, schema *jsonschema.Schema) rawPort {
+func createRawPort(spec *Spec, p *Port, schema *jschema.Schema) rawPort {
 	portConns := make([]rawPortConnection, len(p.Connections))
 	for i, pc := range p.Connections {
 		var connName string
