@@ -22,18 +22,13 @@ type Resolver struct {
 // NewResolver creates a new Resolver for the given schema.
 func NewResolver(schema *jsonschema.Schema, keyOrder map[string][]string) *Resolver {
 	defs := make(map[string]*jsonschema.Schema)
-
-	// Collect from Defs ($defs - draft 2019-09+)
 	for name, def := range schema.Defs {
 		defs[name] = def
 	}
-
-	// Collect from Definitions (older drafts)
 	for name, def := range schema.Definitions {
 		defs[name] = def
 	}
 
-	// Sort definition names for deterministic output
 	defNames := make([]string, 0, len(defs))
 	for name := range defs {
 		defNames = append(defNames, name)
@@ -76,7 +71,6 @@ func (r *Resolver) GetPropertyOrder(path string, props map[string]*jsonschema.Sc
 		return SortedKeys(props)
 	}
 
-	// Filter to only include keys that exist in props
 	seen := make(map[string]bool, len(props))
 	result := make([]string, 0, len(props))
 	for _, key := range order {
@@ -85,7 +79,6 @@ func (r *Resolver) GetPropertyOrder(path string, props map[string]*jsonschema.Sc
 			seen[key] = true
 		}
 	}
-	// Add any keys in props that weren't in the order (shouldn't happen, but be safe)
 	for key := range props {
 		if !seen[key] {
 			result = append(result, key)
@@ -95,16 +88,11 @@ func (r *Resolver) GetPropertyOrder(path string, props map[string]*jsonschema.Sc
 }
 
 // GetRefDefName extracts the definition name from a $ref string.
-// Supports $defs, definitions, and components/schemas (OpenAPI) formats.
-// Returns empty string if the ref format is not recognized.
 func (r *Resolver) GetRefDefName(ref string) string {
 	if !strings.HasPrefix(ref, "#/") {
 		return ""
 	}
-
 	path := strings.TrimPrefix(ref, "#/")
-
-	// Handle different ref formats
 	switch {
 	case strings.HasPrefix(path, "$defs/"):
 		return strings.TrimPrefix(path, "$defs/")
@@ -113,7 +101,6 @@ func (r *Resolver) GetRefDefName(ref string) string {
 	case strings.HasPrefix(path, "components/schemas/"):
 		return strings.TrimPrefix(path, "components/schemas/")
 	}
-
 	return ""
 }
 
@@ -129,63 +116,47 @@ func (r *Resolver) ResolveRef(ref string) *jsonschema.Schema {
 // CollectUsedDefs collects all definitions transitively used by a schema.
 func (r *Resolver) CollectUsedDefs(schema *jsonschema.Schema) map[string]bool {
 	used := make(map[string]bool)
-
 	var collect func(s *jsonschema.Schema)
 	collect = func(s *jsonschema.Schema) {
 		if s == nil {
 			return
 		}
-
-		// If this is a $ref, mark it as used and recurse into its definition
 		if s.Ref != "" {
 			defName := r.GetRefDefName(s.Ref)
 			if defName != "" && !used[defName] {
 				used[defName] = true
-				// Recurse into the definition to find nested refs
 				if def := r.defs[defName]; def != nil {
 					collect(def)
 				}
 			}
 			return
 		}
-
-		// Recurse into properties
 		for _, prop := range s.Properties {
 			collect(prop)
 		}
-
-		// Recurse into array items
 		if s.Items != nil {
 			collect(s.Items)
 		}
-
-		// Recurse into allOf
 		for _, sub := range s.AllOf {
 			collect(sub)
 		}
 	}
-
 	collect(schema)
 	return used
 }
 
 // CollectDependencies returns the names of all $defs directly referenced by a schema.
-// It only collects immediate references (does not recurse into the referenced definitions).
 func (r *Resolver) CollectDependencies(schema *jsonschema.Schema) []string {
 	if schema == nil {
 		return nil
 	}
-
 	var deps []string
 	seen := make(map[string]bool)
-
 	var collect func(s *jsonschema.Schema)
 	collect = func(s *jsonschema.Schema) {
 		if s == nil {
 			return
 		}
-
-		// Check if this is a $ref to a definition - collect but don't recurse into it
 		if s.Ref != "" {
 			name := r.GetRefDefName(s.Ref)
 			if name != "" && !seen[name] {
@@ -194,23 +165,16 @@ func (r *Resolver) CollectDependencies(schema *jsonschema.Schema) []string {
 			}
 			return
 		}
-
-		// Recurse into properties
 		for _, prop := range s.Properties {
 			collect(prop)
 		}
-
-		// Recurse into array items
 		if s.Items != nil {
 			collect(s.Items)
 		}
-
-		// Recurse into allOf
 		for _, sub := range s.AllOf {
 			collect(sub)
 		}
 	}
-
 	collect(schema)
 	return deps
 }

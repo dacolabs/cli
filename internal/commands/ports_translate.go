@@ -46,28 +46,24 @@ Available formats: %s`, strings.Join(translate.Available(), ", ")),
 }
 
 func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) error {
-	// Get the project context
 	ctx, err := context.RequireFromCommand(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Prompt for format if not specified
 	if format == "" {
 		formats := translate.Available()
 		if len(formats) == 0 {
 			return fmt.Errorf("no translation formats available")
-		} else {
-			err := huh.NewForm(
-				huh.NewGroup(prompts.TranslateFormatSelect(&format, formats)),
-			).Run()
-			if err != nil {
-				return err
-			}
+		}
+		err := huh.NewForm(
+			huh.NewGroup(prompts.TranslateFormatSelect(&format, formats)),
+		).Run()
+		if err != nil {
+			return err
 		}
 	}
 
-	// If no port name specified, translate all ports
 	if portName == "" {
 		if outputFile != "" {
 			return fmt.Errorf("--output flag is only valid when translating a single port")
@@ -75,17 +71,14 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 		return translateAllPorts(ctx.Spec, format)
 	}
 
-	// Find the port
 	port, ok := ctx.Spec.Ports[portName]
 	if !ok {
 		return fmt.Errorf("port %q not found in spec", portName)
 	}
-
 	if port.Schema == nil {
 		return fmt.Errorf("port %q has no schema defined", portName)
 	}
 
-	// Translate single port
 	return translatePort(portName, port.Schema, format, outputFile)
 }
 
@@ -127,28 +120,23 @@ func translateAllPorts(spec *opendpi.Spec, format string) error {
 }
 
 func translatePort(portName string, schema *jsonschema.Schema, format, outputFile string) error {
-	// Get the translator from registry
 	translator, err := translate.Get(format)
 	if err != nil {
 		return fmt.Errorf("unsupported format %q. Available formats: %s",
 			format, strings.Join(translate.Available(), ", "))
 	}
 
-	// Serialize schema to JSON for key order extraction
 	rawJSON, err := json.Marshal(schema)
 	if err != nil {
 		return fmt.Errorf("failed to serialize schema: %w", err)
 	}
 
-	// Translate the schema
 	output, err := translator.Translate(portName, schema, rawJSON)
 	if err != nil {
 		return fmt.Errorf("failed to translate schema: %w", err)
 	}
 
-	// Determine output file path
 	if outputFile == "" {
-		// Create schemas directory if it doesn't exist
 		schemasDir := "schemas"
 		if err := os.MkdirAll(schemasDir, 0755); err != nil {
 			return fmt.Errorf("failed to create schemas directory: %w", err)
@@ -156,7 +144,6 @@ func translatePort(portName string, schema *jsonschema.Schema, format, outputFil
 		outputFile = filepath.Join(schemasDir, portName+translator.FileExtension())
 	}
 
-	// Write output to file
 	if err := os.WriteFile(outputFile, output, 0644); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}

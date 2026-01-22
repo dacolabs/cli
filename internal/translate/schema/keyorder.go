@@ -9,21 +9,17 @@ import (
 )
 
 // ExtractKeyOrder parses raw JSON and extracts the order of keys for all "properties" objects.
-// Returns a map from JSON path (e.g., "properties", "$defs.address.properties") to ordered keys.
 func ExtractKeyOrder(rawJSON []byte) map[string][]string {
 	result := make(map[string][]string)
-
-	var extractFromDecoder func(dec *json.Decoder, path string)
-	extractFromDecoder = func(dec *json.Decoder, path string) {
+	var extract func(dec *json.Decoder, path string)
+	extract = func(dec *json.Decoder, path string) {
 		token, err := dec.Token()
 		if err != nil {
 			return
 		}
-
 		switch t := token.(type) {
 		case json.Delim:
 			if t == '{' {
-				// Read object keys in order
 				var keys []string
 				for dec.More() {
 					keyToken, err := dec.Token()
@@ -35,38 +31,27 @@ func ExtractKeyOrder(rawJSON []byte) map[string][]string {
 						continue
 					}
 					keys = append(keys, key)
-
-					// Build the new path
 					var newPath string
 					if path == "" {
 						newPath = key
 					} else {
 						newPath = path + "." + key
 					}
-
-					// Recurse into the value
-					extractFromDecoder(dec, newPath)
+					extract(dec, newPath)
 				}
-				// Consume the closing brace
-				dec.Token()
-
-				// Store keys if this is a "properties" path
+				dec.Token() //nolint:errcheck
 				if strings.HasSuffix(path, "properties") || path == "properties" {
 					result[path] = keys
 				}
 			} else if t == '[' {
-				// Read array elements
 				for dec.More() {
-					extractFromDecoder(dec, path)
+					extract(dec, path)
 				}
-				// Consume the closing bracket
-				dec.Token()
+				dec.Token() //nolint:errcheck
 			}
 		}
 	}
-
 	dec := json.NewDecoder(strings.NewReader(string(rawJSON)))
-	extractFromDecoder(dec, "")
-
+	extract(dec, "")
 	return result
 }
