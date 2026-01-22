@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/context"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
@@ -37,7 +39,7 @@ Available formats: %s`, strings.Join(translate.Available(), ", ")),
 	}
 
 	cmd.Flags().StringVar(&portName, "port-name", "", "Name of the port to translate (translates all ports if not specified)")
-	cmd.Flags().StringVar(&format, "format", "pyspark", fmt.Sprintf("Output format (options: %s)", strings.Join(translate.Available(), ", ")))
+	cmd.Flags().StringVar(&format, "format", "", fmt.Sprintf("Output format (options: %s)", strings.Join(translate.Available(), ", ")))
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
 
 	parent.AddCommand(cmd)
@@ -48,6 +50,21 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 	ctx, err := context.RequireFromCommand(cmd)
 	if err != nil {
 		return err
+	}
+
+	// Prompt for format if not specified
+	if format == "" {
+		formats := translate.Available()
+		if len(formats) == 0 {
+			return fmt.Errorf("no translation formats available")
+		} else {
+			err := huh.NewForm(
+				huh.NewGroup(prompts.TranslateFormatSelect(&format, formats)),
+			).Run()
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// If no port name specified, translate all ports
