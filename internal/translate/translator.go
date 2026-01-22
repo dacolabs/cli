@@ -17,7 +17,8 @@ type Translator interface {
 
 	// Translate converts a JSON schema to the target format
 	// portName is used to name the output schema variable (e.g., "users" -> "users_schema")
-	Translate(portName string, schema *jsonschema.Schema) ([]byte, error)
+	// rawJSON contains the original JSON bytes for preserving key order
+	Translate(portName string, schema *jsonschema.Schema, rawJSON []byte) ([]byte, error)
 
 	// FileExtension returns the appropriate file extension (e.g., ".py", ".sql")
 	FileExtension() string

@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,9 +16,7 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 
-	// Import all translators to auto-register them
-	_ "github.com/dacolabs/cli/internal/translate/databricks-dbt"
-	_ "github.com/dacolabs/cli/internal/translate/databricks-pyspark"
+	// Import translator to auto-register
 	_ "github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
@@ -118,8 +117,14 @@ func translatePort(portName string, schema *jsonschema.Schema, format, outputFil
 			format, strings.Join(translate.Available(), ", "))
 	}
 
+	// Serialize schema to JSON for key order extraction
+	rawJSON, err := json.Marshal(schema)
+	if err != nil {
+		return fmt.Errorf("failed to serialize schema: %w", err)
+	}
+
 	// Translate the schema
-	output, err := translator.Translate(portName, schema)
+	output, err := translator.Translate(portName, schema, rawJSON)
 	if err != nil {
 		return fmt.Errorf("failed to translate schema: %w", err)
 	}

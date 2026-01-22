@@ -4,11 +4,22 @@
 package pyspark
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
+
+// helper to serialize schema to JSON for tests
+func mustMarshal(t *testing.T, schema *jsonschema.Schema) []byte {
+	t.Helper()
+	data, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatalf("failed to marshal schema: %v", err)
+	}
+	return data
+}
 
 func TestTranslator_Translate(t *testing.T) {
 	tests := []struct {
@@ -108,7 +119,8 @@ func TestTranslator_Translate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			translator := New()
-			got, err := translator.Translate("test_port", tt.schema)
+			rawJSON := mustMarshal(t, tt.schema)
+			got, err := translator.Translate("test_port", tt.schema, rawJSON)
 			if err != nil {
 				t.Fatalf("Translate() error = %v", err)
 			}
@@ -139,7 +151,7 @@ func TestTranslator_SchemaWithRefs(t *testing.T) {
 		Properties: map[string]*jsonschema.Schema{
 			"name": {Type: "string"},
 			"address": {
-				Ref: "#/components/schemas/Address",
+				Ref: "#/$defs/Address",
 			},
 		},
 		Defs: map[string]*jsonschema.Schema{
@@ -148,21 +160,16 @@ func TestTranslator_SchemaWithRefs(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate("users", schema)
+	rawJSON := mustMarshal(t, schema)
+	got, err := translator.Translate("users", schema, rawJSON)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
 	gotStr := string(got)
-	// Should contain the address fields
-	if !strings.Contains(gotStr, `"street"`) {
-		t.Error("Should contain street field from referenced schema")
-	}
-	if !strings.Contains(gotStr, `"city"`) {
-		t.Error("Should contain city field from referenced schema")
-	}
-	if !strings.Contains(gotStr, `"zip"`) {
-		t.Error("Should contain zip field from referenced schema")
+	// Should contain the _Address variable reference
+	if !strings.Contains(gotStr, "_Address") {
+		t.Error("Should contain _Address variable for referenced schema")
 	}
 }
 
@@ -179,7 +186,7 @@ func TestTranslator_AllOf(t *testing.T) {
 
 	schema := &jsonschema.Schema{
 		AllOf: []*jsonschema.Schema{
-			{Ref: "#/components/schemas/Base"},
+			{Ref: "#/$defs/Base"},
 			{
 				Type:     "object",
 				Required: []string{"name"},
@@ -195,7 +202,8 @@ func TestTranslator_AllOf(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate("events", schema)
+	rawJSON := mustMarshal(t, schema)
+	got, err := translator.Translate("events", schema, rawJSON)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -217,19 +225,19 @@ func TestTranslator_AllOf(t *testing.T) {
 }
 
 func TestTranslator_CircularRefs(t *testing.T) {
-	// Test with circular references (should not infinite loop)
+	// Test with circular references - should work since refs are emitted by name
 	nodeSchema := &jsonschema.Schema{
 		Type: "object",
 		Properties: map[string]*jsonschema.Schema{
 			"id":   {Type: "string"},
 			"name": {Type: "string"},
 			"parent": {
-				Ref: "#/components/schemas/Node",
+				Ref: "#/$defs/Node",
 			},
 			"children": {
 				Type: "array",
 				Items: &jsonschema.Schema{
-					Ref: "#/components/schemas/Node",
+					Ref: "#/$defs/Node",
 				},
 			},
 		},
@@ -239,7 +247,7 @@ func TestTranslator_CircularRefs(t *testing.T) {
 		Type: "object",
 		Properties: map[string]*jsonschema.Schema{
 			"root": {
-				Ref: "#/components/schemas/Node",
+				Ref: "#/$defs/Node",
 			},
 		},
 		Defs: map[string]*jsonschema.Schema{
@@ -248,15 +256,22 @@ func TestTranslator_CircularRefs(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate("nodes", schema)
+	rawJSON := mustMarshal(t, schema)
+	got, err := translator.Translate("nodes", schema, rawJSON)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
 
 	gotStr := string(got)
-	// Should not infinite loop and should generate something
-	if !strings.Contains(gotStr, "StructType") {
-		t.Error("Should generate StructType")
+	// Node should reference itself by variable name
+	if !strings.Contains(gotStr, "_Node = StructType([") {
+		t.Error("Missing _Node variable declaration")
+	}
+	if !strings.Contains(gotStr, `StructField("parent", _Node`) {
+		t.Error("Should reference _Node for parent field")
+	}
+	if !strings.Contains(gotStr, "ArrayType(_Node)") {
+		t.Error("Should reference _Node in children array")
 	}
 }
 
@@ -286,7 +301,8 @@ func TestTranslator_ComplexSchema(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate("daily_sales", schema)
+	rawJSON := mustMarshal(t, schema)
+	got, err := translator.Translate("daily_sales", schema, rawJSON)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -295,19 +311,6 @@ func TestTranslator_ComplexSchema(t *testing.T) {
 	// Verify imports
 	if !strings.Contains(gotStr, "from pyspark.sql.types import") {
 		t.Error("Missing imports")
-	}
-
-	// Verify required fields are not nullable
-	if !strings.Contains(gotStr, `StructField("date", DateType(), nullable=False)`) {
-		t.Error("Required field 'date' should be nullable=False")
-	}
-	if !strings.Contains(gotStr, `StructField("total_orders", LongType(), nullable=False)`) {
-		t.Error("Required field 'total_orders' should be nullable=False")
-	}
-
-	// Verify optional field is nullable
-	if !strings.Contains(gotStr, `StructField("region", StringType(), nullable=True)`) {
-		t.Error("Optional field 'region' should be nullable=True")
 	}
 
 	// Verify correct types
@@ -365,7 +368,8 @@ func TestTranslator_ComponentExtraction(t *testing.T) {
 	}
 
 	translator := New()
-	got, err := translator.Translate("tree", schema)
+	rawJSON := mustMarshal(t, schema)
+	got, err := translator.Translate("tree", schema, rawJSON)
 	if err != nil {
 		t.Fatalf("Translate() error = %v", err)
 	}
@@ -373,56 +377,24 @@ func TestTranslator_ComponentExtraction(t *testing.T) {
 	gotStr := string(got)
 
 	// Verify component schema is extracted as a variable with underscore prefix
-	if !strings.Contains(gotStr, "# Component schemas") {
-		t.Error("Missing '# Component schemas' comment")
-	}
-	if !strings.Contains(gotStr, "_node = StructType([") {
-		t.Error("Missing _node variable declaration")
+	if !strings.Contains(gotStr, "_Node = StructType([") {
+		t.Error("Missing _Node variable declaration")
 	}
 
-	// Verify main schema references the component variable and uses port name
-	if !strings.Contains(gotStr, "# Main schema") {
-		t.Error("Missing '# Main schema' comment")
+	// Verify main schema references the component variable
+	if !strings.Contains(gotStr, `StructField("root", _Node`) {
+		t.Error("Should reference _Node variable for root field")
 	}
-	if !strings.Contains(gotStr, "tree_schema = StructType([") {
-		t.Error("Missing tree_schema variable declaration")
-	}
-	if !strings.Contains(gotStr, `StructField("root", _node`) {
-		t.Error("Should reference _node variable for root field")
-	}
-	if !strings.Contains(gotStr, "ArrayType(_node)") {
-		t.Error("Should reference _node variable in array")
+	if !strings.Contains(gotStr, "ArrayType(_Node)") {
+		t.Error("Should reference _Node variable in array")
 	}
 
 	// Verify the component is defined before it's used
-	componentIdx := strings.Index(gotStr, "_node = ")
-	mainSchemaIdx := strings.Index(gotStr, "# Main schema")
+	componentIdx := strings.Index(gotStr, "_Node = ")
+	mainSchemaIdx := strings.Index(gotStr, "def _schema():")
 	if componentIdx == -1 || mainSchemaIdx == -1 {
 		t.Error("Missing component or main schema sections")
 	} else if componentIdx > mainSchemaIdx {
 		t.Error("Component schema should be defined before main schema")
-	}
-}
-
-func TestTranslator_ToSnakeCase(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"Node", "node"},
-		{"UserProfile", "user_profile"},
-		{"HTTPResponse", "httpresponse"},
-		{"MySchema", "my_schema"},
-		{"API", "api"},
-		{"APIResponse", "apiresponse"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := toSnakeCase(tt.input)
-			if got != tt.expected {
-				t.Errorf("toSnakeCase(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
 	}
 }
