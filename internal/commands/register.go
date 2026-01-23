@@ -5,6 +5,7 @@
 package commands
 
 import (
+	"github.com/dacolabs/cli/internal/context"
 	"github.com/spf13/cobra"
 )
 
@@ -14,11 +15,20 @@ func NewRootCmd() *cobra.Command {
 		Use: "daco",
 	}
 
-	registerCommands(rootCmd)
+	registerInitCmd(rootCmd)
+	registerConnectionsCmd(rootCmd)
 
 	return rootCmd
 }
 
-func registerCommands(rootCmd *cobra.Command) {
-	registerInitCmd(rootCmd)
+func registerConnectionsCmd(parent *cobra.Command) {
+	cmd := &cobra.Command{
+		Use:               "connections",
+		Short:             "Manage infrastructure connections",
+		PersistentPreRunE: context.PreRunLoad,
+	}
+
+	registerConnectionsListCmd(cmd)
+
+	parent.AddCommand(cmd)
 }
