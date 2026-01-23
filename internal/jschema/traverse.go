@@ -144,14 +144,3 @@ func traverseWithVisited(schema *Schema, resolver RefResolver, yield func(*Schem
 
 	return true
 }
-
-// CollectRefs returns all $ref strings found in the schema tree.
-func CollectRefs(schema *Schema, resolver RefResolver) []string {
-	var refs []string
-	for s := range Traverse(schema, resolver) {
-		if s.Ref != "" {
-			refs = append(refs, s.Ref)
-		}
-	}
-	return refs
-}

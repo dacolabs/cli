@@ -5,9 +5,11 @@ package jschema
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -36,19 +38,13 @@ func (l *Loader) LoadFile(filePath string) (*Schema, error) {
 		return nil, err
 	}
 
-	return LoadBytes(data, FormatFromPath(filePath))
-}
-
-// LoadBytes parses a schema from bytes in the specified format.
-func LoadBytes(data []byte, format Format) (*Schema, error) {
 	var schema Schema
-	var err error
-
-	switch format {
-	case YAML:
+	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
 		err = yaml.Unmarshal(data, &schema)
-	default:
+	} else if strings.HasSuffix(filePath, ".json") {
 		err = json.Unmarshal(data, &schema)
+	} else {
+		return nil, fmt.Errorf("format not supported")
 	}
 
 	if err != nil {

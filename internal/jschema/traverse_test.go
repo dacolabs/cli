@@ -10,7 +10,15 @@ import (
 	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
+
+func loadYAML(t *testing.T, data []byte) *jschema.Schema {
+	t.Helper()
+	var schema jschema.Schema
+	require.NoError(t, yaml.Unmarshal(data, &schema))
+	return &schema
+}
 
 func TestTraverse_SimpleSchema(t *testing.T) {
 	loader := jschema.NewLoader(os.DirFS("testdata"))
@@ -94,8 +102,7 @@ items:
     item:
       type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -136,8 +143,7 @@ $defs:
   other:
     type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var refs []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -181,38 +187,6 @@ func TestTraverse_WithResolver(t *testing.T) {
 	assert.Contains(t, types, "string")
 }
 
-func TestCollectRefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
-	schema, err := loader.LoadFile("with-file-ref.yaml")
-	require.NoError(t, err)
-
-	refs := jschema.CollectRefs(schema, nil)
-
-	assert.Len(t, refs, 1)
-	assert.Contains(t, refs, "./external.yaml")
-}
-
-func TestCollectRefs_WithDefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
-	schema, err := loader.LoadFile("with-defs.yaml")
-	require.NoError(t, err)
-
-	refs := jschema.CollectRefs(schema, nil)
-
-	assert.Len(t, refs, 1)
-	assert.Contains(t, refs, "#/$defs/address")
-}
-
-func TestCollectRefs_NoRefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
-	schema, err := loader.LoadFile("simple.yaml")
-	require.NoError(t, err)
-
-	refs := jschema.CollectRefs(schema, nil)
-
-	assert.Empty(t, refs)
-}
-
 func TestTraverse_WithOneOf(t *testing.T) {
 	data := []byte(`
 oneOf:
@@ -220,8 +194,7 @@ oneOf:
   - type: integer
   - type: boolean
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -238,8 +211,7 @@ type: object
 not:
   type: array
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -268,8 +240,7 @@ else:
     b_field:
       type: integer
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -289,8 +260,7 @@ patternProperties:
   "^I_":
     type: integer
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -307,8 +277,7 @@ type: object
 additionalProperties:
   type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -329,8 +298,7 @@ prefixItems:
   - type: integer
   - type: boolean
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -348,8 +316,7 @@ contains:
   type: number
   minimum: 5
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -372,8 +339,7 @@ definitions:
   age:
     type: integer
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -393,8 +359,7 @@ dependentSchemas:
       billing_address:
         type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -417,8 +382,7 @@ properties:
   third:
     type: boolean
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -437,8 +401,7 @@ type: object
 propertyNames:
   pattern: "^[a-z]+$"
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -458,8 +421,7 @@ items:
 additionalItems:
   type: boolean
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -482,8 +444,7 @@ contentSchema:
     data:
       type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var count int
 	for range jschema.Traverse(schema, nil) {
@@ -500,8 +461,7 @@ type: object
 unevaluatedProperties:
   type: string
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -520,8 +480,7 @@ type: array
 unevaluatedItems:
   type: number
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	var types []string
 	for s := range jschema.Traverse(schema, nil) {
@@ -576,8 +535,7 @@ definitions:
   def2:
     type: integer
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	// Test stopping at different iteration counts
 	// Schema has 17 total nodes
@@ -608,8 +566,7 @@ contains:
 unevaluatedItems:
   type: array
 `)
-	schema, err := jschema.LoadBytes(data, jschema.YAML)
-	require.NoError(t, err)
+	schema := loadYAML(t, data)
 
 	// Schema has 7 total nodes
 	for stopAt := 1; stopAt <= 7; stopAt++ {

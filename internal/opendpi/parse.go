@@ -121,7 +121,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 		var portSchema *jschema.Schema
 		if rp.Schema != nil {
 			if rp.Schema.Ref != "" {
-				if jschema.IsInternalRef(rp.Schema.Ref) {
+				if strings.HasPrefix(rp.Schema.Ref, "#/") {
 					// Component ref
 					if raw.Components == nil {
 						return nil, fmt.Errorf("port %q: schema %q not found (no components)", name, rp.Schema.Ref)
