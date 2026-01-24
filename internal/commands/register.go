@@ -5,20 +5,27 @@
 package commands
 
 import (
+	"github.com/dacolabs/cli/internal/cmdctx"
+	"github.com/dacolabs/cli/internal/translate"
 	"github.com/spf13/cobra"
 )
 
 // NewRootCmd creates and returns the root command for the CLI.
-func NewRootCmd() *cobra.Command {
+func NewRootCmd(translators translate.Register) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "daco",
 	}
 
-	registerCommands(rootCmd)
+	registerInitCmd(rootCmd)
+	cmd := &cobra.Command{
+		Use:               "ports",
+		Short:             "Manage data product ports",
+		PersistentPreRunE: cmdctx.PreRunLoad,
+	}
+
+	registerPortTranslateCmd(cmd, translators)
+
+	rootCmd.AddCommand(cmd)
 
 	return rootCmd
-}
-
-func registerCommands(rootCmd *cobra.Command) {
-	registerInitCmd(rootCmd)
 }
