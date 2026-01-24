@@ -4,7 +4,7 @@
 // Package opendpi provides OpenDPI specification types.
 package opendpi
 
-import "github.com/google/jsonschema-go/jsonschema"
+import "github.com/dacolabs/cli/internal/jschema"
 
 // Spec represents the root structure of an OpenDPI specification file.
 type Spec struct {
@@ -41,7 +41,7 @@ type Connection struct {
 type Port struct {
 	Description string
 	Connections []PortConnection
-	Schema      *jsonschema.Schema
+	Schema      *jschema.Schema
 }
 
 // PortConnection represents a connection-location pair for a port.
