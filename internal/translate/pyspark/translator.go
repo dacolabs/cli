@@ -1,257 +1,200 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package pyspark provides PySpark schema translation.
+// Package pyspark provides PySpark schema translation utilities.
 package pyspark
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/dacolabs/cli/internal/translate"
-	"github.com/dacolabs/cli/internal/translate/schema"
+	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/google/jsonschema-go/jsonschema"
 )
-
-func init() {
-	translate.Register(New())
-}
 
 // Translator translates JSON schemas to PySpark StructType definitions.
 type Translator struct{}
 
-// New creates a new PySpark translator.
-func New() *Translator {
-	return &Translator{}
-}
-
-// Name returns the translator's identifier.
-func (t *Translator) Name() string {
-	return "pyspark"
-}
-
-// FileExtension returns the file extension for PySpark files.
 func (t *Translator) FileExtension() string {
 	return ".py"
 }
 
 // Translate converts a JSON schema to PySpark Python code.
-func (t *Translator) Translate(portName string, s *jsonschema.Schema, rawJSON []byte) ([]byte, error) {
-	keyOrder := schema.ExtractKeyOrder(rawJSON)
-	r := schema.NewResolver(s, keyOrder)
-
+func (t *Translator) Translate(portName string, schema *jsonschema.Schema) ([]byte, error) {
 	var sb strings.Builder
-	sb.WriteString(`from pyspark.sql.types import (
-    ArrayType,
-    BooleanType,
-    DateType,
-    DoubleType,
-    LongType,
-    StringType,
-    StructField,
-    StructType,
-    TimestampType,
-)
 
-`)
+	// Get property key order for preserving original ordering
+	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract key order: %w", err)
+	}
 
-	usedDefs := r.CollectUsedDefs(s)
-	if len(usedDefs) > 0 {
-		defs, err := generateDefinitions(r, usedDefs)
-		if err != nil {
+	sb.WriteString("import pyspark.sql.types as T\n")
+	sb.WriteString("\n")
+
+	// Generate variables for defs in topological order (dependencies first)
+	for defName, defSchema := range jschema.TraverseDefs(schema) {
+		sb.WriteString("_" + defName + " = ")
+		if err := translateSchema(&sb, defSchema, 0, keyOrder, ""); err != nil {
 			return nil, err
 		}
-		if defs != "" {
-			sb.WriteString(defs)
-			sb.WriteString("\n")
-		}
+		sb.WriteString("\n\n")
 	}
 
-	structDef, err := convertToStructType(s, 1, r, "properties")
-	if err != nil {
+	// Generate main schema
+	sb.WriteString(portName + "_schema = ")
+	if err := translateSchema(&sb, schema, 0, keyOrder, ""); err != nil {
 		return nil, err
 	}
-	sb.WriteString("def _schema():\n")
-	sb.WriteString("    return ")
-	sb.WriteString(structDef)
 	sb.WriteString("\n")
 
 	return []byte(sb.String()), nil
 }
 
-func generateDefinitions(r *schema.Resolver, usedDefs map[string]bool) (string, error) {
-	if len(usedDefs) == 0 {
-		return "", nil
-	}
+func translateSchema(sb *strings.Builder, schema *jsonschema.Schema, depth int, keyOrder map[string][]string, path string) error {
+	indent := strings.Repeat("    ", depth)
 
-	var result []string
-	generating := make(map[string]bool)
+	if schema.Type == "object" || (schema.Type == "" && len(schema.Properties) > 0) {
+		sb.WriteString("T.StructType([\n")
 
-	var generate func(name string) error
-	generate = func(name string) error {
-		if r.IsGenerated(name) || !usedDefs[name] || generating[name] {
-			return nil
-		}
-		def := r.GetDef(name)
-		if def == nil {
-			return nil
-		}
-		generating[name] = true
+		// Get property names in original order from keyOrder, or fall back to map iteration
+		propNames := getOrderedKeys(schema, keyOrder, path)
 
-		for _, dep := range r.CollectDependencies(def) {
-			if usedDefs[dep] {
-				if err := generate(dep); err != nil {
-					return err
+		for i, propName := range propNames {
+			propSchema := schema.Properties[propName]
+
+			nullable := true
+			for _, s := range schema.Required {
+				if s == propName {
+					nullable = false
 				}
+			}
+
+			sb.WriteString(indent + "    T.StructField(")
+			sb.WriteString(fmt.Sprintf("%q, ", propName))
+
+			// Build path for nested properties
+			var propPath string
+			if path == "" {
+				propPath = "properties." + propName
+			} else {
+				propPath = path + ".properties." + propName
+			}
+
+			if err := translateType(sb, propSchema, depth+1, keyOrder, propPath); err != nil {
+				return err
+			}
+
+			nullableStr := "True"
+			if !nullable {
+				nullableStr = "False"
+			}
+			sb.WriteString(fmt.Sprintf(", nullable=%s)", nullableStr))
+
+			if i < len(propNames)-1 {
+				sb.WriteString(",\n")
+			} else {
+				sb.WriteString("\n")
 			}
 		}
 
-		defPath := "$defs." + name + ".properties"
-		structDef, err := convertToStructType(def, 0, r, defPath)
-		if err != nil {
-			return fmt.Errorf("definition %q: %w", name, err)
-		}
-
-		result = append(result, fmt.Sprintf("_%s = %s", name, structDef))
-		r.MarkGenerated(name)
+		sb.WriteString(indent + "])")
 		return nil
 	}
 
-	for _, name := range r.GetDefNames() {
-		if usedDefs[name] {
-			if err := generate(name); err != nil {
-				return "", err
+	return translateType(sb, schema, depth, keyOrder, path)
+}
+
+func translateType(sb *strings.Builder, schema *jsonschema.Schema, depth int, keyOrder map[string][]string, path string) error {
+	// Handle $ref by emitting the variable name
+	if schema.Ref != "" {
+		refName := extractRefName(schema.Ref)
+		sb.WriteString(refName)
+		return nil
+	}
+
+	// Handle arrays
+	if schema.Type == "array" {
+		sb.WriteString("T.ArrayType(")
+		if schema.Items != nil {
+			if err := translateType(sb, schema.Items, depth, keyOrder, path); err != nil {
+				return err
 			}
+		} else {
+			sb.WriteString("T.StringType()")
+		}
+		sb.WriteString(")")
+		return nil
+	}
+
+	// Handle objects
+	if schema.Type == "object" || (schema.Type == "" && len(schema.Properties) > 0) {
+		return translateSchema(sb, schema, depth, keyOrder, path)
+	}
+
+	// Handle primitive types with format
+	if schema.Format != "" {
+		switch schema.Format {
+		case "date":
+			sb.WriteString("T.DateType()")
+			return nil
+		case "date-time":
+			sb.WriteString("T.TimestampType()")
+			return nil
+		case "uuid":
+			sb.WriteString("T.StringType()")
+			return nil
 		}
 	}
 
-	return strings.Join(result, "\n") + "\n", nil
-}
-
-func convertToStructType(s *jsonschema.Schema, indent int, r *schema.Resolver, path string) (string, error) {
-	if s == nil {
-		return "StructType([])", nil
-	}
-	if len(s.AllOf) > 0 {
-		merged := mergeAllOf(s.AllOf, r)
-		return convertToStructType(merged, indent, r, path)
-	}
-	if s.Properties == nil || len(s.Properties) == 0 {
-		return "StructType([])", nil
-	}
-
-	requiredSet := make(map[string]bool)
-	for _, req := range s.Required {
-		requiredSet[req] = true
-	}
-
-	propNames := r.GetPropertyOrder(path, s.Properties)
-	var sb strings.Builder
-	baseIndent := strings.Repeat("    ", indent)
-	fieldIndent := strings.Repeat("    ", indent+1)
-
-	sb.WriteString("StructType([\n")
-	for i, name := range propNames {
-		prop := s.Properties[name]
-		nullable := !requiredSet[name]
-		nestedPath := path + "." + name + ".properties"
-		pysparkType, err := convertType(prop, indent+1, r, nestedPath)
-		if err != nil {
-			return "", fmt.Errorf("property %q: %w", name, err)
-		}
-
-		sb.WriteString(fieldIndent)
-		sb.WriteString(fmt.Sprintf(`StructField("%s", %s, nullable=%s)`, name, pysparkType, boolToStr(nullable)))
-		if i < len(propNames)-1 {
-			sb.WriteString(",")
-		}
-		sb.WriteString("\n")
-	}
-	sb.WriteString(baseIndent)
-	sb.WriteString("])")
-
-	return sb.String(), nil
-}
-
-func convertType(s *jsonschema.Schema, indent int, r *schema.Resolver, path string) (string, error) {
-	if s == nil {
-		return "StringType()", nil
-	}
-	if s.Ref != "" {
-		defName := r.GetRefDefName(s.Ref)
-		if defName != "" {
-			return "_" + defName, nil
-		}
-		return "", fmt.Errorf("unresolved $ref: %s", s.Ref)
-	}
-	if len(s.AllOf) > 0 {
-		merged := mergeAllOf(s.AllOf, r)
-		return convertToStructType(merged, indent, r, path)
-	}
-
-	switch s.Type {
+	// Handle primitive types
+	switch schema.Type {
 	case "string":
-		return convertStringType(s.Format), nil
+		sb.WriteString("T.StringType()")
 	case "integer":
-		return "LongType()", nil
+		sb.WriteString("T.LongType()")
 	case "number":
-		return "DoubleType()", nil
+		sb.WriteString("T.DoubleType()")
 	case "boolean":
-		return "BooleanType()", nil
-	case "array":
-		if s.Items == nil {
-			return "ArrayType(StringType())", nil
-		}
-		elementType, err := convertType(s.Items, indent, r, path)
-		if err != nil {
-			return "", fmt.Errorf("array items: %w", err)
-		}
-		return fmt.Sprintf("ArrayType(%s)", elementType), nil
-	case "object":
-		return convertToStructType(s, indent, r, path)
+		sb.WriteString("T.BooleanType()")
 	default:
-		if len(s.Properties) > 0 {
-			return convertToStructType(s, indent, r, path)
-		}
-		return "StringType()", nil
+		sb.WriteString("T.StringType()")
 	}
+
+	return nil
 }
 
-func convertStringType(format string) string {
-	switch format {
-	case "date":
-		return "DateType()"
-	case "date-time":
-		return "TimestampType()"
-	default:
-		return "StringType()"
+// extractRefName extracts the schema name from a $ref string.
+func extractRefName(ref string) string {
+	if name, ok := strings.CutPrefix(ref, "#/$defs/"); ok {
+		return "_" + name
 	}
+	return ref
 }
 
-func boolToStr(b bool) string {
-	if b {
-		return "True"
+// getOrderedKeys returns property names in their original order from keyOrder.
+func getOrderedKeys(schema *jsonschema.Schema, keyOrder map[string][]string, path string) []string {
+	// Try to find the order for this path
+	orderPath := "properties"
+	if path != "" {
+		orderPath = path + ".properties"
 	}
-	return "False"
-}
 
-func mergeAllOf(schemas []*jsonschema.Schema, r *schema.Resolver) *jsonschema.Schema {
-	merged := &jsonschema.Schema{
-		Type:       "object",
-		Properties: make(map[string]*jsonschema.Schema),
-		Required:   []string{},
-	}
-	for _, sub := range schemas {
-		resolved := sub
-		if sub.Ref != "" {
-			if ref := r.ResolveRef(sub.Ref); ref != nil {
-				resolved = ref
+	if order, ok := keyOrder[orderPath]; ok {
+		// Filter to only include keys that exist in the schema
+		var result []string
+		for _, key := range order {
+			if _, exists := schema.Properties[key]; exists {
+				result = append(result, key)
 			}
 		}
-		for propName, propSchema := range resolved.Properties {
-			merged.Properties[propName] = propSchema
-		}
-		merged.Required = append(merged.Required, resolved.Required...)
+		return result
 	}
-	return merged
+
+	// Fall back to collecting keys from the map
+	var keys []string
+	for name := range schema.Properties {
+		keys = append(keys, name)
+	}
+	return keys
 }

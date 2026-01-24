@@ -613,3 +613,334 @@ func TestTraverse_EarlyTerminationWithResolver(t *testing.T) {
 	}
 	assert.Equal(t, 2, count)
 }
+
+// TraverseDefs tests
+
+func TestTraverseDefs_Empty(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	assert.Empty(t, names)
+}
+
+func TestTraverseDefs_SingleDef(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"Address": {Type: "object"},
+		},
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	assert.Equal(t, []string{"Address"}, names)
+}
+
+func TestTraverseDefs_TopologicalOrder_Simple(t *testing.T) {
+	// Address has no deps, Customer depends on Address
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"Customer": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"address": {Ref: "#/$defs/Address"},
+				},
+			},
+			"Address": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"street": {Type: "string"},
+				},
+			},
+		},
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	// Address should come before Customer (dependency first)
+	assert.Equal(t, 2, len(names))
+	addressIdx := -1
+	customerIdx := -1
+	for i, name := range names {
+		if name == "Address" {
+			addressIdx = i
+		}
+		if name == "Customer" {
+			customerIdx = i
+		}
+	}
+	assert.True(t, addressIdx < customerIdx, "Address should come before Customer, got order: %v", names)
+}
+
+func TestTraverseDefs_TopologicalOrder_Chain(t *testing.T) {
+	// C depends on B, B depends on A
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"C": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"b": {Ref: "#/$defs/B"},
+				},
+			},
+			"B": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"a": {Ref: "#/$defs/A"},
+				},
+			},
+			"A": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"value": {Type: "string"},
+				},
+			},
+		},
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	// A should come first, then B, then C
+	assert.Equal(t, 3, len(names))
+	indices := make(map[string]int)
+	for i, name := range names {
+		indices[name] = i
+	}
+	assert.True(t, indices["A"] < indices["B"], "A should come before B")
+	assert.True(t, indices["B"] < indices["C"], "B should come before C")
+}
+
+func TestTraverseDefs_TopologicalOrder_MultipleRefs(t *testing.T) {
+	// Order depends on both Address and Phone
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"Order": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"shipping": {Ref: "#/$defs/Address"},
+					"contact":  {Ref: "#/$defs/Phone"},
+				},
+			},
+			"Address": {Type: "object"},
+			"Phone":   {Type: "object"},
+		},
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	// Address and Phone should come before Order
+	assert.Equal(t, 3, len(names))
+	indices := make(map[string]int)
+	for i, name := range names {
+		indices[name] = i
+	}
+	assert.True(t, indices["Address"] < indices["Order"], "Address should come before Order")
+	assert.True(t, indices["Phone"] < indices["Order"], "Phone should come before Order")
+}
+
+func TestTraverseDefs_NoDeps(t *testing.T) {
+	// All independent schemas
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"A": {Type: "string"},
+			"B": {Type: "integer"},
+			"C": {Type: "boolean"},
+		},
+	}
+
+	var names []string
+	for name := range jschema.TraverseDefs(schema) {
+		names = append(names, name)
+	}
+
+	// All 3 should be present (order doesn't matter when no deps)
+	assert.Equal(t, 3, len(names))
+	assert.Contains(t, names, "A")
+	assert.Contains(t, names, "B")
+	assert.Contains(t, names, "C")
+}
+
+func TestTraverseDefs_EarlyTermination(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"A": {Type: "string"},
+			"B": {Type: "integer"},
+			"C": {Type: "boolean"},
+		},
+	}
+
+	var count int
+	for range jschema.TraverseDefs(schema) {
+		count++
+		if count >= 2 {
+			break
+		}
+	}
+
+	assert.Equal(t, 2, count)
+}
+
+func TestTraverseDefs_YieldsSchema(t *testing.T) {
+	addressSchema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"street": {Type: "string"},
+		},
+	}
+
+	schema := &jschema.Schema{
+		Type: "object",
+		Defs: map[string]*jschema.Schema{
+			"Address": addressSchema,
+		},
+	}
+
+	for name, s := range jschema.TraverseDefs(schema) {
+		assert.Equal(t, "Address", name)
+		assert.Equal(t, addressSchema, s)
+	}
+}
+
+// RewriteRefs tests
+
+func TestRewriteRefs_ComponentsSchemas(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"address": {Ref: "#/components/schemas/Address"},
+			"contact": {Ref: "#/components/schemas/Contact"},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/Address", schema.Properties["address"].Ref)
+	assert.Equal(t, "#/$defs/Contact", schema.Properties["contact"].Ref)
+}
+
+func TestRewriteRefs_Definitions(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"user": {Ref: "#/definitions/User"},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/User", schema.Properties["user"].Ref)
+}
+
+func TestRewriteRefs_NestedRefs(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"order": {
+				Type: "object",
+				Properties: map[string]*jschema.Schema{
+					"customer": {Ref: "#/components/schemas/Customer"},
+				},
+			},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/Customer", schema.Properties["order"].Properties["customer"].Ref)
+}
+
+func TestRewriteRefs_MixedRefs(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"component":  {Ref: "#/components/schemas/Component"},
+			"definition": {Ref: "#/definitions/Definition"},
+			"def":        {Ref: "#/$defs/AlreadyDef"},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/Component", schema.Properties["component"].Ref)
+	assert.Equal(t, "#/$defs/Definition", schema.Properties["definition"].Ref)
+	assert.Equal(t, "#/$defs/AlreadyDef", schema.Properties["def"].Ref) // Unchanged
+}
+
+func TestRewriteRefs_PreservesDefsRefs(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"address": {Ref: "#/$defs/Address"},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	// Should remain unchanged
+	assert.Equal(t, "#/$defs/Address", schema.Properties["address"].Ref)
+}
+
+func TestRewriteRefs_InArrayItems(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "array",
+		Items: &jschema.Schema{
+			Ref: "#/components/schemas/Item",
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/Item", schema.Items.Ref)
+}
+
+func TestRewriteRefs_InAllOf(t *testing.T) {
+	schema := &jschema.Schema{
+		AllOf: []*jschema.Schema{
+			{Ref: "#/components/schemas/Base"},
+			{Ref: "#/definitions/Extended"},
+		},
+	}
+
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "#/$defs/Base", schema.AllOf[0].Ref)
+	assert.Equal(t, "#/$defs/Extended", schema.AllOf[1].Ref)
+}
+
+func TestRewriteRefs_NoRefs(t *testing.T) {
+	schema := &jschema.Schema{
+		Type: "object",
+		Properties: map[string]*jschema.Schema{
+			"name": {Type: "string"},
+			"age":  {Type: "integer"},
+		},
+	}
+
+	// Should not panic and leave schema unchanged
+	jschema.RewriteRefs(schema)
+
+	assert.Equal(t, "", schema.Properties["name"].Ref)
+	assert.Equal(t, "", schema.Properties["age"].Ref)
+}

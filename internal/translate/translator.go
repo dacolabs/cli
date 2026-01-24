@@ -12,28 +12,20 @@ import (
 
 // Translator defines the interface all format translators must implement.
 type Translator interface {
-	// Name returns the translator's identifier (e.g., "pyspark", "dbt-sql")
-	Name() string
-
 	// Translate converts a JSON schema to the target format
 	// portName is used to name the output schema variable (e.g., "users" -> "users_schema")
 	// rawJSON contains the original JSON bytes for preserving key order
-	Translate(portName string, schema *jsonschema.Schema, rawJSON []byte) ([]byte, error)
+	Translate(portName string, schema *jsonschema.Schema) ([]byte, error)
 
 	// FileExtension returns the appropriate file extension (e.g., ".py", ".sql")
 	FileExtension() string
 }
 
-var translators = make(map[string]Translator)
-
-// Register adds a translator to the registry.
-func Register(t Translator) {
-	translators[t.Name()] = t
-}
+type Register map[string]Translator
 
 // Get retrieves a translator by name.
-func Get(name string) (Translator, error) {
-	t, ok := translators[name]
+func (r Register) Get(name string) (Translator, error) {
+	t, ok := r[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown translator: %s", name)
 	}
@@ -41,9 +33,9 @@ func Get(name string) (Translator, error) {
 }
 
 // Available returns all registered translator names.
-func Available() []string {
-	names := make([]string, 0, len(translators))
-	for name := range translators {
+func (r Register) Available() []string {
+	names := make([]string, 0, len(r))
+	for name := range r {
 		names = append(names, name)
 	}
 	return names

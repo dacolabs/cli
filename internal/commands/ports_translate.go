@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,13 +13,14 @@ import (
 	"github.com/dacolabs/cli/internal/context"
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/translate"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 
 	// Import translator to auto-register
 	_ "github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
-func registerPortTranslateCmd(parent *cobra.Command) {
+func registerPortTranslateCmd(parent *cobra.Command, translators translate.Register) {
 	var portName string
 	var format string
 	var outputFile string
@@ -30,29 +30,29 @@ func registerPortTranslateCmd(parent *cobra.Command) {
 		Short: "Translate a port schema to a target format",
 		Long: fmt.Sprintf(`Translate a port schema to a target format.
 
-Available formats: %s`, strings.Join(translate.Available(), ", ")),
+Available formats: %s`, strings.Join(translators.Available(), ", ")),
 		Example: `  daco ports translate
 		daco ports translate --port-name "my-port" --format pyspark --output schema.py`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPortTranslate(cmd, portName, format, outputFile)
+			return runPortTranslate(cmd, translators, portName, format, outputFile)
 		},
 	}
 
 	cmd.Flags().StringVar(&portName, "port-name", "", "Name of the port to translate (translates all ports if not specified)")
-	cmd.Flags().StringVar(&format, "format", "", fmt.Sprintf("Output format (options: %s)", strings.Join(translate.Available(), ", ")))
+	cmd.Flags().StringVar(&format, "format", "", fmt.Sprintf("Output format (options: %s)", strings.Join(translators.Available(), ", ")))
 	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
 
 	parent.AddCommand(cmd)
 }
 
-func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) error {
+func runPortTranslate(cmd *cobra.Command, translators translate.Register, portName, format, outputFile string) error {
 	ctx, err := context.RequireFromCommand(cmd)
 	if err != nil {
 		return err
 	}
 
 	if format == "" {
-		formats := translate.Available()
+		formats := translators.Available()
 		if len(formats) == 0 {
 			return fmt.Errorf("no translation formats available")
 		}
@@ -84,7 +84,7 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 				continue
 			}
 
-			err := translatePort(portName, port.Schema, format, "")
+			err := translatePort(portName, translators, port.Schema, format, "")
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("%s: %v", portName, err))
 			} else {
@@ -113,22 +113,17 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 		return fmt.Errorf("port %q has no schema defined", portName)
 	}
 
-	return translatePort(portName, port.Schema, format, outputFile)
+	return translatePort(portName, translators, port.Schema, format, outputFile)
 }
 
-func translatePort(portName string, schema *jschema.Schema, format, outputFile string) error {
-	translator, err := translate.Get(format)
+func translatePort(portName string, translators translate.Register,schema *jsonschema.Schema, format, outputFile string) error {
+	translator, err := translators.Get(format)
 	if err != nil {
 		return fmt.Errorf("unsupported format %q. Available formats: %s",
-			format, strings.Join(translate.Available(), ", "))
+			format, strings.Join(translators.Available(), ", "))
 	}
 
-	rawJSON, err := json.Marshal(schema)
-	if err != nil {
-		return fmt.Errorf("failed to serialize schema: %w", err)
-	}
-
-	output, err := translator.Translate(portName, schema, rawJSON)
+	output, err := translator.Translate(portName, schema)
 	if err != nil {
 		return fmt.Errorf("failed to translate schema: %w", err)
 	}

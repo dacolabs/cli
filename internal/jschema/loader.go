@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,7 +27,7 @@ func NewLoader(fsys fs.FS) *Loader {
 
 // LoadFile loads and parses a schema file.
 // The format is determined from the file extension.
-func (l *Loader) LoadFile(filePath string) (*Schema, error) {
+func (l *Loader) LoadFile(filePath string) (*jsonschema.Schema, error) {
 	f, err := l.fsys.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -38,7 +39,7 @@ func (l *Loader) LoadFile(filePath string) (*Schema, error) {
 		return nil, err
 	}
 
-	var schema Schema
+	var schema jsonschema.Schema
 	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
 		err = yaml.Unmarshal(data, &schema)
 	} else if strings.HasSuffix(filePath, ".json") {
@@ -56,7 +57,7 @@ func (l *Loader) LoadFile(filePath string) (*Schema, error) {
 // ResolveRefs resolves all external file $refs in the schema tree in-place.
 // It recursively loads referenced schemas and replaces the ref with the loaded content.
 // Internal refs (starting with #/) are left unchanged.
-func (l *Loader) ResolveRefs(schema *Schema, basePath string) error {
+func (l *Loader) ResolveRefs(schema *jsonschema.Schema, basePath string) error {
 	for s := range Traverse(schema, nil) {
 		if !IsFileRef(s.Ref) {
 			continue
