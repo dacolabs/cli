@@ -32,8 +32,7 @@ func ExtractKeyOrder(s *jsonschema.Schema) (map[string][]string, error) {
 		if err != nil {
 			return
 		}
-		switch t := token.(type) {
-		case json.Delim:
+		if t, ok := token.(json.Delim); ok {
 			if t == '{' {
 				var keys []string
 				for dec.More() {
@@ -54,7 +53,7 @@ func ExtractKeyOrder(s *jsonschema.Schema) (map[string][]string, error) {
 					}
 					extract(dec, newPath)
 				}
-				dec.Token() //nolint:errcheck
+				_, _ = dec.Token()
 				if strings.HasSuffix(path, "properties") || path == "properties" {
 					result[path] = keys
 				}
@@ -62,7 +61,7 @@ func ExtractKeyOrder(s *jsonschema.Schema) (map[string][]string, error) {
 				for dec.More() {
 					extract(dec, path)
 				}
-				dec.Token() //nolint:errcheck
+				_, _ = dec.Token()
 			}
 		}
 	}

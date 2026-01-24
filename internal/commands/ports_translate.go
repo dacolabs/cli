@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
@@ -46,7 +46,7 @@ Available formats: %s`, strings.Join(translators.Available(), ", ")),
 }
 
 func runPortTranslate(cmd *cobra.Command, translators translate.Register, portName, format, outputFile string) error {
-	ctx, err := context.RequireFromCommand(cmd)
+	ctx, err := cmdctx.RequireFromCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func runPortTranslate(cmd *cobra.Command, translators translate.Register, portNa
 	return translatePort(portName, translators, port.Schema, format, outputFile)
 }
 
-func translatePort(portName string, translators translate.Register,schema *jsonschema.Schema, format, outputFile string) error {
+func translatePort(portName string, translators translate.Register, schema *jsonschema.Schema, format, outputFile string) error {
 	translator, err := translators.Get(format)
 	if err != nil {
 		return fmt.Errorf("unsupported format %q. Available formats: %s",
@@ -130,13 +130,13 @@ func translatePort(portName string, translators translate.Register,schema *jsons
 
 	if outputFile == "" {
 		schemasDir := "schemas"
-		if err := os.MkdirAll(schemasDir, 0755); err != nil {
+		if err := os.MkdirAll(schemasDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create schemas directory: %w", err)
 		}
 		outputFile = filepath.Join(schemasDir, portName+translator.FileExtension())
 	}
 
-	if err := os.WriteFile(outputFile, output, 0644); err != nil {
+	if err := os.WriteFile(outputFile, output, 0o600); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", outputFile)

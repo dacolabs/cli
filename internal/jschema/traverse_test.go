@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"github.com/dacolabs/cli/internal/jschema"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-func loadYAML(t *testing.T, data []byte) *jschema.Schema {
+func loadYAML(t *testing.T, data []byte) *jsonschema.Schema {
 	t.Helper()
-	var schema jschema.Schema
+	var schema jsonschema.Schema
 	require.NoError(t, yaml.Unmarshal(data, &schema))
 	return &schema
 }
@@ -115,9 +116,9 @@ items:
 
 func TestTraverse_CircularRefs(t *testing.T) {
 	// Create a schema that references itself
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"self": nil, // Will be set to schema itself
 		},
 	}
@@ -157,18 +158,18 @@ $defs:
 }
 
 func TestTraverse_WithResolver(t *testing.T) {
-	targetSchema := &jschema.Schema{
+	targetSchema := &jsonschema.Schema{
 		Type: "string",
 	}
 
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"ref": {Ref: "#/$defs/target"},
 		},
 	}
 
-	resolver := func(ref string) *jschema.Schema {
+	resolver := func(ref string) *jsonschema.Schema {
 		if ref == "#/$defs/target" {
 			return targetSchema
 		}
@@ -582,21 +583,21 @@ unevaluatedItems:
 }
 
 func TestTraverse_EarlyTerminationWithResolver(t *testing.T) {
-	targetSchema := &jschema.Schema{
+	targetSchema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"nested": {Type: "string"},
 		},
 	}
 
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"ref": {Ref: "#/$defs/target"},
 		},
 	}
 
-	resolver := func(ref string) *jschema.Schema {
+	resolver := func(ref string) *jsonschema.Schema {
 		if ref == "#/$defs/target" {
 			return targetSchema
 		}
@@ -617,11 +618,11 @@ func TestTraverse_EarlyTerminationWithResolver(t *testing.T) {
 // TraverseDefs tests
 
 func TestTraverseDefs_Empty(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
 	}
 
-	var names []string
+	var names []string //nolint:prealloc
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -630,14 +631,14 @@ func TestTraverseDefs_Empty(t *testing.T) {
 }
 
 func TestTraverseDefs_SingleDef(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"Address": {Type: "object"},
 		},
 	}
 
-	var names []string
+	names := make([]string, 0, 1)
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -647,25 +648,25 @@ func TestTraverseDefs_SingleDef(t *testing.T) {
 
 func TestTraverseDefs_TopologicalOrder_Simple(t *testing.T) {
 	// Address has no deps, Customer depends on Address
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"Customer": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"address": {Ref: "#/$defs/Address"},
 				},
 			},
 			"Address": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"street": {Type: "string"},
 				},
 			},
 		},
 	}
 
-	var names []string
+	names := make([]string, 0, 2)
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -687,31 +688,31 @@ func TestTraverseDefs_TopologicalOrder_Simple(t *testing.T) {
 
 func TestTraverseDefs_TopologicalOrder_Chain(t *testing.T) {
 	// C depends on B, B depends on A
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"C": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"b": {Ref: "#/$defs/B"},
 				},
 			},
 			"B": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"a": {Ref: "#/$defs/A"},
 				},
 			},
 			"A": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"value": {Type: "string"},
 				},
 			},
 		},
 	}
 
-	var names []string
+	names := make([]string, 0, 3)
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -728,12 +729,12 @@ func TestTraverseDefs_TopologicalOrder_Chain(t *testing.T) {
 
 func TestTraverseDefs_TopologicalOrder_MultipleRefs(t *testing.T) {
 	// Order depends on both Address and Phone
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"Order": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"shipping": {Ref: "#/$defs/Address"},
 					"contact":  {Ref: "#/$defs/Phone"},
 				},
@@ -743,7 +744,7 @@ func TestTraverseDefs_TopologicalOrder_MultipleRefs(t *testing.T) {
 		},
 	}
 
-	var names []string
+	names := make([]string, 0, 3)
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -760,16 +761,16 @@ func TestTraverseDefs_TopologicalOrder_MultipleRefs(t *testing.T) {
 
 func TestTraverseDefs_NoDeps(t *testing.T) {
 	// All independent schemas
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"A": {Type: "string"},
 			"B": {Type: "integer"},
 			"C": {Type: "boolean"},
 		},
 	}
 
-	var names []string
+	names := make([]string, 0, 3)
 	for name := range jschema.TraverseDefs(schema) {
 		names = append(names, name)
 	}
@@ -782,9 +783,9 @@ func TestTraverseDefs_NoDeps(t *testing.T) {
 }
 
 func TestTraverseDefs_EarlyTermination(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"A": {Type: "string"},
 			"B": {Type: "integer"},
 			"C": {Type: "boolean"},
@@ -803,16 +804,16 @@ func TestTraverseDefs_EarlyTermination(t *testing.T) {
 }
 
 func TestTraverseDefs_YieldsSchema(t *testing.T) {
-	addressSchema := &jschema.Schema{
+	addressSchema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"street": {Type: "string"},
 		},
 	}
 
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"Address": addressSchema,
 		},
 	}
@@ -826,9 +827,9 @@ func TestTraverseDefs_YieldsSchema(t *testing.T) {
 // RewriteRefs tests
 
 func TestRewriteRefs_ComponentsSchemas(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"address": {Ref: "#/components/schemas/Address"},
 			"contact": {Ref: "#/components/schemas/Contact"},
 		},
@@ -841,9 +842,9 @@ func TestRewriteRefs_ComponentsSchemas(t *testing.T) {
 }
 
 func TestRewriteRefs_Definitions(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"user": {Ref: "#/definitions/User"},
 		},
 	}
@@ -854,12 +855,12 @@ func TestRewriteRefs_Definitions(t *testing.T) {
 }
 
 func TestRewriteRefs_NestedRefs(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"order": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"customer": {Ref: "#/components/schemas/Customer"},
 				},
 			},
@@ -872,9 +873,9 @@ func TestRewriteRefs_NestedRefs(t *testing.T) {
 }
 
 func TestRewriteRefs_MixedRefs(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"component":  {Ref: "#/components/schemas/Component"},
 			"definition": {Ref: "#/definitions/Definition"},
 			"def":        {Ref: "#/$defs/AlreadyDef"},
@@ -889,9 +890,9 @@ func TestRewriteRefs_MixedRefs(t *testing.T) {
 }
 
 func TestRewriteRefs_PreservesDefsRefs(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"address": {Ref: "#/$defs/Address"},
 		},
 	}
@@ -903,9 +904,9 @@ func TestRewriteRefs_PreservesDefsRefs(t *testing.T) {
 }
 
 func TestRewriteRefs_InArrayItems(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "array",
-		Items: &jschema.Schema{
+		Items: &jsonschema.Schema{
 			Ref: "#/components/schemas/Item",
 		},
 	}
@@ -916,8 +917,8 @@ func TestRewriteRefs_InArrayItems(t *testing.T) {
 }
 
 func TestRewriteRefs_InAllOf(t *testing.T) {
-	schema := &jschema.Schema{
-		AllOf: []*jschema.Schema{
+	schema := &jsonschema.Schema{
+		AllOf: []*jsonschema.Schema{
 			{Ref: "#/components/schemas/Base"},
 			{Ref: "#/definitions/Extended"},
 		},
@@ -930,9 +931,9 @@ func TestRewriteRefs_InAllOf(t *testing.T) {
 }
 
 func TestRewriteRefs_NoRefs(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"name": {Type: "string"},
 			"age":  {Type: "integer"},
 		},

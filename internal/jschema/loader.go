@@ -40,11 +40,12 @@ func (l *Loader) LoadFile(filePath string) (*jsonschema.Schema, error) {
 	}
 
 	var schema jsonschema.Schema
-	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
+	switch {
+	case strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml"):
 		err = yaml.Unmarshal(data, &schema)
-	} else if strings.HasSuffix(filePath, ".json") {
+	case strings.HasSuffix(filePath, ".json"):
 		err = json.Unmarshal(data, &schema)
-	} else {
+	default:
 		return nil, fmt.Errorf("format not supported")
 	}
 

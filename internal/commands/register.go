@@ -5,7 +5,7 @@
 package commands
 
 import (
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/spf13/cobra"
 )
@@ -20,12 +20,12 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "ports",
 		Short:             "Manage data product ports",
-		PersistentPreRunE: context.PreRunLoad,
+		PersistentPreRunE: cmdctx.PreRunLoad,
 	}
 
 	registerPortTranslateCmd(cmd, translators)
 
 	rootCmd.AddCommand(cmd)
-	
+
 	return rootCmd
 }

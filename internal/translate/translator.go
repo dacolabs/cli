@@ -21,6 +21,7 @@ type Translator interface {
 	FileExtension() string
 }
 
+// Register maps format names to their translators.
 type Register map[string]Translator
 
 // Get retrieves a translator by name.

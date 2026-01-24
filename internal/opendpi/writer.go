@@ -91,7 +91,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		}
 
 		for name, p := range spec.Ports {
-			var schema *jschema.Schema
+			var schema *jsonschema.Schema
 			if p.Schema != nil {
 				// Write main schema (without $defs - they go to separate files)
 				schemaToWrite := *p.Schema
@@ -130,17 +130,17 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 					}
 				}
 
-				schema = &jschema.Schema{Ref: "schemas/" + name + ".yaml"}
+				schema = &jsonschema.Schema{Ref: "schemas/" + name + ".yaml"}
 			}
 
 			ports[name] = createRawPort(spec, &p, schema)
 		}
 
 	case config.SchemaComponents:
-		components = &rawComponents{Schemas: make(map[string]*jschema.Schema)}
+		components = &rawComponents{Schemas: make(map[string]*jsonschema.Schema)}
 
 		for name, p := range spec.Ports {
-			var schema *jschema.Schema
+			var schema *jsonschema.Schema
 			if p.Schema != nil {
 				// Add main schema (without $defs)
 				schemaToAdd := *p.Schema
@@ -167,7 +167,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 					components.Schemas[defName] = &defSchemaToAdd
 				}
 
-				schema = &jschema.Schema{Ref: "#/components/schemas/" + name}
+				schema = &jsonschema.Schema{Ref: "#/components/schemas/" + name}
 			}
 
 			ports[name] = createRawPort(spec, &p, schema)
@@ -216,7 +216,7 @@ func writeYaml(path string, v any) error {
 	return enc.Encode(v)
 }
 
-func createRawPort(spec *Spec, p *Port, schema *jschema.Schema) rawPort {
+func createRawPort(spec *Spec, p *Port, schema *jsonschema.Schema) rawPort {
 	portConns := make([]rawPortConnection, len(p.Connections))
 	for i, pc := range p.Connections {
 		var connName string

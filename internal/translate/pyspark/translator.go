@@ -15,6 +15,7 @@ import (
 // Translator translates JSON schemas to PySpark StructType definitions.
 type Translator struct{}
 
+// FileExtension returns the file extension for PySpark schemas.
 func (t *Translator) FileExtension() string {
 	return ".py"
 }
@@ -71,7 +72,7 @@ func translateSchema(sb *strings.Builder, schema *jsonschema.Schema, depth int, 
 			}
 
 			sb.WriteString(indent + "    T.StructField(")
-			sb.WriteString(fmt.Sprintf("%q, ", propName))
+			fmt.Fprintf(sb, "%q, ", propName)
 
 			// Build path for nested properties
 			var propPath string
@@ -89,7 +90,7 @@ func translateSchema(sb *strings.Builder, schema *jsonschema.Schema, depth int, 
 			if !nullable {
 				nullableStr = "False"
 			}
-			sb.WriteString(fmt.Sprintf(", nullable=%s)", nullableStr))
+			fmt.Fprintf(sb, ", nullable=%s)", nullableStr)
 
 			if i < len(propNames)-1 {
 				sb.WriteString(",\n")

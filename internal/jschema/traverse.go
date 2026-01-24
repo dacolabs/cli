@@ -10,24 +10,21 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-// Schema is an alias for jsonschema.Schema.
-type Schema = jsonschema.Schema
-
 // RefResolver resolves $ref strings to schemas.
 // Return nil if the ref cannot be resolved.
-type RefResolver func(ref string) *Schema
+type RefResolver func(ref string) *jsonschema.Schema
 
 // Traverse returns an iterator over all schemas in the tree.
 // It handles cycles by tracking visited schemas.
 // If resolver is provided, it follows $ref links to their targets.
-func Traverse(schema *Schema, resolver RefResolver) iter.Seq[*Schema] {
-	return func(yield func(*Schema) bool) {
-		visited := make(map[*Schema]struct{})
+func Traverse(schema *jsonschema.Schema, resolver RefResolver) iter.Seq[*jsonschema.Schema] {
+	return func(yield func(*jsonschema.Schema) bool) {
+		visited := make(map[*jsonschema.Schema]struct{})
 		traverseWithVisited(schema, resolver, yield, visited)
 	}
 }
 
-func traverseWithVisited(schema *Schema, resolver RefResolver, yield func(*Schema) bool, visited map[*Schema]struct{}) bool {
+func traverseWithVisited(schema *jsonschema.Schema, resolver RefResolver, yield func(*jsonschema.Schema) bool, visited map[*jsonschema.Schema]struct{}) bool {
 	if schema == nil {
 		return true
 	}
@@ -51,101 +48,101 @@ func traverseWithVisited(schema *Schema, resolver RefResolver, yield func(*Schem
 
 	// Objects
 	for _, s := range schema.Properties {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.PatternProperties {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
-	if !traverseWithVisited((*Schema)(schema.AdditionalProperties), resolver, yield, visited) {
+	if !traverseWithVisited(schema.AdditionalProperties, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.PropertyNames), resolver, yield, visited) {
+	if !traverseWithVisited(schema.PropertyNames, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.UnevaluatedProperties), resolver, yield, visited) {
+	if !traverseWithVisited(schema.UnevaluatedProperties, resolver, yield, visited) {
 		return false
 	}
 
 	// Arrays
-	if !traverseWithVisited((*Schema)(schema.Items), resolver, yield, visited) {
+	if !traverseWithVisited(schema.Items, resolver, yield, visited) {
 		return false
 	}
 	for _, s := range schema.ItemsArray {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.PrefixItems {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
-	if !traverseWithVisited((*Schema)(schema.AdditionalItems), resolver, yield, visited) {
+	if !traverseWithVisited(schema.AdditionalItems, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.Contains), resolver, yield, visited) {
+	if !traverseWithVisited(schema.Contains, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.UnevaluatedItems), resolver, yield, visited) {
+	if !traverseWithVisited(schema.UnevaluatedItems, resolver, yield, visited) {
 		return false
 	}
 
 	// Logic
 	for _, s := range schema.AllOf {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.AnyOf {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.OneOf {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
-	if !traverseWithVisited((*Schema)(schema.Not), resolver, yield, visited) {
+	if !traverseWithVisited(schema.Not, resolver, yield, visited) {
 		return false
 	}
 
 	// Conditional
-	if !traverseWithVisited((*Schema)(schema.If), resolver, yield, visited) {
+	if !traverseWithVisited(schema.If, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.Then), resolver, yield, visited) {
+	if !traverseWithVisited(schema.Then, resolver, yield, visited) {
 		return false
 	}
-	if !traverseWithVisited((*Schema)(schema.Else), resolver, yield, visited) {
+	if !traverseWithVisited(schema.Else, resolver, yield, visited) {
 		return false
 	}
 	for _, s := range schema.DependentSchemas {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.DependencySchemas {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 
 	// Other
-	if !traverseWithVisited((*Schema)(schema.ContentSchema), resolver, yield, visited) {
+	if !traverseWithVisited(schema.ContentSchema, resolver, yield, visited) {
 		return false
 	}
 	for _, s := range schema.Defs {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
 	for _, s := range schema.Definitions {
-		if !traverseWithVisited((*Schema)(s), resolver, yield, visited) {
+		if !traverseWithVisited(s, resolver, yield, visited) {
 			return false
 		}
 	}
@@ -156,9 +153,9 @@ func traverseWithVisited(schema *Schema, resolver RefResolver, yield func(*Schem
 // TraverseDefs returns an iterator over $defs in topological order.
 // Dependencies are yielded before the schemas that reference them.
 // Each iteration yields (name, schema) pairs.
-func TraverseDefs(schema *Schema) iter.Seq2[string, *Schema] {
-	return func(yield func(string, *Schema) bool) {
-		if schema.Defs == nil || len(schema.Defs) == 0 {
+func TraverseDefs(schema *jsonschema.Schema) iter.Seq2[string, *jsonschema.Schema] {
+	return func(yield func(string, *jsonschema.Schema) bool) {
+		if len(schema.Defs) == 0 {
 			return
 		}
 
@@ -173,7 +170,7 @@ func TraverseDefs(schema *Schema) iter.Seq2[string, *Schema] {
 
 // topologicalSort returns def names ordered so dependencies come first.
 // Uses Kahn's algorithm for topological sorting.
-func topologicalSort(defs map[string]*Schema) []string {
+func topologicalSort(defs map[string]*jsonschema.Schema) []string {
 	// Build adjacency list: for each def, find what other defs it references
 	deps := make(map[string][]string)
 	for name, s := range defs {
@@ -229,7 +226,7 @@ func topologicalSort(defs map[string]*Schema) []string {
 }
 
 // collectDefRefs extracts $ref names from a schema that point to $defs.
-func collectDefRefs(schema *Schema) []string {
+func collectDefRefs(schema *jsonschema.Schema) []string {
 	var refs []string
 	for s := range Traverse(schema, nil) {
 		if s.Ref != "" {
@@ -245,7 +242,7 @@ func collectDefRefs(schema *Schema) []string {
 
 // RewriteRefs rewrites all $ref attributes to use #/$defs/Name format.
 // It handles both #/components/schemas/Name and #/definitions/Name refs.
-func RewriteRefs(schema *Schema) {
+func RewriteRefs(schema *jsonschema.Schema) {
 	for s := range Traverse(schema, nil) {
 		if name, ok := strings.CutPrefix(s.Ref, "#/components/schemas/"); ok {
 			s.Ref = "#/$defs/" + name

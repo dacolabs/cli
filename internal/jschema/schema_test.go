@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dacolabs/cli/internal/jschema"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,9 +54,9 @@ func TestIsFileRef_EmptyRef(t *testing.T) {
 }
 
 func TestExtractKeyOrder_SimpleObject(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"name": {Type: "string"},
 			"age":  {Type: "integer"},
 			"city": {Type: "string"},
@@ -75,12 +76,12 @@ func TestExtractKeyOrder_SimpleObject(t *testing.T) {
 }
 
 func TestExtractKeyOrder_NestedObject(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"user": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"firstName": {Type: "string"},
 					"lastName":  {Type: "string"},
 				},
@@ -101,15 +102,15 @@ func TestExtractKeyOrder_NestedObject(t *testing.T) {
 }
 
 func TestExtractKeyOrder_WithDefs(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
-		Properties: map[string]*jschema.Schema{
+		Properties: map[string]*jsonschema.Schema{
 			"address": {Ref: "#/$defs/Address"},
 		},
-		Defs: map[string]*jschema.Schema{
+		Defs: map[string]*jsonschema.Schema{
 			"Address": {
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"street": {Type: "string"},
 					"city":   {Type: "string"},
 					"zip":    {Type: "string"},
@@ -132,7 +133,7 @@ func TestExtractKeyOrder_WithDefs(t *testing.T) {
 }
 
 func TestExtractKeyOrder_EmptySchema(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "object",
 	}
 
@@ -144,11 +145,11 @@ func TestExtractKeyOrder_EmptySchema(t *testing.T) {
 }
 
 func TestExtractKeyOrder_ArraySchema(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "array",
-		Items: &jschema.Schema{
+		Items: &jsonschema.Schema{
 			Type: "object",
-			Properties: map[string]*jschema.Schema{
+			Properties: map[string]*jsonschema.Schema{
 				"id":   {Type: "integer"},
 				"name": {Type: "string"},
 			},
@@ -166,17 +167,17 @@ func TestExtractKeyOrder_ArraySchema(t *testing.T) {
 }
 
 func TestExtractKeyOrder_AllOf(t *testing.T) {
-	schema := &jschema.Schema{
-		AllOf: []*jschema.Schema{
+	schema := &jsonschema.Schema{
+		AllOf: []*jsonschema.Schema{
 			{
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"base": {Type: "string"},
 				},
 			},
 			{
 				Type: "object",
-				Properties: map[string]*jschema.Schema{
+				Properties: map[string]*jsonschema.Schema{
 					"extended": {Type: "string"},
 				},
 			},
@@ -192,7 +193,7 @@ func TestExtractKeyOrder_AllOf(t *testing.T) {
 }
 
 func TestExtractKeyOrder_PrimitiveSchema(t *testing.T) {
-	schema := &jschema.Schema{
+	schema := &jsonschema.Schema{
 		Type: "string",
 	}
 
