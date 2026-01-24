@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"iter"
 	"path"
 	"strings"
 
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/cli/internal/jschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,44 +49,58 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 		tags[i] = Tag(rt)
 	}
 
-	var schemaDefs map[string]*jsonschema.Schema
+	loader := jschema.NewLoader(fsys)
+
+	var schemaDefs map[string]*jschema.Schema
 	if raw.Components != nil {
-		schemaDefs = make(map[string]*jsonschema.Schema, len(raw.Components.Schemas))
+		schemaDefs = make(map[string]*jschema.Schema, len(raw.Components.Schemas))
 		for name, rs := range raw.Components.Schemas {
-			if rs.Ref != "" && !strings.HasPrefix(rs.Ref, "#/") {
-				schema, err := loadSchemaFile(fsys, rs.Ref)
+			if jschema.IsFileRef(rs.Ref) {
+				s, err := loader.LoadFile(rs.Ref)
 				if err != nil {
 					return nil, fmt.Errorf("component schema %q: failed to load external schema %q: %w", name, rs.Ref, err)
 				}
 				basePath := path.Dir(rs.Ref)
-				if err := loadExternalSchemas(fsys, schema, basePath); err != nil {
+				if err := loader.ResolveRefs(s, basePath); err != nil {
 					return nil, fmt.Errorf("component schema %q: %w", name, err)
 				}
-				schemaDefs[name] = schema
+				schemaDefs[name] = s
 			} else {
-				if err := loadExternalSchemas(fsys, rs, ""); err != nil {
+				if err := loader.ResolveRefs(rs, ""); err != nil {
 					return nil, fmt.Errorf("component schema %q: %w", name, err)
 				}
 				schemaDefs[name] = rs
 			}
 		}
 	} else {
-		schemaDefs = make(map[string]*jsonschema.Schema)
+		schemaDefs = make(map[string]*jschema.Schema)
 	}
 
 	for name, rp := range raw.Ports {
-		if rp.Schema == nil || rp.Schema.Ref == "" || strings.HasPrefix(rp.Schema.Ref, "#/") {
+		if rp.Schema == nil || !jschema.IsFileRef(rp.Schema.Ref) {
 			continue
 		}
-		schema, err := loadSchemaFile(fsys, rp.Schema.Ref)
+		s, err := loader.LoadFile(rp.Schema.Ref)
 		if err != nil {
 			return nil, fmt.Errorf("port %q: failed to load external schema %q: %w", name, rp.Schema.Ref, err)
 		}
 		basePath := path.Dir(rp.Schema.Ref)
-		if err := loadExternalSchemas(fsys, schema, basePath); err != nil {
+		if err := loader.ResolveRefs(s, basePath); err != nil {
 			return nil, fmt.Errorf("port %q: %w", name, err)
 		}
-		schemaDefs[rp.Schema.Ref] = schema
+		schemaDefs[rp.Schema.Ref] = s
+	}
+
+	// Unified schemas map, it will contain all resolved schemas keyed by name
+	schemas := make(map[string]*jschema.Schema)
+
+	// Add component schemas to unified map (already resolved)
+	for name, s := range schemaDefs {
+		// Skip file path keys (they contain '/' or '.')
+		if strings.Contains(name, "/") || strings.Contains(name, ".") {
+			continue
+		}
+		schemas[name] = s
 	}
 
 	ports := make(map[string]Port, len(raw.Ports))
@@ -105,7 +118,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 			}
 		}
 
-		var schema *jsonschema.Schema
+		var portSchema *jschema.Schema
 		if rp.Schema != nil {
 			if rp.Schema.Ref != "" {
 				if strings.HasPrefix(rp.Schema.Ref, "#/") {
@@ -118,55 +131,72 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 					if !ok {
 						return nil, fmt.Errorf("port %q: schema %q not found", name, rp.Schema.Ref)
 					}
-					schema = resolved
+					portSchema = resolved
 				} else {
 					// External file ref - already loaded in schemaDefs with full path
 					resolved, ok := schemaDefs[rp.Schema.Ref]
 					if !ok {
 						return nil, fmt.Errorf("port %q: external schema %q not found", name, rp.Schema.Ref)
 					}
-					schema = resolved
+					portSchema = resolved
+					// Add to unified schemas map using port name
+					if existing, exists := schemas[name]; exists && existing != portSchema {
+						return nil, fmt.Errorf("duplicate schema name %q", name)
+					}
+					schemas[name] = portSchema
 				}
 			} else {
-				schema = rp.Schema
+				portSchema = rp.Schema
 				// Load external file refs inside inline schema
-				if err := loadExternalSchemas(fsys, schema, ""); err != nil {
+				if err := loader.ResolveRefs(portSchema, ""); err != nil {
 					return nil, fmt.Errorf("port %q: %w", name, err)
 				}
+				// Add inline schema to unified map using port name
+				if existing, exists := schemas[name]; exists && existing != portSchema {
+					return nil, fmt.Errorf("duplicate schema name %q", name)
+				}
+				schemas[name] = portSchema
 			}
 
 			// Only add component schemas that are actually referenced
 			if raw.Components != nil && len(schemaDefs) > 0 {
-				collectComponentRefs := func(schema *jsonschema.Schema, schemaDefs map[string]*jsonschema.Schema) map[string]struct{} {
+				collectComponentRefs := func(s *jschema.Schema, schemaDefs map[string]*jschema.Schema) map[string]struct{} {
 					refs := make(map[string]struct{})
-					resolver := func(ref string) *jsonschema.Schema {
+					resolver := func(ref string) *jschema.Schema {
 						if schemaName, ok := strings.CutPrefix(ref, "#/components/schemas/"); ok {
 							return schemaDefs[schemaName]
 						}
 						return nil
 					}
-					for s := range iterNestedRefs(schema, resolver) {
-						if schemaName, ok := strings.CutPrefix(s.Ref, "#/components/schemas/"); ok {
+					for item := range jschema.Traverse(s, resolver) {
+						if schemaName, ok := strings.CutPrefix(item.Ref, "#/components/schemas/"); ok {
 							refs[schemaName] = struct{}{}
 						}
 					}
 					return refs
 				}
-				refs := collectComponentRefs(schema, schemaDefs)
+				refs := collectComponentRefs(portSchema, schemaDefs)
 				if len(refs) > 0 {
-					if schema.Defs == nil {
-						schema.Defs = make(map[string]*jsonschema.Schema)
+					if portSchema.Defs == nil {
+						portSchema.Defs = make(map[string]*jschema.Schema)
 					}
 					for ref := range refs {
 						s, ok := schemaDefs[ref]
 						if !ok {
 							return nil, fmt.Errorf("port %q: referenced schema %q not found in components", name, ref)
 						}
-						if _, ok := schema.Defs[ref]; ok {
+						if _, ok := portSchema.Defs[ref]; ok {
 							return nil, fmt.Errorf("port %q: schema definition conflict: %q already exists in $defs", name, ref)
 						}
-						schema.Defs[ref] = s
+						portSchema.Defs[ref] = s
 					}
+				}
+			}
+
+			// Validate $defs don't conflict with existing schema names
+			for defName := range portSchema.Defs {
+				if existing, exists := schemas[defName]; exists && existing != portSchema.Defs[defName] {
+					return nil, fmt.Errorf("port %q: schema definition %q conflicts with existing schema", name, defName)
 				}
 			}
 		}
@@ -174,7 +204,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 		ports[name] = Port{
 			Description: rp.Description,
 			Connections: portConns,
-			Schema:      schema,
+			Schema:      portSchema,
 		}
 	}
 
@@ -184,7 +214,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 		Tags:        tags,
 		Connections: connections,
 		Ports:       ports,
-		rawSpec:     raw,
+		Schemas:     schemas,
 	}, nil
 }
 
@@ -218,7 +248,7 @@ type rawConnection struct {
 type rawPort struct {
 	Description string              `yaml:"description,omitempty" json:"description,omitempty"`
 	Connections []rawPortConnection `yaml:"connections" json:"connections"`
-	Schema      *jsonschema.Schema  `yaml:"schema" json:"schema"`
+	Schema      *jschema.Schema  `yaml:"schema" json:"schema"`
 }
 
 type rawPortConnection struct {
@@ -231,7 +261,7 @@ type connectionRef struct {
 }
 
 type rawComponents struct {
-	Schemas map[string]*jsonschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Schemas map[string]*jschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
 }
 
 func parseJSON(r io.Reader) (*rawSpec, error) {
@@ -262,207 +292,11 @@ func parseYAML(r io.Reader) (*rawSpec, error) {
 		return nil, err
 	}
 
-	var intermediate map[string]any
-	if err = yaml.Unmarshal(data, &intermediate); err != nil { //nolint:gocritic
-		return nil, err
-	}
-
-	jsonData, err := json.Marshal(intermediate)
-	if err != nil {
-		return nil, err
-	}
-
 	var raw rawSpec
-	if err = json.Unmarshal(jsonData, &raw); err != nil { //nolint:gocritic
+	if err = yaml.Unmarshal(data, &raw); err != nil { //nolint:gocritic
 		return nil, err
 	}
 
 	return &raw, nil
 }
 
-func loadSchemaFile(fsys fs.FS, filePath string) (*jsonschema.Schema, error) {
-	f, err := fsys.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	var schema jsonschema.Schema
-
-	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
-		var intermediate any
-		if err := yaml.Unmarshal(data, &intermediate); err != nil {
-			return nil, err
-		}
-		jsonData, err := json.Marshal(intermediate)
-		if err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(jsonData, &schema); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := json.Unmarshal(data, &schema); err != nil {
-			return nil, err
-		}
-	}
-
-	return &schema, nil
-}
-
-func iterNestedRefs(schema *jsonschema.Schema, resolver func(ref string) *jsonschema.Schema) iter.Seq[*jsonschema.Schema] {
-	return func(yield func(*jsonschema.Schema) bool) {
-		visited := make(map[*jsonschema.Schema]struct{})
-		refsWithVisited(schema, resolver, yield, visited)
-	}
-}
-
-func refsWithVisited(schema *jsonschema.Schema, resolver func(ref string) *jsonschema.Schema, yield func(*jsonschema.Schema) bool, visited map[*jsonschema.Schema]struct{}) bool {
-	if schema == nil {
-		return true
-	}
-	if _, ok := visited[schema]; ok {
-		return true
-	}
-	visited[schema] = struct{}{}
-
-	if !yield(schema) {
-		return false
-	}
-
-	// Follow $ref if resolver is provided
-	if schema.Ref != "" && resolver != nil {
-		if resolved := resolver(schema.Ref); resolved != nil {
-			if !refsWithVisited(resolved, resolver, yield, visited) {
-				return false
-			}
-		}
-	}
-
-	// Objects
-	for _, s := range schema.Properties {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.PatternProperties {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	if !refsWithVisited(schema.AdditionalProperties, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.PropertyNames, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.UnevaluatedProperties, resolver, yield, visited) {
-		return false
-	}
-
-	// Arrays
-	if !refsWithVisited(schema.Items, resolver, yield, visited) {
-		return false
-	}
-	for _, s := range schema.ItemsArray {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.PrefixItems {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	if !refsWithVisited(schema.AdditionalItems, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.Contains, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.UnevaluatedItems, resolver, yield, visited) {
-		return false
-	}
-
-	// Logic
-	for _, s := range schema.AllOf {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.AnyOf {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.OneOf {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	if !refsWithVisited(schema.Not, resolver, yield, visited) {
-		return false
-	}
-
-	// Conditional
-	if !refsWithVisited(schema.If, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.Then, resolver, yield, visited) {
-		return false
-	}
-	if !refsWithVisited(schema.Else, resolver, yield, visited) {
-		return false
-	}
-	for _, s := range schema.DependentSchemas {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.DependencySchemas {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-
-	// Other
-	if !refsWithVisited(schema.ContentSchema, resolver, yield, visited) {
-		return false
-	}
-	for _, s := range schema.Defs {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-	for _, s := range schema.Definitions {
-		if !refsWithVisited(s, resolver, yield, visited) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func loadExternalSchemas(fsys fs.FS, schema *jsonschema.Schema, basePath string) error {
-	for s := range iterNestedRefs(schema, nil) {
-		if s.Ref == "" || strings.HasPrefix(s.Ref, "#/") {
-			continue
-		}
-		refPath := path.Join(basePath, s.Ref)
-		loaded, err := loadSchemaFile(fsys, refPath)
-		if err != nil {
-			return fmt.Errorf("failed to load external schema %q: %w", s.Ref, err)
-		}
-		newBase := path.Dir(refPath)
-		if err := loadExternalSchemas(fsys, loaded, newBase); err != nil {
-			return err
-		}
-		*s = *loaded
-	}
-	return nil
-}
