@@ -12,10 +12,8 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/context"
-	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/translate"
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 
 	// Import translator to auto-register
@@ -33,6 +31,8 @@ func registerPortTranslateCmd(parent *cobra.Command) {
 		Long: fmt.Sprintf(`Translate a port schema to a target format.
 
 Available formats: %s`, strings.Join(translate.Available(), ", ")),
+		Example: `  daco ports translate
+		daco ports translate --port-name "my-port" --format pyspark --output schema.py`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPortTranslate(cmd, portName, format, outputFile)
 		},
@@ -65,10 +65,44 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 	}
 
 	if portName == "" {
+		spec := ctx.Spec
 		if outputFile != "" {
 			return fmt.Errorf("--output flag is only valid when translating a single port")
 		}
-		return translateAllPorts(ctx.Spec, format)
+		if len(ctx.Spec.Ports) == 0 {
+			return fmt.Errorf("no ports found in spec")
+		}
+
+		fmt.Printf("Translating %d port(s) to %s...\n", len(spec.Ports), format)
+
+		var errors []string
+		successCount := 0
+
+		for portName, port := range spec.Ports {
+			if port.Schema == nil {
+				fmt.Printf("  Skipping %s (no schema defined)\n", portName)
+				continue
+			}
+
+			err := translatePort(portName, port.Schema, format, "")
+			if err != nil {
+				errors = append(errors, fmt.Sprintf("%s: %v", portName, err))
+			} else {
+				successCount++
+			}
+		}
+
+		fmt.Printf("\nSuccessfully translated %d port(s)\n", successCount)
+
+		if len(errors) > 0 {
+			fmt.Println("\nErrors:")
+			for _, err := range errors {
+				fmt.Printf("  - %s\n", err)
+			}
+			return fmt.Errorf("failed to translate %d port(s)", len(errors))
+		}
+
+		return nil
 	}
 
 	port, ok := ctx.Spec.Ports[portName]
@@ -82,44 +116,7 @@ func runPortTranslate(cmd *cobra.Command, portName, format, outputFile string) e
 	return translatePort(portName, port.Schema, format, outputFile)
 }
 
-func translateAllPorts(spec *opendpi.Spec, format string) error {
-	if len(spec.Ports) == 0 {
-		return fmt.Errorf("no ports found in spec")
-	}
-
-	fmt.Printf("Translating %d port(s) to %s...\n", len(spec.Ports), format)
-
-	var errors []string
-	successCount := 0
-
-	for portName, port := range spec.Ports {
-		if port.Schema == nil {
-			fmt.Printf("  Skipping %s (no schema defined)\n", portName)
-			continue
-		}
-
-		err := translatePort(portName, port.Schema, format, "")
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("%s: %v", portName, err))
-		} else {
-			successCount++
-		}
-	}
-
-	fmt.Printf("\nSuccessfully translated %d port(s)\n", successCount)
-
-	if len(errors) > 0 {
-		fmt.Println("\nErrors:")
-		for _, err := range errors {
-			fmt.Printf("  - %s\n", err)
-		}
-		return fmt.Errorf("failed to translate %d port(s)", len(errors))
-	}
-
-	return nil
-}
-
-func translatePort(portName string, schema *jsonschema.Schema, format, outputFile string) error {
+func translatePort(portName string, schema *jschema.Schema, format, outputFile string) error {
 	translator, err := translate.Get(format)
 	if err != nil {
 		return fmt.Errorf("unsupported format %q. Available formats: %s",
