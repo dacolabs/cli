@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -37,7 +37,7 @@ func registerPortsListCmd(parent *cobra.Command) {
   # List ports as YAML
   daco ports list -o yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := cmdctx.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -50,7 +50,7 @@ func registerPortsListCmd(parent *cobra.Command) {
 	parent.AddCommand(cmd)
 }
 
-func runPortsList(ctx *context.Context, opts *portsListOptions) error {
+func runPortsList(ctx *cmdctx.Context, opts *portsListOptions) error {
 	if len(ctx.Spec.Ports) == 0 {
 		fmt.Println("No ports defined.")
 		return nil
