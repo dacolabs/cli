@@ -10,7 +10,7 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -40,7 +40,7 @@ func registerConnectionsDescribeCmd(parent *cobra.Command) {
   daco connections describe kafka_prod -o yaml`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := cmdctx.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -98,7 +98,7 @@ func selectConnectionToDescribe(conns map[string]opendpi.Connection) (string, er
 	return selected, nil
 }
 
-func runConnectionsDescribe(ctx *context.Context, connName string, opts *connectionsDescribeOptions) error {
+func runConnectionsDescribe(ctx *cmdctx.Context, connName string, opts *connectionsDescribeOptions) error {
 	conn, exists := ctx.Spec.Connections[connName]
 	if !exists {
 		return fmt.Errorf("connection %q not found", connName)
