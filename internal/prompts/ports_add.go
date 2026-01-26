@@ -4,18 +4,16 @@
 package prompts
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 // AddPortResult holds the result of RunAddPortForm.
 type AddPortResult struct {
 	Name        string
 	Description string
-	Schema      *jschema.Schema
+	Schema      *jsonschema.Schema
 	SchemaPath  string
 	Connections []opendpi.PortConnection
 	NewConns    map[string]opendpi.Connection
@@ -27,7 +25,7 @@ type AddPortResult struct {
 func RunAddPortForm(
 	existingPorts map[string]opendpi.Port,
 	existingConns map[string]opendpi.Connection,
-	existingSchemas map[string]*jschema.Schema,
+	existingSchemas map[string]*jsonschema.Schema,
 ) (result AddPortResult, _ error) {
 	// Step 1: Port name and description
 	if err := huh.NewForm(
@@ -88,7 +86,7 @@ func RunAddPortForm(
 				return result, err
 			}
 		case "interactive":
-			result.Schema = &jschema.Schema{}
+			result.Schema = &jsonschema.Schema{}
 			schemas := copySchemas(existingSchemas)
 			if err := RunSchemaForm(nil, result.Schema, schemas); err != nil {
 				return result, err
@@ -97,7 +95,7 @@ func RunAddPortForm(
 			for k, v := range schemas {
 				if _, existed := existingSchemas[k]; !existed {
 					if result.Schema.Defs == nil {
-						result.Schema.Defs = make(map[string]*jschema.Schema)
+						result.Schema.Defs = make(map[string]*jsonschema.Schema)
 					}
 					result.Schema.Defs[k] = v
 				}
@@ -119,7 +117,7 @@ func RunAddPortForm(
 
 	if hasConnection {
 		var err error
-		result.Connections, result.NewConns, err = promptPortConnections(existingConns)
+		result.Connections, result.NewConns, err = RunPortConnectionsForm(existingConns)
 		if err != nil {
 			return result, err
 		}
@@ -128,9 +126,9 @@ func RunAddPortForm(
 	return result, nil
 }
 
-// promptPortConnections handles adding connections to a port, allowing both
+// RunPortConnectionsForm handles adding connections to a port, allowing both
 // creating new connections and using existing ones.
-func promptPortConnections(existingConns map[string]opendpi.Connection) ([]opendpi.PortConnection, map[string]opendpi.Connection, error) {
+func RunPortConnectionsForm(existingConns map[string]opendpi.Connection) ([]opendpi.PortConnection, map[string]opendpi.Connection, error) {
 	var conns []opendpi.PortConnection
 	newConns := make(map[string]opendpi.Connection)
 
@@ -160,44 +158,46 @@ func promptPortConnections(existingConns map[string]opendpi.Connection) ([]opend
 			return nil, nil, err
 		}
 
+		var connResult ConnectionResult
+		var err error
+
 		switch connSource {
 		case "new":
-			connName, conn, err := RunAddNewConnectionForm(workingConns)
+			connResult, err = RunAddNewConnectionForm(workingConns)
 			if err != nil {
 				return nil, nil, err
 			}
 			// Add to working connections so it can be reused
-			workingConns[connName] = conn
+			workingConns[connResult.Name] = connResult.Connection
 			// Track as new connection to be added to spec
-			newConns[connName] = conn
-
-			// Prompt for location
-			var location string
-			if err := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Location").
-						Placeholder("e.g., events_topic, users_table, /data/events").
-						Value(&location).
-						Validate(requiredValidator("location")),
-				),
-			).Run(); err != nil {
-				return nil, nil, err
-			}
-
-			connCopy := conn
-			conns = append(conns, opendpi.PortConnection{
-				Connection: &connCopy,
-				Location:   location,
-			})
+			newConns[connResult.Name] = connResult.Connection
 
 		case "existing":
-			portConn, err := promptSingleExistingConnection(workingConns)
+			connResult, err = RunSelectConnectionForm(workingConns)
 			if err != nil {
 				return nil, nil, err
 			}
-			conns = append(conns, portConn)
 		}
+
+		// Prompt for location
+		var location string
+		if err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Location").
+					Placeholder("e.g., events_topic, users_table, /data/events").
+					Value(&location).
+					Validate(requiredValidator("location")),
+			),
+		).Run(); err != nil {
+			return nil, nil, err
+		}
+
+		connCopy := connResult.Connection
+		conns = append(conns, opendpi.PortConnection{
+			Connection: &connCopy,
+			Location:   location,
+		})
 
 		var addAnother bool
 		if err := huh.NewForm(
@@ -218,39 +218,4 @@ func promptPortConnections(existingConns map[string]opendpi.Connection) ([]opend
 	}
 
 	return conns, newConns, nil
-}
-
-// promptSingleExistingConnection prompts for selecting one existing connection and its location.
-func promptSingleExistingConnection(existingConns map[string]opendpi.Connection) (opendpi.PortConnection, error) {
-	options := make([]huh.Option[string], 0, len(existingConns))
-	for name, conn := range existingConns {
-		label := fmt.Sprintf("%s (%s://%s)", name, conn.Protocol, conn.Host)
-		options = append(options, huh.NewOption(label, name))
-	}
-
-	var connName, location string
-
-	if err := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Select connection").
-				Options(options...).
-				Filtering(true).
-				Value(&connName).
-				Height(8),
-			huh.NewInput().
-				Title("Location").
-				Placeholder("e.g., events_topic, users_table, /data/events").
-				Value(&location).
-				Validate(requiredValidator("location")),
-		),
-	).Run(); err != nil {
-		return opendpi.PortConnection{}, err
-	}
-
-	conn := existingConns[connName]
-	return opendpi.PortConnection{
-		Connection: &conn,
-		Location:   location,
-	}, nil
 }

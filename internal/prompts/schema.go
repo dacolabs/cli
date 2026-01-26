@@ -11,12 +11,12 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/jschema"
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 // RunSchemaForm prompts the user to define or select a schema.
 // If name is nil, the schema name prompt is skipped (used for nested schemas like properties/items).
-func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jschema.Schema) error {
+func RunSchemaForm(name *string, schema *jsonschema.Schema, schemas map[string]*jsonschema.Schema) error {
 	if name != nil && *name == "" {
 		if err := huh.NewForm(
 			huh.NewGroup(
@@ -97,7 +97,7 @@ func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jsc
 		}
 
 	case "object":
-		schema.Properties = make(map[string]*jschema.Schema)
+		schema.Properties = make(map[string]*jsonschema.Schema)
 		for {
 			var propName string
 			var isRequired bool
@@ -121,7 +121,7 @@ func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jsc
 			}
 
 			// Recursive call for property schema (nil name - nested schema)
-			propSchema := &jschema.Schema{}
+			propSchema := &jsonschema.Schema{}
 			if err := RunSchemaForm(nil, propSchema, schemas); err != nil {
 				return err
 			}
@@ -130,11 +130,11 @@ func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jsc
 			switch {
 			case propSchema.Type == "object":
 				schemas[propName] = propSchema
-				schema.Properties[propName] = &jschema.Schema{Ref: "#/$defs/" + propName}
+				schema.Properties[propName] = &jsonschema.Schema{Ref: "#/$defs/" + propName}
 			case propSchema.Type == "array" && propSchema.Items != nil && propSchema.Items.Type == "object":
 				// Array of objects - store the array schema in $defs
 				schemas[propName] = propSchema
-				schema.Properties[propName] = &jschema.Schema{Ref: "#/$defs/" + propName}
+				schema.Properties[propName] = &jsonschema.Schema{Ref: "#/$defs/" + propName}
 			default:
 				schema.Properties[propName] = propSchema
 			}
@@ -161,7 +161,7 @@ func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jsc
 		}
 
 	case "array":
-		itemSchema := &jschema.Schema{}
+		itemSchema := &jsonschema.Schema{}
 		if err := RunSchemaForm(nil, itemSchema, schemas); err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func RunSchemaForm(name *string, schema *jschema.Schema, schemas map[string]*jsc
 	return nil
 }
 
-func promptStringAttributes(schema *jschema.Schema) error {
+func promptStringAttributes(schema *jsonschema.Schema) error {
 	var format string
 	var enumValues string
 
@@ -212,7 +212,7 @@ func promptStringAttributes(schema *jschema.Schema) error {
 	return nil
 }
 
-func promptNumberAttributes(schema *jschema.Schema) error {
+func promptNumberAttributes(schema *jsonschema.Schema) error {
 	var minStr, maxStr string
 
 	if err := huh.NewForm(
@@ -285,11 +285,11 @@ func optionalNumberValidator(s string) error {
 	return nil
 }
 
-func copySchemas(src map[string]*jschema.Schema) map[string]*jschema.Schema {
+func copySchemas(src map[string]*jsonschema.Schema) map[string]*jsonschema.Schema {
 	if src == nil {
-		return make(map[string]*jschema.Schema)
+		return make(map[string]*jsonschema.Schema)
 	}
-	dst := make(map[string]*jschema.Schema, len(src))
+	dst := make(map[string]*jsonschema.Schema, len(src))
 	for k, v := range src {
 		dst[k] = v
 	}

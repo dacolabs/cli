@@ -8,10 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ func registerPortsAddCmd(parent *cobra.Command) {
   daco ports add --name events --schema-file ./schemas/event.json \
     --connection kafka --location events_topic --non-interactive`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := cmdctx.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -56,7 +57,7 @@ func registerPortsAddCmd(parent *cobra.Command) {
 	parent.AddCommand(cmd)
 }
 
-func runPortsAdd(ctx *context.Context, opts *portsAddOptions) error {
+func runPortsAdd(ctx *cmdctx.Context, opts *portsAddOptions) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -81,7 +82,7 @@ func runPortsAdd(ctx *context.Context, opts *portsAddOptions) error {
 	}
 
 	var name, description string
-	var schema *jschema.Schema
+	var schema *jsonschema.Schema
 	var conns []opendpi.PortConnection
 
 	// Load schema from file if specified via flag
