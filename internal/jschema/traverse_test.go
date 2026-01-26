@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package jschema_test
+package jschema
 
 import (
 	"os"
 	"testing"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,12 +21,12 @@ func loadYAML(t *testing.T, data []byte) *jsonschema.Schema {
 }
 
 func TestTraverse_SimpleSchema(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("simple.yaml")
 	require.NoError(t, err)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -36,12 +35,12 @@ func TestTraverse_SimpleSchema(t *testing.T) {
 }
 
 func TestTraverse_WithProperties(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("simple.yaml")
 	require.NoError(t, err)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -53,12 +52,12 @@ func TestTraverse_WithProperties(t *testing.T) {
 }
 
 func TestTraverse_WithAllOf(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("complex/allof.yaml")
 	require.NoError(t, err)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -67,12 +66,12 @@ func TestTraverse_WithAllOf(t *testing.T) {
 }
 
 func TestTraverse_WithAnyOf(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("complex/anyof.yaml")
 	require.NoError(t, err)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -81,12 +80,12 @@ func TestTraverse_WithAnyOf(t *testing.T) {
 }
 
 func TestTraverse_WithDefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("with-defs.yaml")
 	require.NoError(t, err)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -106,7 +105,7 @@ items:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -125,7 +124,7 @@ func TestTraverse_CircularRefs(t *testing.T) {
 	schema.Properties["self"] = schema
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -147,7 +146,7 @@ $defs:
 	schema := loadYAML(t, data)
 
 	var refs []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Ref != "" {
 			refs = append(refs, s.Ref)
 		}
@@ -177,7 +176,7 @@ func TestTraverse_WithResolver(t *testing.T) {
 	}
 
 	var types []string
-	for s := range jschema.Traverse(schema, resolver) {
+	for s := range Traverse(schema, resolver) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -198,7 +197,7 @@ oneOf:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -215,7 +214,7 @@ not:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -244,7 +243,7 @@ else:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -264,7 +263,7 @@ patternProperties:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -281,7 +280,7 @@ additionalProperties:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -302,7 +301,7 @@ prefixItems:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -320,7 +319,7 @@ contains:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -343,7 +342,7 @@ definitions:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -363,7 +362,7 @@ dependentSchemas:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -386,7 +385,7 @@ properties:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 		if count == 2 {
 			break // Stop after 2 schemas
@@ -405,7 +404,7 @@ propertyNames:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -425,7 +424,7 @@ additionalItems:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -448,7 +447,7 @@ contentSchema:
 	schema := loadYAML(t, data)
 
 	var count int
-	for range jschema.Traverse(schema, nil) {
+	for range Traverse(schema, nil) {
 		count++
 	}
 
@@ -465,7 +464,7 @@ unevaluatedProperties:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -484,7 +483,7 @@ unevaluatedItems:
 	schema := loadYAML(t, data)
 
 	var types []string
-	for s := range jschema.Traverse(schema, nil) {
+	for s := range Traverse(schema, nil) {
 		if s.Type != "" {
 			types = append(types, s.Type)
 		}
@@ -542,7 +541,7 @@ definitions:
 	// Schema has 17 total nodes
 	for stopAt := 1; stopAt <= 17; stopAt++ {
 		var count int
-		for range jschema.Traverse(schema, nil) {
+		for range Traverse(schema, nil) {
 			count++
 			if count >= stopAt {
 				break
@@ -572,7 +571,7 @@ unevaluatedItems:
 	// Schema has 7 total nodes
 	for stopAt := 1; stopAt <= 7; stopAt++ {
 		var count int
-		for range jschema.Traverse(schema, nil) {
+		for range Traverse(schema, nil) {
 			count++
 			if count >= stopAt {
 				break
@@ -606,7 +605,7 @@ func TestTraverse_EarlyTerminationWithResolver(t *testing.T) {
 
 	// Stop after visiting the ref but before following it
 	var count int
-	for range jschema.Traverse(schema, resolver) {
+	for range Traverse(schema, resolver) {
 		count++
 		if count >= 2 {
 			break
@@ -623,7 +622,7 @@ func TestTraverseDefs_Empty(t *testing.T) {
 	}
 
 	var names []string //nolint:prealloc
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -639,7 +638,7 @@ func TestTraverseDefs_SingleDef(t *testing.T) {
 	}
 
 	names := make([]string, 0, 1)
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -667,7 +666,7 @@ func TestTraverseDefs_TopologicalOrder_Simple(t *testing.T) {
 	}
 
 	names := make([]string, 0, 2)
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -713,7 +712,7 @@ func TestTraverseDefs_TopologicalOrder_Chain(t *testing.T) {
 	}
 
 	names := make([]string, 0, 3)
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -745,7 +744,7 @@ func TestTraverseDefs_TopologicalOrder_MultipleRefs(t *testing.T) {
 	}
 
 	names := make([]string, 0, 3)
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -771,7 +770,7 @@ func TestTraverseDefs_NoDeps(t *testing.T) {
 	}
 
 	names := make([]string, 0, 3)
-	for name := range jschema.TraverseDefs(schema) {
+	for name := range TraverseDefs(schema) {
 		names = append(names, name)
 	}
 
@@ -793,7 +792,7 @@ func TestTraverseDefs_EarlyTermination(t *testing.T) {
 	}
 
 	var count int
-	for range jschema.TraverseDefs(schema) {
+	for range TraverseDefs(schema) {
 		count++
 		if count >= 2 {
 			break
@@ -818,7 +817,7 @@ func TestTraverseDefs_YieldsSchema(t *testing.T) {
 		},
 	}
 
-	for name, s := range jschema.TraverseDefs(schema) {
+	for name, s := range TraverseDefs(schema) {
 		assert.Equal(t, "Address", name)
 		assert.Equal(t, addressSchema, s)
 	}
@@ -835,7 +834,7 @@ func TestRewriteRefs_ComponentsSchemas(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/Address", schema.Properties["address"].Ref)
 	assert.Equal(t, "#/$defs/Contact", schema.Properties["contact"].Ref)
@@ -849,7 +848,7 @@ func TestRewriteRefs_Definitions(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/User", schema.Properties["user"].Ref)
 }
@@ -867,7 +866,7 @@ func TestRewriteRefs_NestedRefs(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/Customer", schema.Properties["order"].Properties["customer"].Ref)
 }
@@ -882,7 +881,7 @@ func TestRewriteRefs_MixedRefs(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/Component", schema.Properties["component"].Ref)
 	assert.Equal(t, "#/$defs/Definition", schema.Properties["definition"].Ref)
@@ -897,7 +896,7 @@ func TestRewriteRefs_PreservesDefsRefs(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	// Should remain unchanged
 	assert.Equal(t, "#/$defs/Address", schema.Properties["address"].Ref)
@@ -911,7 +910,7 @@ func TestRewriteRefs_InArrayItems(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/Item", schema.Items.Ref)
 }
@@ -924,7 +923,7 @@ func TestRewriteRefs_InAllOf(t *testing.T) {
 		},
 	}
 
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "#/$defs/Base", schema.AllOf[0].Ref)
 	assert.Equal(t, "#/$defs/Extended", schema.AllOf[1].Ref)
@@ -940,7 +939,7 @@ func TestRewriteRefs_NoRefs(t *testing.T) {
 	}
 
 	// Should not panic and leave schema unchanged
-	jschema.RewriteRefs(schema)
+	RewriteRefs(schema)
 
 	assert.Equal(t, "", schema.Properties["name"].Ref)
 	assert.Equal(t, "", schema.Properties["age"].Ref)

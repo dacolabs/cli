@@ -23,6 +23,7 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 		PersistentPreRunE: cmdctx.PreRunLoad,
 	}
 
+	registerPortsAddCmd(cmd)
 	registerPortTranslateCmd(cmd, translators)
 
 	rootCmd.AddCommand(cmd)

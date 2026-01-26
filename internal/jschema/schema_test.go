@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package jschema_test
+package jschema
 
 import (
 	"testing"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +25,7 @@ func TestIsFileRef_ExternalRefs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			assert.Equal(t, tt.expected, jschema.IsFileRef(tt.ref))
+			assert.Equal(t, tt.expected, IsFileRef(tt.ref))
 		})
 	}
 }
@@ -44,13 +43,13 @@ func TestIsFileRef_InternalRefs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			assert.Equal(t, tt.expected, jschema.IsFileRef(tt.ref))
+			assert.Equal(t, tt.expected, IsFileRef(tt.ref))
 		})
 	}
 }
 
 func TestIsFileRef_EmptyRef(t *testing.T) {
-	assert.False(t, jschema.IsFileRef(""))
+	assert.False(t, IsFileRef(""))
 }
 
 func TestExtractKeyOrder_SimpleObject(t *testing.T) {
@@ -63,7 +62,7 @@ func TestExtractKeyOrder_SimpleObject(t *testing.T) {
 		},
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Should have a "properties" key
@@ -89,7 +88,7 @@ func TestExtractKeyOrder_NestedObject(t *testing.T) {
 		},
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Should have root properties
@@ -119,7 +118,7 @@ func TestExtractKeyOrder_WithDefs(t *testing.T) {
 		},
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Should have root properties
@@ -137,7 +136,7 @@ func TestExtractKeyOrder_EmptySchema(t *testing.T) {
 		Type: "object",
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Empty schema has no properties key
@@ -156,7 +155,7 @@ func TestExtractKeyOrder_ArraySchema(t *testing.T) {
 		},
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Should have items properties
@@ -184,7 +183,7 @@ func TestExtractKeyOrder_AllOf(t *testing.T) {
 		},
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Should have properties from allOf schemas
@@ -197,7 +196,7 @@ func TestExtractKeyOrder_PrimitiveSchema(t *testing.T) {
 		Type: "string",
 	}
 
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
+	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
 
 	// Primitive schema has no properties

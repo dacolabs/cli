@@ -193,7 +193,7 @@ func getOrderedKeys(schema *jsonschema.Schema, keyOrder map[string][]string, pat
 	}
 
 	// Fall back to collecting keys from the map
-	var keys []string
+	keys := make([]string, 0, len(schema.Properties))
 	for name := range schema.Properties {
 		keys = append(keys, name)
 	}

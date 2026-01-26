@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package pyspark_test
+package pyspark
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/dacolabs/cli/internal/translate/pyspark"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +21,7 @@ func TestTranslate_SimpleObject(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("users", schema)
 	require.NoError(t, err)
 
@@ -50,7 +49,7 @@ func TestTranslate_AllPrimitiveTypes(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("types", schema)
 	require.NoError(t, err)
 
@@ -72,7 +71,7 @@ func TestTranslate_DateFormats(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("dates", schema)
 	require.NoError(t, err)
 
@@ -95,7 +94,7 @@ func TestTranslate_ArrayType(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("items", schema)
 	require.NoError(t, err)
 
@@ -118,7 +117,7 @@ func TestTranslate_NestedObject(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("user", schema)
 	require.NoError(t, err)
 
@@ -144,7 +143,7 @@ func TestTranslate_WithDefs_VariableReference(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("user", schema)
 	require.NoError(t, err)
 
@@ -180,7 +179,7 @@ func TestTranslate_TopologicalOrder(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("order", schema)
 	require.NoError(t, err)
 
@@ -206,7 +205,7 @@ func TestTranslate_RequiredFields(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("user", schema)
 	require.NoError(t, err)
 
@@ -248,7 +247,7 @@ func TestTranslate_ChainedDeps(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("root", schema)
 	require.NoError(t, err)
 
@@ -274,7 +273,7 @@ func TestTranslate_NoDefs(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("simple", schema)
 	require.NoError(t, err)
 
@@ -310,7 +309,7 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("list", schema)
 	require.NoError(t, err)
 
@@ -338,7 +337,7 @@ func TestTranslate_RefToComponentsRewritten(t *testing.T) {
 		},
 	}
 
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	output, err := translator.Translate("data", schema)
 	require.NoError(t, err)
 
@@ -350,6 +349,6 @@ func TestTranslate_RefToComponentsRewritten(t *testing.T) {
 }
 
 func TestFileExtension(t *testing.T) {
-	translator := &pyspark.Translator{}
+	translator := &Translator{}
 	assert.Equal(t, ".py", translator.FileExtension())
 }

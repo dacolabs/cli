@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package jschema_test
+package jschema
 
 import (
 	"os"
 	"testing"
 	"testing/fstest"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoadFile_YAML(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("simple.yaml")
 	require.NoError(t, err)
 	assert.Equal(t, "object", schema.Type)
@@ -23,7 +22,7 @@ func TestLoadFile_YAML(t *testing.T) {
 }
 
 func TestLoadFile_JSON(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("simple.json")
 	require.NoError(t, err)
 	assert.Equal(t, "object", schema.Type)
@@ -32,7 +31,7 @@ func TestLoadFile_JSON(t *testing.T) {
 }
 
 func TestLoadFile_NotFound(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	_, err := loader.LoadFile("nonexistent.yaml")
 	require.Error(t, err)
 }
@@ -41,7 +40,7 @@ func TestLoadFile_InvalidYAML(t *testing.T) {
 	fsys := fstest.MapFS{
 		"invalid.yaml": &fstest.MapFile{Data: []byte("{{invalid yaml")},
 	}
-	loader := jschema.NewLoader(fsys)
+	loader := NewLoader(fsys)
 	_, err := loader.LoadFile("invalid.yaml")
 	require.Error(t, err)
 }
@@ -50,13 +49,13 @@ func TestLoadFile_InvalidJSON(t *testing.T) {
 	fsys := fstest.MapFS{
 		"invalid.json": &fstest.MapFile{Data: []byte("{invalid json}")},
 	}
-	loader := jschema.NewLoader(fsys)
+	loader := NewLoader(fsys)
 	_, err := loader.LoadFile("invalid.json")
 	require.Error(t, err)
 }
 
 func TestResolveRefs_SimpleFileRef(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("with-file-ref.yaml")
 	require.NoError(t, err)
 
@@ -76,7 +75,7 @@ func TestResolveRefs_SimpleFileRef(t *testing.T) {
 }
 
 func TestResolveRefs_NestedFileRefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("nested/main.yaml")
 	require.NoError(t, err)
 
@@ -90,7 +89,7 @@ func TestResolveRefs_NestedFileRefs(t *testing.T) {
 }
 
 func TestResolveRefs_DeepNestedPaths(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("nested/deep/deep.yaml")
 	require.NoError(t, err)
 
@@ -104,7 +103,7 @@ func TestResolveRefs_DeepNestedPaths(t *testing.T) {
 }
 
 func TestResolveRefs_SkipsInternalRefs(t *testing.T) {
-	loader := jschema.NewLoader(os.DirFS("testdata"))
+	loader := NewLoader(os.DirFS("testdata"))
 	schema, err := loader.LoadFile("with-defs.yaml")
 	require.NoError(t, err)
 
@@ -124,7 +123,7 @@ properties:
     $ref: "./does-not-exist.yaml"
 `)},
 	}
-	loader := jschema.NewLoader(fsys)
+	loader := NewLoader(fsys)
 	schema, err := loader.LoadFile("schema.yaml")
 	require.NoError(t, err)
 
