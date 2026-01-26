@@ -592,6 +592,8 @@ func TestWrite_DuplicateSchemaNames(t *testing.T) {
 		{"JSON/Modular", JSONWriter, config.SchemaModular},
 		{"YAML/Components", YAMLWriter, config.SchemaComponents},
 		{"JSON/Components", JSONWriter, config.SchemaComponents},
+		{"YAML/Inline", YAMLWriter, config.SchemaInline},
+		{"JSON/Inline", JSONWriter, config.SchemaInline},
 	}
 
 	for _, tt := range tests {
