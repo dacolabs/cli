@@ -17,18 +17,25 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 	}
 
 	registerInitCmd(rootCmd)
-	cmd := &cobra.Command{
+
+	portsCmd := &cobra.Command{
 		Use:               "ports",
 		Short:             "Manage data product ports",
 		PersistentPreRunE: cmdctx.PreRunLoad,
 	}
+	registerPortsAddCmd(portsCmd)
+	registerPortsListCmd(portsCmd)
+	registerPortsRemoveCmd(portsCmd)
+	registerPortTranslateCmd(portsCmd, translators)
+	rootCmd.AddCommand(portsCmd)
 
-	registerPortsAddCmd(cmd)
-	registerPortsListCmd(cmd)
-	registerPortsRemoveCmd(cmd)
-	registerPortTranslateCmd(cmd, translators)
-
-	rootCmd.AddCommand(cmd)
+	connsCmd := &cobra.Command{
+		Use:               "conections",
+		Short:             "Manage data product connections",
+		PersistentPreRunE: cmdctx.PreRunLoad,
+	}
+	registerConnectionsDescribeCmd(connsCmd)
+	rootCmd.AddCommand(connsCmd)
 
 	return rootCmd
 }
