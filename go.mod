@@ -10,6 +10,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+replace github.com/google/jsonschema-go => github.com/dacolabs/jsonschema-go v0.0.0-20260121145504-b7f7835e2c1b
+
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

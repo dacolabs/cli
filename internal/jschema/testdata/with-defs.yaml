@@ -1,0 +1,12 @@
+type: object
+properties:
+  address:
+    $ref: "#/$defs/address"
+$defs:
+  address:
+    type: object
+    properties:
+      street:
+        type: string
+      city:
+        type: string

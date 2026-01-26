@@ -411,8 +411,8 @@ func TestParse_RefOnlySchema(t *testing.T) {
 			assert.Len(t, usersPort.Schema.Defs, 1, "Only BaseUser should be in Defs")
 
 			// Verify the schema is the UserWrapper (which is a ref-only schema)
-			// After resolution, the Ref field should still contain the ref string
-			assert.Equal(t, "#/components/schemas/BaseUser", usersPort.Schema.Ref)
+			// After resolution, the Ref field is rewritten to use #/$defs/ format
+			assert.Equal(t, "#/$defs/BaseUser", usersPort.Schema.Ref)
 
 			// Check direct port - uses BaseUser directly
 			directPort, ok := spec.Ports["direct"]
@@ -558,4 +558,128 @@ func TestParse_NilFS(t *testing.T) {
 
 	_, err = YAML.Parse(f, nil)
 	assert.Error(t, err)
+}
+
+func TestParse_SchemasMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		file   string
+		parser Parser
+	}{
+		{"YAML", "minimal.yaml", YAML},
+		{"JSON", "minimal.json", JSON},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(filepath.Join("testdata", tt.file))
+			require.NoError(t, err)
+			defer f.Close() //nolint:errcheck
+
+			spec, err := tt.parser.Parse(f, os.DirFS("testdata"))
+			require.NoError(t, err)
+
+			// Schemas map should be populated
+			require.NotNil(t, spec.Schemas)
+			require.Len(t, spec.Schemas, 1)
+
+			// Schema should be keyed by port name for inline schemas
+			schema, ok := spec.Schemas["users"]
+			require.True(t, ok, "schema 'users' should exist in Schemas map")
+			assert.Equal(t, "object", schema.Type)
+		})
+	}
+}
+
+func TestParse_SchemasMap_Components(t *testing.T) {
+	tests := []struct {
+		name   string
+		file   string
+		parser Parser
+	}{
+		{"YAML", "with-components.yaml", YAML},
+		{"JSON", "with-components.json", JSON},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(filepath.Join("testdata", tt.file))
+			require.NoError(t, err)
+			defer f.Close() //nolint:errcheck
+
+			spec, err := tt.parser.Parse(f, os.DirFS("testdata"))
+			require.NoError(t, err)
+
+			// Schemas map should contain component schemas
+			require.NotNil(t, spec.Schemas)
+
+			// Component schemas should be in the map
+			_, ok := spec.Schemas["User"]
+			assert.True(t, ok, "component schema 'User' should exist in Schemas map")
+
+			_, ok = spec.Schemas["Address"]
+			assert.True(t, ok, "component schema 'Address' should exist in Schemas map")
+		})
+	}
+}
+
+func TestParse_SchemasMap_MultiPort(t *testing.T) {
+	tests := []struct {
+		name   string
+		file   string
+		parser Parser
+	}{
+		{"YAML", "multi-port.yaml", YAML},
+		{"JSON", "multi-port.json", JSON},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(filepath.Join("testdata", tt.file))
+			require.NoError(t, err)
+			defer f.Close() //nolint:errcheck
+
+			spec, err := tt.parser.Parse(f, os.DirFS("testdata"))
+			require.NoError(t, err)
+
+			// Schemas map should contain all port schemas
+			require.NotNil(t, spec.Schemas)
+			require.Len(t, spec.Schemas, 3) // daily_orders, user_segments, order_events
+
+			for portName := range spec.Ports {
+				_, ok := spec.Schemas[portName]
+				assert.True(t, ok, "schema for port %q should exist in Schemas map", portName)
+			}
+		})
+	}
+}
+
+func TestParse_SchemasResolved(t *testing.T) {
+	tests := []struct {
+		name   string
+		file   string
+		parser Parser
+	}{
+		{"YAML", "with-components.yaml", YAML},
+		{"JSON", "with-components.json", JSON},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(filepath.Join("testdata", tt.file))
+			require.NoError(t, err)
+			defer f.Close() //nolint:errcheck
+
+			spec, err := tt.parser.Parse(f, os.DirFS("testdata"))
+			require.NoError(t, err)
+
+			// Schemas in the map should be fully resolved (self-contained)
+			userSchema, ok := spec.Schemas["User"]
+			require.True(t, ok)
+
+			// Schema should have type resolved (not just a ref)
+			assert.Equal(t, "object", userSchema.Type)
+			assert.NotNil(t, userSchema.Properties)
+		})
+	}
 }
