@@ -10,7 +10,7 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -36,7 +36,7 @@ func registerConnectionsListCmd(parent *cobra.Command) {
   # List connections as YAML
   daco connections list -o yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := cmdctx.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ func registerConnectionsListCmd(parent *cobra.Command) {
 	parent.AddCommand(cmd)
 }
 
-func runConnectionsList(ctx *context.Context, opts *connectionsListOptions) error {
+func runConnectionsList(ctx *cmdctx.Context, opts *connectionsListOptions) error {
 	if len(ctx.Spec.Connections) == 0 {
 		fmt.Println("No connections defined.")
 		return nil
@@ -130,20 +130,4 @@ func countConnectionUsage(conn *opendpi.Connection, ports map[string]opendpi.Por
 		}
 	}
 	return count
-}
-
-func findPortsUsingConnection(conn *opendpi.Connection, ports map[string]opendpi.Port) []string {
-	var usingPorts []string
-	for portName, port := range ports {
-		for _, pc := range port.Connections {
-			if pc.Connection != nil &&
-				pc.Connection.Protocol == conn.Protocol &&
-				pc.Connection.Host == conn.Host {
-				usingPorts = append(usingPorts, portName)
-				break
-			}
-		}
-	}
-	sort.Strings(usingPorts)
-	return usingPorts
 }
