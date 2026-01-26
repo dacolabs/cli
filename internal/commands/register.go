@@ -24,6 +24,7 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 	}
 
 	registerPortsAddCmd(cmd)
+	registerPortsListCmd(cmd)
 	registerPortTranslateCmd(cmd, translators)
 
 	rootCmd.AddCommand(cmd)
