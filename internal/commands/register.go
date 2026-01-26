@@ -35,6 +35,7 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 		PersistentPreRunE: cmdctx.PreRunLoad,
 	}
 	registerConnectionsDescribeCmd(connsCmd)
+	registerConnectionsListCmd(portsCmd)
 	registerConnectionsRemoveCmd(connsCmd)
 	rootCmd.AddCommand(connsCmd)
 
