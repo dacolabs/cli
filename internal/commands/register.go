@@ -5,30 +5,42 @@
 package commands
 
 import (
-	"github.com/dacolabs/cli/internal/context"
+	"github.com/dacolabs/cli/internal/session"
+	"github.com/dacolabs/cli/internal/translate"
 	"github.com/spf13/cobra"
 )
 
 // NewRootCmd creates and returns the root command for the CLI.
-func NewRootCmd() *cobra.Command {
+func NewRootCmd(translators translate.Register) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "daco",
 	}
 
-	registerInitCmd(rootCmd)
-	registerConnectionsCmd(rootCmd)
-
-	return rootCmd
-}
-
-func registerConnectionsCmd(parent *cobra.Command) {
-	cmd := &cobra.Command{
-		Use:               "connections",
-		Short:             "Manage infrastructure connections",
-		PersistentPreRunE: context.PreRunLoad,
+	portsCmd := &cobra.Command{
+		Use:               "ports",
+		Short:             "Manage data product ports",
+		PersistentPreRunE: session.PreRunLoad,
 	}
+	portsCmd.AddCommand(
+		newPortsAddCmd(),
+		newPortsListCmd(),
+		newPortsRemoveCmd(),
+		newPortsTranslateCmd(translators))
 
-	registerConnectionsAddCmd(cmd)
+	connsCmd := &cobra.Command{
+		Use:               "connections",
+		Short:             "Manage data product connections",
+		PersistentPreRunE: session.PreRunLoad,
+	}
+	connsCmd.AddCommand(
+		newConnectionsAddCmd(),
+		newConnectionsDescribeCmd(),
+		newConnectionsListCmd(),
+		newConnectionsRemoveCmd())
 
-	parent.AddCommand(cmd)
+	rootCmd.AddCommand(
+		newInitCmd(),
+		portsCmd,
+		connsCmd)
+	return rootCmd
 }

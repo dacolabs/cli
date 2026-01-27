@@ -12,16 +12,38 @@ import (
 	"github.com/dacolabs/cli/internal/opendpi"
 )
 
+// ConnectionAddResult holds the result of connection form functions.
+type ConnectionAddResult struct {
+	Name       string
+	Connection opendpi.Connection
+}
+
 // RunAddNewConnectionForm runs the interactive form for creating a new connection.
-// Returns the connection name and the connection object.
-func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (name string, conn opendpi.Connection, _ error) {
+func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionAddResult, error) {
+	var result ConnectionAddResult
 	if err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Connection name").
 				Placeholder("e.g., kafka_prod, postgres_main").
-				Value(&name).
-				Validate(connectionNameValidator(existingConns)),
+				Value(&result.Name).
+				Validate(func(s string) error {
+					if s == "" {
+						return errors.New("name is required")
+					}
+					for i, r := range s {
+						if i == 0 && !unicode.IsLetter(r) && r != '_' {
+							return errors.New("must start with letter or underscore")
+						}
+						if i > 0 && !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+							return errors.New("must contain only letters, numbers, underscores")
+						}
+					}
+					if _, exists := existingConns[s]; exists {
+						return fmt.Errorf("connection %q already exists", s)
+					}
+					return nil
+				}),
 			huh.NewSelect[string]().
 				Title("Protocol").
 				Options(
@@ -35,11 +57,11 @@ func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (name 
 					huh.NewOption("mongodb", "mongodb"),
 					huh.NewOption("other", "other"),
 				).
-				Value(&conn.Protocol),
+				Value(&result.Connection.Protocol),
 			huh.NewInput().
 				Title("Host").
 				Placeholder("e.g., localhost:9092, db.example.com:5432").
-				Value(&conn.Host).
+				Value(&result.Connection.Host).
 				Validate(func(s string) error {
 					if s == "" {
 						return errors.New("host is required")
@@ -49,32 +71,37 @@ func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (name 
 			huh.NewInput().
 				Title("Description (optional)").
 				Placeholder("e.g., Production Kafka cluster").
-				Value(&conn.Description),
+				Value(&result.Connection.Description),
 		),
 	).Run(); err != nil {
-		return name, conn, err
+		return ConnectionAddResult{}, err
 	}
 
-	return name, conn, nil
+	return result, nil
 }
 
-func connectionNameValidator(existing map[string]opendpi.Connection) func(string) error {
-	return func(s string) error {
-		if s == "" {
-			return errors.New("name is required")
-		}
-		for i, r := range s {
-			if i == 0 && !unicode.IsLetter(r) && r != '_' {
-				return errors.New("must start with letter or underscore")
-			}
-			if i > 0 && !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
-				return errors.New("must contain only letters, numbers, underscores")
-			}
-		}
-		if _, exists := existing[s]; exists {
-			return fmt.Errorf("connection %q already exists", s)
-		}
-		return nil
+// RunSelectConnectionForm prompts for selecting one existing connection.
+func RunSelectConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionAddResult, error) {
+	var result ConnectionAddResult
+	options := make([]huh.Option[string], 0, len(existingConns))
+	for n, c := range existingConns {
+		label := fmt.Sprintf("%s (%s://%s)", n, c.Protocol, c.Host)
+		options = append(options, huh.NewOption(label, n))
 	}
-}
 
+	if err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Select connection").
+				Options(options...).
+				Filtering(true).
+				Value(&result.Name).
+				Height(8),
+		),
+	).Run(); err != nil {
+		return ConnectionAddResult{}, err
+	}
+
+	result.Connection = existingConns[result.Name]
+	return result, nil
+}

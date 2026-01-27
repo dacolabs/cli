@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dacolabs/cli/internal/context"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ type connectionsAddOptions struct {
 	nonInteractive bool
 }
 
-func registerConnectionsAddCmd(parent *cobra.Command) {
+func newConnectionsAddCmd() *cobra.Command {
 	opts := &connectionsAddOptions{}
 
 	cmd := &cobra.Command{
@@ -35,7 +35,7 @@ func registerConnectionsAddCmd(parent *cobra.Command) {
   # Non-interactive
   daco connections add -n kafka_prod -p kafka --host broker:9092 --non-interactive`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -49,10 +49,10 @@ func registerConnectionsAddCmd(parent *cobra.Command) {
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runConnectionsAdd(ctx *context.Context, opts *connectionsAddOptions) error {
+func runConnectionsAdd(ctx *session.Context, opts *connectionsAddOptions) error {
 	// Non-interactive validation
 	if opts.nonInteractive {
 		if opts.name == "" {
@@ -69,19 +69,19 @@ func runConnectionsAdd(ctx *context.Context, opts *connectionsAddOptions) error 
 		}
 	}
 
-	var name string
-	var conn opendpi.Connection
-
+	var result prompts.ConnectionAddResult
 	if opts.nonInteractive {
-		name = opts.name
-		conn = opendpi.Connection{
-			Protocol:    opts.protocol,
-			Host:        opts.host,
-			Description: opts.description,
+		result = prompts.ConnectionAddResult{
+			Name: opts.name,
+			Connection: opendpi.Connection{
+				Protocol:    opts.protocol,
+				Host:        opts.host,
+				Description: opts.description,
+			},
 		}
 	} else {
 		var err error
-		name, conn, err = prompts.RunAddNewConnectionForm(ctx.Spec.Connections)
+		result, err = prompts.RunAddNewConnectionForm(ctx.Spec.Connections)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func runConnectionsAdd(ctx *context.Context, opts *connectionsAddOptions) error 
 	}
 
 	// Add the connection
-	ctx.Spec.Connections[name] = conn
+	ctx.Spec.Connections[result.Name] = result.Connection
 
 	// Get working directory and spec directory
 	cwd, err := os.Getwd()
@@ -118,6 +118,6 @@ func runConnectionsAdd(ctx *context.Context, opts *connectionsAddOptions) error 
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 
-	fmt.Printf("Connection %q added.\n", name)
+	fmt.Printf("Connection %q added.\n", result.Name)
 	return nil
 }

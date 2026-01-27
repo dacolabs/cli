@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dacolabs/cli/internal/config"
+	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/google/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -49,24 +50,21 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		tags[i] = rawTag(t)
 	}
 
-	// For modular/components modes, collect schema names and check for duplicates
-	var schemaNames map[string]string
-	if cfg.Schema.Organization == config.SchemaModular || cfg.Schema.Organization == config.SchemaComponents {
-		schemaNames = make(map[string]string) // name -> port that defined it
-		for name, p := range spec.Ports {
-			if p.Schema == nil {
-				continue
+	// Collect schema names and check for duplicates
+	schemaNames := make(map[string]string) // name -> port that defined it
+	for name, p := range spec.Ports {
+		if p.Schema == nil {
+			continue
+		}
+		if existingPort, ok := schemaNames[name]; ok {
+			return fmt.Errorf("duplicate schema name %q: defined by ports %q and %q", name, existingPort, name)
+		}
+		schemaNames[name] = name
+		for defName := range p.Schema.Defs {
+			if existingPort, ok := schemaNames[defName]; ok {
+				return fmt.Errorf("duplicate schema name %q: defined in port %q and port %q", defName, existingPort, name)
 			}
-			if existingPort, ok := schemaNames[name]; ok {
-				return fmt.Errorf("duplicate schema name %q: defined by ports %q and %q", name, existingPort, name)
-			}
-			schemaNames[name] = name
-			for defName := range p.Schema.Defs {
-				if existingPort, ok := schemaNames[defName]; ok {
-					return fmt.Errorf("duplicate schema name %q: defined in port %q and port %q", defName, existingPort, name)
-				}
-				schemaNames[defName] = name
-			}
+			schemaNames[defName] = name
 		}
 	}
 
@@ -99,7 +97,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				schemaToWrite := *p.Schema
 				schemaToWrite.Defs = nil
 				// Rewrite $refs to point to external files
-				for s := range iterNestedRefs(&schemaToWrite, nil) {
+				for s := range jschema.Traverse(&schemaToWrite, nil) {
 					if strings.HasPrefix(s.Ref, "#/components/schemas/") {
 						refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
 						s.Ref = refName + ".yaml"
@@ -109,7 +107,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 					}
 				}
 				schemaFile := filepath.Join(schemasDir, name+".yaml")
-				if err := writeYaml(schemaFile, &schemaToWrite); err != nil {
+				if err := wr.write(schemaFile, &schemaToWrite); err != nil {
 					return fmt.Errorf("failed to write schema file %s: %w", schemaFile, err)
 				}
 
@@ -117,7 +115,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				for defName, defSchema := range p.Schema.Defs {
 					defSchemaToWrite := *defSchema
 					// Rewrite $refs in def schemas too
-					for s := range iterNestedRefs(&defSchemaToWrite, nil) {
+					for s := range jschema.Traverse(&defSchemaToWrite, nil) {
 						if strings.HasPrefix(s.Ref, "#/components/schemas/") {
 							refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
 							s.Ref = refName + ".yaml"
@@ -127,7 +125,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 						}
 					}
 					defFile := filepath.Join(schemasDir, defName+".yaml")
-					if err := writeYaml(defFile, &defSchemaToWrite); err != nil {
+					if err := wr.write(defFile, &defSchemaToWrite); err != nil {
 						return fmt.Errorf("failed to write schema file %s: %w", defFile, err)
 					}
 				}
@@ -148,7 +146,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				schemaToAdd := *p.Schema
 				schemaToAdd.Defs = nil
 				// Rewrite $refs from $defs to components
-				for s := range iterNestedRefs(&schemaToAdd, nil) {
+				for s := range jschema.Traverse(&schemaToAdd, nil) {
 					if strings.HasPrefix(s.Ref, "#/$defs/") {
 						refName := strings.TrimPrefix(s.Ref, "#/$defs/")
 						s.Ref = "#/components/schemas/" + refName
@@ -160,7 +158,7 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 				for defName, defSchema := range p.Schema.Defs {
 					defSchemaToAdd := *defSchema
 					// Rewrite $refs in def schemas too
-					for s := range iterNestedRefs(&defSchemaToAdd, nil) {
+					for s := range jschema.Traverse(&defSchemaToAdd, nil) {
 						if strings.HasPrefix(s.Ref, "#/$defs/") {
 							refName := strings.TrimPrefix(s.Ref, "#/$defs/")
 							s.Ref = "#/components/schemas/" + refName

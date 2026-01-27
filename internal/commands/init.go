@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
@@ -17,17 +16,17 @@ import (
 )
 
 type initOptions struct {
-	extends        string // path to parent config
-	createSpec     bool   // create spec
-	name           string // product name
-	path           string // path to spec file
-	version        string // spec version
-	schemaOrg      string // schema organization
-	format         string // spec format (yaml/json)
+	extends        string
+	createSpec     bool
+	name           string
+	path           string
+	version        string
+	schemaOrg      string
+	format         string
 	nonInteractive bool
 }
 
-func registerInitCmd(parent *cobra.Command) {
+func newInitCmd() *cobra.Command {
 	opts := &initOptions{}
 
 	cmd := &cobra.Command{
@@ -35,7 +34,10 @@ func registerInitCmd(parent *cobra.Command) {
 		Short: "Initialize a new daco project",
 		Long: `Initialize a new daco project with a daco.yaml configuration file.
 Can create a new spec, use an existing one, or extend a parent config.`,
-		Example: `  daco init
+		Example: `  # Interactive mode
+  daco init
+
+  # Non-interactive
   daco init --name "my-product" --non-interactive
   daco init --extends ../daco.yaml --non-interactive`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -49,9 +51,9 @@ Can create a new spec, use an existing one, or extend a parent config.`,
 	cmd.Flags().StringVarP(&opts.version, "version", "v", "1.0.0", "Initial spec version")
 	cmd.Flags().StringVarP(&opts.schemaOrg, "schema-organization", "s", "modular", "Schema organization (modular, components, or inline)")
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "yaml", "Spec format (yaml or json)")
-	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts (requires --name or--extends)")
+	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts (requires --name or --extends)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
 func runInit(opts *initOptions) error {
@@ -67,38 +69,20 @@ func runInit(opts *initOptions) error {
 	}
 
 	if opts.nonInteractive {
-		if opts.name == "" && opts.extends != "" {
+		if opts.name == "" && opts.extends == "" {
 			return errors.New("non-interactive mode requires either --name or --extends")
 		}
 	} else {
-		extends := false
 		opts.createSpec = true
-		if err := huh.NewForm(
-			huh.NewGroup(
-				prompts.ConfigTypeSelect(&extends),
-			),
-			huh.NewGroup(
-				prompts.ParentConfigPathInput(&opts.extends),
-			).WithHideFunc(func() bool { return !extends }),
-			huh.NewGroup(
-				prompts.NewSpecSourceSelect(&opts.createSpec),
-			).WithHideFunc(func() bool { return extends }),
-			huh.NewGroup(
-				prompts.SpecPathInput(&opts.path, &opts.createSpec),
-			).WithHideFunc(func() bool { return extends }),
-			huh.NewGroup(
-				prompts.SpecFormatSelect(&opts.format),
-			).WithHideFunc(func() bool { return extends || !opts.createSpec }),
-			huh.NewGroup(
-				prompts.ProductNameInput(&opts.name),
-			).WithHideFunc(func() bool { return extends || opts.name != "" || !opts.createSpec }),
-			huh.NewGroup(
-				prompts.SpecVersionInput(&opts.version),
-			).WithHideFunc(func() bool { return extends || !opts.createSpec }),
-			huh.NewGroup(
-				prompts.SchemaOrganizationSelect(&opts.schemaOrg),
-			).WithHideFunc(func() bool { return extends }),
-		).Run(); err != nil {
+		if err := prompts.RunInitForm(
+			&opts.extends,
+			&opts.name,
+			&opts.path,
+			&opts.version,
+			&opts.schemaOrg,
+			&opts.format,
+			&opts.createSpec,
+		); err != nil {
 			return err
 		}
 	}
@@ -124,6 +108,7 @@ func runInit(opts *initOptions) error {
 		fmt.Print("Initialization completed")
 		return nil
 	}
+
 	cfg := config.Config{
 		Version: config.CurrentConfigVersion,
 		Path:    opts.path,
@@ -135,6 +120,7 @@ func runInit(opts *initOptions) error {
 	if !filepath.IsAbs(specFolder) {
 		specFolder = filepath.Join(cwd, specFolder)
 	}
+
 	if !opts.createSpec {
 		_, err1 := os.Stat(filepath.Join(specFolder, "opendpi.yaml"))
 		_, err2 := os.Stat(filepath.Join(specFolder, "opendpi.json"))
@@ -177,6 +163,7 @@ func runInit(opts *initOptions) error {
 			return fmt.Errorf("failed to write spec file: %w", err)
 		}
 	}
+
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
