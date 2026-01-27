@@ -7,14 +7,17 @@ package commands
 import (
 	"github.com/dacolabs/cli/internal/session"
 	"github.com/dacolabs/cli/internal/translate"
+	"github.com/dacolabs/cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
 // NewRootCmd creates and returns the root command for the CLI.
 func NewRootCmd(translators translate.Register) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use: "daco",
+		Use:     "daco",
+		Version: version.Short(),
 	}
+	rootCmd.SetVersionTemplate(version.Info() + "\n")
 
 	portsCmd := &cobra.Command{
 		Use:               "ports",

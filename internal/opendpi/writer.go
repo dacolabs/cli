@@ -199,7 +199,7 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close() //nolint:errcheck
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)
@@ -210,7 +210,7 @@ func writeYaml(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close() //nolint:errcheck
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
 	return enc.Encode(v)

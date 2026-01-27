@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 0.1.0, 0.1.0-alpha.1, 0.1.0-beta.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.23.0"
+
+jobs:
+  validate:
+    name: Validate Version
+    runs-on: ubuntu-latest
+    outputs:
+      is_prerelease: ${{ steps.check.outputs.is_prerelease }}
+      version_tag: ${{ steps.check.outputs.version_tag }}
+    steps:
+      - name: Validate version format
+        id: check
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Validate semver format (with optional pre-release suffix)
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z]+\.[0-9]+)?$'; then
+            echo "Error: Invalid version format. Use semver (e.g., 0.1.0, 0.1.0-alpha.1, 0.1.0-beta.1)"
+            exit 1
+          fi
+
+          VERSION_TAG="v$VERSION"
+          echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
+
+          # Auto-detect pre-release from version string
+          if echo "$VERSION" | grep -qE '(alpha|beta|rc)'; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Detected pre-release version: $VERSION"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Stable release: $VERSION"
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check tag doesn't exist
+        run: |
+          if git rev-parse "${{ steps.check.outputs.version_tag }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ steps.check.outputs.version_tag }} already exists"
+            exit 1
+          fi
+
+  test:
+    name: Run Tests
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+  release:
+    name: Create Release
+    needs: [validate, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ needs.validate.outputs.version_tag }}" -m "Release ${{ needs.validate.outputs.version_tag }}"
+          git push origin "${{ needs.validate.outputs.version_tag }}"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Output release URL
+        run: |
+          echo "Release created: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version_tag }}"
