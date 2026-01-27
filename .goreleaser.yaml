@@ -129,6 +129,11 @@ brews:
       owner: dacolabs
       name: homebrew-tap
       token: "{{ .Env.RELEASE_TOKEN }}"
+      pull_request:
+        enabled: true
+        base:
+          branch: main
+    commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     directory: Formula
     homepage: "https://github.com/dacolabs/cli"
     description: "Swiss army knife for data product projects"
@@ -145,6 +150,11 @@ scoops:
       owner: dacolabs
       name: scoop-bucket
       token: "{{ .Env.RELEASE_TOKEN }}"
+      pull_request:
+        enabled: true
+        base:
+          branch: main
+    commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/dacolabs/cli"
     description: "Swiss army knife for data product projects"
     license: "Apache-2.0"
