@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-package cmdctx
+package session
 
 import (
 	"context"

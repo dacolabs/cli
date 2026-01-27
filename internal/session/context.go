@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package cmdctx provides project context loading for CLI commands.
-package cmdctx
+// Package session provides project context loading for CLI commands.
+package session
 
 import (
 	"context"

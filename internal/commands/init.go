@@ -26,7 +26,7 @@ type initOptions struct {
 	nonInteractive bool
 }
 
-func registerInitCmd(parent *cobra.Command) {
+func newInitCmd() *cobra.Command {
 	opts := &initOptions{}
 
 	cmd := &cobra.Command{
@@ -53,7 +53,7 @@ Can create a new spec, use an existing one, or extend a parent config.`,
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "yaml", "Spec format (yaml or json)")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts (requires --name or --extends)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
 func runInit(opts *initOptions) error {

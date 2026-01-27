@@ -5,7 +5,7 @@
 package commands
 
 import (
-	"github.com/dacolabs/cli/internal/cmdctx"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/spf13/cobra"
 )
@@ -16,28 +16,31 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 		Use: "daco",
 	}
 
-	registerInitCmd(rootCmd)
-
 	portsCmd := &cobra.Command{
 		Use:               "ports",
 		Short:             "Manage data product ports",
-		PersistentPreRunE: cmdctx.PreRunLoad,
+		PersistentPreRunE: session.PreRunLoad,
 	}
-	registerPortsAddCmd(portsCmd)
-	registerPortsListCmd(portsCmd)
-	registerPortsRemoveCmd(portsCmd)
-	registerPortTranslateCmd(portsCmd, translators)
-	rootCmd.AddCommand(portsCmd)
+	portsCmd.AddCommand(
+		newPortsAddCmd(),
+		newPortsListCmd(),
+		newPortsRemoveCmd(),
+		newPortsTranslateCmd(translators))
 
 	connsCmd := &cobra.Command{
-		Use:               "conections",
+		Use:               "connections",
 		Short:             "Manage data product connections",
-		PersistentPreRunE: cmdctx.PreRunLoad,
+		PersistentPreRunE: session.PreRunLoad,
 	}
-	registerConnectionsDescribeCmd(connsCmd)
-	registerConnectionsListCmd(portsCmd)
-	registerConnectionsRemoveCmd(connsCmd)
-	rootCmd.AddCommand(connsCmd)
+	connsCmd.AddCommand(
+		newConnectionsAddCmd(),
+		newConnectionsDescribeCmd(),
+		newConnectionsListCmd(),
+		newConnectionsRemoveCmd())
 
+	rootCmd.AddCommand(
+		newInitCmd(),
+		portsCmd,
+		connsCmd)
 	return rootCmd
 }

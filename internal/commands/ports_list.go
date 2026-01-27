@@ -11,23 +11,24 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 type portsListOptions struct {
-	output string // output format: table, json, yaml
+	output string
 }
 
-func registerPortsListCmd(parent *cobra.Command) {
+func newPortsListCmd() *cobra.Command {
 	opts := &portsListOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all ports in the OpenDPI spec",
-		Long:  `List all ports defined in the OpenDPI spec with their names, types, and descriptions.`,
+		Long: `List all ports defined in the OpenDPI spec.
+Displays port names, schema types, descriptions, and connection information.`,
 		Example: `  # List ports in table format
   daco ports list
 
@@ -37,7 +38,7 @@ func registerPortsListCmd(parent *cobra.Command) {
   # List ports as YAML
   daco ports list -o yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -47,10 +48,10 @@ func registerPortsListCmd(parent *cobra.Command) {
 
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "table", "Output format (table, json, yaml)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runPortsList(ctx *cmdctx.Context, opts *portsListOptions) error {
+func runPortsList(ctx *session.Context, opts *portsListOptions) error {
 	if len(ctx.Spec.Ports) == 0 {
 		fmt.Println("No ports defined.")
 		return nil

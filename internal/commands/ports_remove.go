@@ -10,22 +10,24 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 )
 
 type portsRemoveOptions struct {
-	force bool // skip confirmation
+	force bool
 }
 
-func registerPortsRemoveCmd(parent *cobra.Command) {
+func newPortsRemoveCmd() *cobra.Command {
 	opts := &portsRemoveOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "remove [PORT_NAME]",
 		Short: "Remove a port from the OpenDPI spec",
-		Long:  `Remove a port from the OpenDPI spec with interactive confirmation. If no port name is provided, an interactive selection prompt is shown.`,
+		Long: `Remove a port from the OpenDPI spec.
+If no port name is provided, an interactive selection prompt is shown.
+Requires confirmation unless --force is specified.`,
 		Example: `  # Interactive selection
   daco ports remove
 
@@ -36,7 +38,7 @@ func registerPortsRemoveCmd(parent *cobra.Command) {
   daco ports remove user_events --force`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -56,10 +58,10 @@ func registerPortsRemoveCmd(parent *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runPortsRemove(ctx *cmdctx.Context, portName string, opts *portsRemoveOptions) error {
+func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOptions) error {
 	port, exists := ctx.Spec.Ports[portName]
 	if !exists {
 		return fmt.Errorf("port %q not found", portName)

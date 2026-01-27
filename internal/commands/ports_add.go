@@ -8,30 +8,32 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 )
 
 type portsAddOptions struct {
-	name           string // port name
-	description    string // port description
-	schemaFile     string // path to JSON schema file
-	connectionName string // existing connection name
-	location       string // location for the connection
+	name           string
+	description    string
+	schemaFile     string
+	connectionName string
+	location       string
 	nonInteractive bool
 }
 
-func registerPortsAddCmd(parent *cobra.Command) {
+func newPortsAddCmd() *cobra.Command {
 	opts := &portsAddOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new port to the OpenDPI spec",
-		Long:  `Add a new port to the OpenDPI spec with schema and connection configuration.`,
+		Long: `Add a new port to the OpenDPI spec with schema and connection configuration.
+Ports can have optional schemas (from file or created interactively) and
+connections that define where data flows.`,
 		Example: `  # Interactive mode
   daco ports add
 
@@ -39,7 +41,7 @@ func registerPortsAddCmd(parent *cobra.Command) {
   daco ports add --name events --schema-file ./schemas/event.json \
     --connection kafka --location events_topic --non-interactive`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -49,15 +51,15 @@ func registerPortsAddCmd(parent *cobra.Command) {
 
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Port name")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Port description")
-	cmd.Flags().StringVar(&opts.schemaFile, "schema-file", "", "Path to JSON schema file")
+	cmd.Flags().StringVarP(&opts.schemaFile, "schema-file", "s", "", "Path to JSON schema file")
 	cmd.Flags().StringVarP(&opts.connectionName, "connection", "c", "", "Connection name")
 	cmd.Flags().StringVarP(&opts.location, "location", "l", "", "Location (table, topic, path, etc.)")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runPortsAdd(ctx *cmdctx.Context, opts *portsAddOptions) error {
+func runPortsAdd(ctx *session.Context, opts *portsAddOptions) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)

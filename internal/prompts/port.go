@@ -9,8 +9,8 @@ import (
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-// AddPortResult holds the result of RunAddPortForm.
-type AddPortResult struct {
+// PortAddResult holds the result of RunAddPortForm.
+type PortAddResult struct {
 	Name        string
 	Description string
 	Schema      *jsonschema.Schema
@@ -20,13 +20,13 @@ type AddPortResult struct {
 }
 
 // RunAddPortForm runs the interactive form for adding a port.
-// Returns AddPortResult containing port name, description, schema, schemaPath (if file selected),
+// Returns PortAddResult containing port name, description, schema, schemaPath (if file selected),
 // connections, and newConns (connections created during this form that need to be added to spec).
 func RunAddPortForm(
 	existingPorts map[string]opendpi.Port,
 	existingConns map[string]opendpi.Connection,
 	existingSchemas map[string]*jsonschema.Schema,
-) (result AddPortResult, _ error) {
+) (result PortAddResult, _ error) {
 	// Step 1: Port name and description
 	if err := huh.NewForm(
 		huh.NewGroup(
@@ -158,7 +158,7 @@ func RunPortConnectionsForm(existingConns map[string]opendpi.Connection) ([]open
 			return nil, nil, err
 		}
 
-		var connResult ConnectionResult
+		var connResult ConnectionAddResult
 		var err error
 
 		switch connSource {
@@ -218,4 +218,16 @@ func RunPortConnectionsForm(existingConns map[string]opendpi.Connection) ([]open
 	}
 
 	return conns, newConns, nil
+}
+
+// RunTranslateFormatSelect returns a select field for choosing translation output format.
+func RunTranslateFormatSelect(value *string, formats []string) *huh.Select[string] {
+	options := make([]huh.Option[string], len(formats))
+	for i, f := range formats {
+		options[i] = huh.NewOption(f, f)
+	}
+	return huh.NewSelect[string]().
+		Title("Output format").
+		Options(options...).
+		Value(value)
 }

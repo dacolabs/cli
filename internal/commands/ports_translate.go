@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/prompts"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
@@ -20,10 +20,14 @@ import (
 	_ "github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
-func registerPortTranslateCmd(parent *cobra.Command, translators translate.Register) {
-	var portName string
-	var format string
-	var outputFile string
+type portsTranslateOptions struct {
+	name       string
+	format     string
+	outputFile string
+}
+
+func newPortsTranslateCmd(translators translate.Register) *cobra.Command {
+	opts := &portsTranslateOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "translate",
@@ -31,42 +35,46 @@ func registerPortTranslateCmd(parent *cobra.Command, translators translate.Regis
 		Long: fmt.Sprintf(`Translate a port schema to a target format.
 
 Available formats: %s`, strings.Join(translators.Available(), ", ")),
-		Example: `  daco ports translate
-		daco ports translate --port-name "my-port" --format pyspark --output schema.py`,
+		Example: `  # Interactive mode
+  daco ports translate
+
+  # Translate specific port
+  daco ports translate --name my-port --format pyspark --output schema.py`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPortTranslate(cmd, translators, portName, format, outputFile)
+			return runPortsTranslate(cmd, translators, opts)
 		},
 	}
 
-	cmd.Flags().StringVar(&portName, "port-name", "", "Name of the port to translate (translates all ports if not specified)")
-	cmd.Flags().StringVar(&format, "format", "", fmt.Sprintf("Output format (options: %s)", strings.Join(translators.Available(), ", ")))
-	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
+	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Port name (translates all if not specified)")
+	cmd.Flags().StringVarP(&opts.format, "format", "f", "", fmt.Sprintf("Output format (%s)", strings.Join(translators.Available(), ", ")))
+	cmd.Flags().StringVarP(&opts.outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runPortTranslate(cmd *cobra.Command, translators translate.Register, portName, format, outputFile string) error {
-	ctx, err := cmdctx.RequireFromCommand(cmd)
+func runPortsTranslate(cmd *cobra.Command, translators translate.Register, opts *portsTranslateOptions) error {
+	ctx, err := session.RequireFromCommand(cmd)
 	if err != nil {
 		return err
 	}
 
+	format := opts.format
 	if format == "" {
 		formats := translators.Available()
 		if len(formats) == 0 {
 			return fmt.Errorf("no translation formats available")
 		}
 		err := huh.NewForm(
-			huh.NewGroup(prompts.TranslateFormatSelect(&format, formats)),
+			huh.NewGroup(prompts.RunTranslateFormatSelect(&format, formats)),
 		).Run()
 		if err != nil {
 			return err
 		}
 	}
 
-	if portName == "" {
+	if opts.name == "" {
 		spec := ctx.Spec
-		if outputFile != "" {
+		if opts.outputFile != "" {
 			return fmt.Errorf("--output flag is only valid when translating a single port")
 		}
 		if len(ctx.Spec.Ports) == 0 {
@@ -105,15 +113,15 @@ func runPortTranslate(cmd *cobra.Command, translators translate.Register, portNa
 		return nil
 	}
 
-	port, ok := ctx.Spec.Ports[portName]
+	port, ok := ctx.Spec.Ports[opts.name]
 	if !ok {
-		return fmt.Errorf("port %q not found in spec", portName)
+		return fmt.Errorf("port %q not found in spec", opts.name)
 	}
 	if port.Schema == nil {
-		return fmt.Errorf("port %q has no schema defined", portName)
+		return fmt.Errorf("port %q has no schema defined", opts.name)
 	}
 
-	return translatePort(portName, translators, port.Schema, format, outputFile)
+	return translatePort(opts.name, translators, port.Schema, format, opts.outputFile)
 }
 
 func translatePort(portName string, translators translate.Register, schema *jsonschema.Schema, format, outputFile string) error {
@@ -139,7 +147,7 @@ func translatePort(portName string, translators translate.Register, schema *json
 	if err := os.WriteFile(outputFile, output, 0o600); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
-	fmt.Printf("  ✓ %s\n", outputFile)
+	fmt.Printf("  %s\n", outputFile)
 
 	return nil
 }

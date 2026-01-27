@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ type connectionsRemoveOptions struct {
 	force bool
 }
 
-func registerConnectionsRemoveCmd(parent *cobra.Command) {
+func newConnectionsRemoveCmd() *cobra.Command {
 	opts := &connectionsRemoveOptions{}
 
 	cmd := &cobra.Command{
@@ -37,7 +37,7 @@ func registerConnectionsRemoveCmd(parent *cobra.Command) {
   daco connections remove unused_conn --force`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -58,10 +58,10 @@ func registerConnectionsRemoveCmd(parent *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&opts.force, "force", "f", false, "Skip confirmation prompt")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runConnectionsRemove(ctx *cmdctx.Context, connName string, opts *connectionsRemoveOptions) error {
+func runConnectionsRemove(ctx *session.Context, connName string, opts *connectionsRemoveOptions) error {
 	conn, exists := ctx.Spec.Connections[connName]
 	if !exists {
 		return fmt.Errorf("connection %q not found", connName)

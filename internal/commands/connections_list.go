@@ -10,17 +10,17 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 type connectionsListOptions struct {
-	output string // table, json, yaml
+	output string
 }
 
-func registerConnectionsListCmd(parent *cobra.Command) {
+func newConnectionsListCmd() *cobra.Command {
 	opts := &connectionsListOptions{}
 
 	cmd := &cobra.Command{
@@ -36,7 +36,7 @@ func registerConnectionsListCmd(parent *cobra.Command) {
   # List connections as YAML
   daco connections list -o yaml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -46,10 +46,10 @@ func registerConnectionsListCmd(parent *cobra.Command) {
 
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "table", "Output format (table, json, yaml)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
-func runConnectionsList(ctx *cmdctx.Context, opts *connectionsListOptions) error {
+func runConnectionsList(ctx *session.Context, opts *connectionsListOptions) error {
 	if len(ctx.Spec.Connections) == 0 {
 		fmt.Println("No connections defined.")
 		return nil

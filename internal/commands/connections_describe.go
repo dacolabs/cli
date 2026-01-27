@@ -10,17 +10,17 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/cmdctx"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 type connectionsDescribeOptions struct {
-	output string // text, json, yaml
+	output string
 }
 
-func registerConnectionsDescribeCmd(parent *cobra.Command) {
+func newConnectionsDescribeCmd() *cobra.Command {
 	opts := &connectionsDescribeOptions{}
 
 	cmd := &cobra.Command{
@@ -40,7 +40,7 @@ func registerConnectionsDescribeCmd(parent *cobra.Command) {
   daco connections describe kafka_prod -o yaml`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := cmdctx.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -60,7 +60,7 @@ func registerConnectionsDescribeCmd(parent *cobra.Command) {
 
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "text", "Output format (text, json, yaml)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
 func selectConnectionToDescribe(conns map[string]opendpi.Connection) (string, error) {
@@ -98,7 +98,7 @@ func selectConnectionToDescribe(conns map[string]opendpi.Connection) (string, er
 	return selected, nil
 }
 
-func runConnectionsDescribe(ctx *cmdctx.Context, connName string, opts *connectionsDescribeOptions) error {
+func runConnectionsDescribe(ctx *session.Context, connName string, opts *connectionsDescribeOptions) error {
 	conn, exists := ctx.Spec.Connections[connName]
 	if !exists {
 		return fmt.Errorf("connection %q not found", connName)

@@ -12,15 +12,15 @@ import (
 	"github.com/dacolabs/cli/internal/opendpi"
 )
 
-// ConnectionResult holds the result of connection form functions.
-type ConnectionResult struct {
+// ConnectionAddResult holds the result of connection form functions.
+type ConnectionAddResult struct {
 	Name       string
 	Connection opendpi.Connection
 }
 
 // RunAddNewConnectionForm runs the interactive form for creating a new connection.
-func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionResult, error) {
-	var result ConnectionResult
+func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionAddResult, error) {
+	var result ConnectionAddResult
 	if err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -74,15 +74,15 @@ func RunAddNewConnectionForm(existingConns map[string]opendpi.Connection) (Conne
 				Value(&result.Connection.Description),
 		),
 	).Run(); err != nil {
-		return ConnectionResult{}, err
+		return ConnectionAddResult{}, err
 	}
 
 	return result, nil
 }
 
 // RunSelectConnectionForm prompts for selecting one existing connection.
-func RunSelectConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionResult, error) {
-	var result ConnectionResult
+func RunSelectConnectionForm(existingConns map[string]opendpi.Connection) (ConnectionAddResult, error) {
+	var result ConnectionAddResult
 	options := make([]huh.Option[string], 0, len(existingConns))
 	for n, c := range existingConns {
 		label := fmt.Sprintf("%s (%s://%s)", n, c.Protocol, c.Host)
@@ -99,7 +99,7 @@ func RunSelectConnectionForm(existingConns map[string]opendpi.Connection) (Conne
 				Height(8),
 		),
 	).Run(); err != nil {
-		return ConnectionResult{}, err
+		return ConnectionAddResult{}, err
 	}
 
 	result.Connection = existingConns[result.Name]
