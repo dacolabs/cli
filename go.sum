@@ -39,8 +39,8 @@ github.com/charmbracelet/x/xpty v0.1.2/go.mod h1:XK2Z0id5rtLWcpeNiMYBccNNBrP2IJn
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.24 h1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
 github.com/creack/pty v1.1.24/go.mod h1:08sCNb52WyoAwi2QDyzUCTgcvVFhUzewun7wtTfvcwE=
-github.com/dacolabs/jsonschema-go v0.0.0-20260121145504-b7f7835e2c1b h1:kPrxMMox8f1B4C8vXTBtP11orvswvBS1AMROuYt1zRo=
-github.com/dacolabs/jsonschema-go v0.0.0-20260121145504-b7f7835e2c1b/go.mod h1:nHs3P4SIH0FF6QaAZseD8tQo/3CzH1Y3m5AJJtgfnws=
+github.com/dacolabs/jsonschema-go v0.0.0-20260127144729-166053579939 h1:9zUXh/VXN/CbyHuHwTiFwYNvqceKJ0bcYNgEpeqJWik=
+github.com/dacolabs/jsonschema-go v0.0.0-20260127144729-166053579939/go.mod h1:I1gqd8IaEUbncFwAv02m+GyWchq7Rhp1ZedU+yZpPNY=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

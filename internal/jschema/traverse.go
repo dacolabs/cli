@@ -7,7 +7,7 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 )
 
 // RefResolver resolves $ref strings to schemas.

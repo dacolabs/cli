@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
