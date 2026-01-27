@@ -80,7 +80,7 @@ func Load(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrSpecNotFound, err)
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close() //nolint:errcheck
 
 	spec, err := parser.Parse(f, os.DirFS(specDir))
 	if err != nil {

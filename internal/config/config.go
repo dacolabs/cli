@@ -53,7 +53,7 @@ func (c *Config) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close() //nolint:errcheck
 
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
@@ -66,7 +66,7 @@ func loadFile(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close() //nolint:errcheck
 
 	var cfg Config
 	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {

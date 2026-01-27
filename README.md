@@ -4,11 +4,30 @@ Swiss army knife for data product projects.
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew install dacolabs/tap/daco
+```
+
+### Scoop (Windows)
+
+```powershell
+scoop bucket add dacolabs https://github.com/dacolabs/scoop-bucket.git
+scoop install daco
+```
+
+### Go Install
+
 ```bash
 go install github.com/dacolabs/cli/cmd/daco@latest
 ```
 
-Or build from source:
+### Manual Download
+
+Download the appropriate binary from the [releases page](https://github.com/dacolabs/cli/releases).
+
+### Build from Source
 
 ```bash
 git clone https://github.com/dacolabs/cli.git
@@ -27,22 +46,9 @@ daco init
 daco --help
 ```
 
-## Development
-
-```bash
-# Run tests
-make test
-
-# Lint code
-make lint
-
-# Format code
-make format
-```
-
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, project structure, and guidelines.
 
 ## License
 

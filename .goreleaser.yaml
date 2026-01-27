@@ -1,0 +1,152 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: daco
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod verify
+
+builds:
+  - id: daco
+    main: ./cmd/daco
+    binary: daco
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/dacolabs/cli/internal/version.Version={{.Version}}
+      - -X github.com/dacolabs/cli/internal/version.Commit={{.Commit}}
+      - -X github.com/dacolabs/cli/internal/version.Date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev"
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))?\!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\(.+\))?\!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(.+\))?\!?:.+$'
+      order: 2
+    - title: Tests
+      regexp: '^.*?test(\(.+\))?\!?:.+$'
+      order: 3
+    - title: Maintenance
+      regexp: '^.*?(chore|ci|build|refactor)(\(.+\))?\!?:.+$'
+      order: 4
+    - title: Breaking Changes
+      regexp: '^.*?\!:.+$'
+      order: 5
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Merge branch"
+      - typo
+
+release:
+  github:
+    owner: dacolabs
+    name: cli
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Daco CLI {{ .Tag }}
+
+    {{ if .Prerelease }}> This is a pre-release version.{{ end }}
+
+    ### Installation
+
+    **Homebrew (macOS/Linux):**
+    ```bash
+    brew install dacolabs/tap/daco
+    ```
+
+    **Scoop (Windows):**
+    ```powershell
+    scoop bucket add dacolabs https://github.com/dacolabs/scoop-bucket.git
+    scoop install daco
+    ```
+
+    **Go:**
+    ```bash
+    go install github.com/dacolabs/cli/cmd/daco@{{ .Tag }}
+    ```
+
+    **Manual Download:**
+    Download the appropriate archive for your platform below.
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/dacolabs/cli/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+brews:
+  - name: daco
+    repository:
+      owner: dacolabs
+      name: homebrew-tap
+      token: "{{ .Env.RELEASE_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/dacolabs/cli"
+    description: "Swiss army knife for data product projects"
+    license: "Apache-2.0"
+    skip_upload: auto
+    test: |
+      system "#{bin}/daco", "--version"
+    install: |
+      bin.install "daco"
+
+scoops:
+  - name: daco
+    repository:
+      owner: dacolabs
+      name: scoop-bucket
+      token: "{{ .Env.RELEASE_TOKEN }}"
+    homepage: "https://github.com/dacolabs/cli"
+    description: "Swiss army knife for data product projects"
+    license: "Apache-2.0"
+    skip_upload: auto
+
+announce:
+  skip: true

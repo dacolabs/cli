@@ -33,3 +33,6 @@ Thumbs.db
 
 # Debug
 __debug_bin*
+
+# GoReleaser
+dist/
