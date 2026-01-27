@@ -36,16 +36,6 @@ make build
 ./bin/daco --help
 ```
 
-## Usage
-
-```bash
-# Initialize a new data product
-daco init
-
-# Show help
-daco --help
-```
-
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, project structure, and guidelines.
