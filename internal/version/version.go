@@ -7,6 +7,7 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
 )
 
 // These variables are set at build time using ldflags.
@@ -18,6 +19,34 @@ var (
 	// Date is the build date in RFC3339 format.
 	Date = "unknown"
 )
+
+func init() {
+	// If version wasn't set via ldflags, try to get it from build info.
+	// This works when installed via "go install module@version".
+	if Version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			Version = info.Main.Version
+		}
+	}
+
+	// Try to get commit and date from build settings if not set via ldflags.
+	if Commit == "none" || Date == "unknown" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			for _, setting := range info.Settings {
+				switch setting.Key {
+				case "vcs.revision":
+					if Commit == "none" && len(setting.Value) >= 7 {
+						Commit = setting.Value[:7]
+					}
+				case "vcs.time":
+					if Date == "unknown" {
+						Date = setting.Value
+					}
+				}
+			}
+		}
+	}
+}
 
 // Info returns formatted version information.
 func Info() string {
