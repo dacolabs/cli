@@ -202,13 +202,6 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 					return nil, fmt.Errorf("port %q: schema definition %q conflicts with existing schema", name, defName)
 				}
 			}
-
-			// Validate $defs don't conflict with existing schema names
-			for defName := range portSchema.Defs {
-				if existing, exists := schemas[defName]; exists && existing != portSchema.Defs[defName] {
-					return nil, fmt.Errorf("port %q: schema definition %q conflicts with existing schema", name, defName)
-				}
-			}
 		}
 
 		ports[name] = Port{
