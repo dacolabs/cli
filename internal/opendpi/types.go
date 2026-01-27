@@ -5,7 +5,7 @@
 package opendpi
 
 import (
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 )
 
 // Spec represents the root structure of an OpenDPI specification file.

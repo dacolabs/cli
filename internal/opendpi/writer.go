@@ -10,7 +10,7 @@ import (
 
 	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/cli/internal/jschema"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 

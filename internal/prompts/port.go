@@ -6,7 +6,7 @@ package prompts
 import (
 	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/opendpi"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 )
 
 // PortAddResult holds the result of RunAddPortForm.

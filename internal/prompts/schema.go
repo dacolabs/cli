@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/huh"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 )
 
 // RunSchemaForm prompts the user to define or select a schema.

@@ -13,7 +13,7 @@ import (
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/session"
 	"github.com/dacolabs/cli/internal/translate"
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 
 	// Import translator to auto-register

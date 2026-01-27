@@ -7,7 +7,7 @@ package translate
 import (
 	"fmt"
 
-	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/dacolabs/jsonschema-go/jsonschema"
 )
 
 // Translator defines the interface all format translators must implement.
