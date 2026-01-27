@@ -128,10 +128,13 @@ brews:
     repository:
       owner: dacolabs
       name: homebrew-tap
+      branch: "{{.ProjectName}}-{{.Version}}"
       token: "{{ .Env.RELEASE_TOKEN }}"
       pull_request:
         enabled: true
         base:
+          owner: dacolabs
+          name: homebrew-tap
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     directory: Formula
@@ -149,10 +152,13 @@ scoops:
     repository:
       owner: dacolabs
       name: scoop-bucket
+      branch: "{{.ProjectName}}-{{.Version}}"
       token: "{{ .Env.RELEASE_TOKEN }}"
       pull_request:
         enabled: true
         base:
+          owner: dacolabs
+          name: scoop-bucket
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/dacolabs/cli"
