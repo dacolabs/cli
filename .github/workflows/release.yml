@@ -106,6 +106,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ needs.validate.outputs.version_tag }}
 
       - name: Output release URL
         run: |
