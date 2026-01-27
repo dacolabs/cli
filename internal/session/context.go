@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package context provides project context loading for CLI commands.
-package context
+// Package session provides project context loading for CLI commands.
+package session
 
 import (
 	"context"

@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dacolabs/cli/internal/context"
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/session"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +22,7 @@ type portsDescribeOptions struct {
 	output string // output format: text, json, yaml
 }
 
-func registerPortsDescribeCmd(parent *cobra.Command) {
+func newPortsDescribeCmd() *cobra.Command {
 	opts := &portsDescribeOptions{}
 
 	cmd := &cobra.Command{
@@ -42,7 +42,7 @@ func registerPortsDescribeCmd(parent *cobra.Command) {
   daco ports describe user_events -o yaml`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, err := context.RequireFromCommand(cmd)
+			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func registerPortsDescribeCmd(parent *cobra.Command) {
 
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "text", "Output format (text, json, yaml)")
 
-	parent.AddCommand(cmd)
+	return cmd
 }
 
 func selectPortToDescribe(ports map[string]opendpi.Port) (string, error) {
@@ -107,7 +107,7 @@ func selectPortToDescribe(ports map[string]opendpi.Port) (string, error) {
 	return selected, nil
 }
 
-func runPortsDescribe(ctx *context.Context, portName string, opts *portsDescribeOptions) error {
+func runPortsDescribe(ctx *session.Context, portName string, opts *portsDescribeOptions) error {
 	port, exists := ctx.Spec.Ports[portName]
 	if !exists {
 		return fmt.Errorf("port %q not found", portName)
@@ -162,7 +162,7 @@ func runPortsDescribe(ctx *context.Context, portName string, opts *portsDescribe
 	}
 }
 
-func printSchemaText(schema *jschema.Schema, indent string) {
+func printSchemaText(schema *jsonschema.Schema, indent string) {
 	if schema.Ref != "" {
 		fmt.Printf("%sRef: %s\n", indent, schema.Ref)
 		return
@@ -262,16 +262,4 @@ func printSchemaText(schema *jschema.Schema, indent string) {
 			printSchemaText(schema.Defs[defName], indent+"    ")
 		}
 	}
-}
-
-func findConnectionName(conn *opendpi.Connection, connections map[string]opendpi.Connection) string {
-	if conn == nil {
-		return "unknown"
-	}
-	for name, c := range connections {
-		if c.Protocol == conn.Protocol && c.Host == conn.Host {
-			return name
-		}
-	}
-	return "unknown"
 }

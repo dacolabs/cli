@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/dacolabs/cli/internal/jschema"
+	"github.com/google/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,9 +52,9 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 
 	loader := jschema.NewLoader(fsys)
 
-	var schemaDefs map[string]*jschema.Schema
+	var schemaDefs map[string]*jsonschema.Schema
 	if raw.Components != nil {
-		schemaDefs = make(map[string]*jschema.Schema, len(raw.Components.Schemas))
+		schemaDefs = make(map[string]*jsonschema.Schema, len(raw.Components.Schemas))
 		for name, rs := range raw.Components.Schemas {
 			if jschema.IsFileRef(rs.Ref) {
 				s, err := loader.LoadFile(rs.Ref)
@@ -73,7 +74,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 			}
 		}
 	} else {
-		schemaDefs = make(map[string]*jschema.Schema)
+		schemaDefs = make(map[string]*jsonschema.Schema)
 	}
 
 	for name, rp := range raw.Ports {
@@ -92,7 +93,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 	}
 
 	// Unified schemas map, it will contain all resolved schemas keyed by name
-	schemas := make(map[string]*jschema.Schema)
+	schemas := make(map[string]*jsonschema.Schema)
 
 	// Add component schemas to unified map (already resolved)
 	for name, s := range schemaDefs {
@@ -118,7 +119,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 			}
 		}
 
-		var portSchema *jschema.Schema
+		var portSchema *jsonschema.Schema
 		if rp.Schema != nil {
 			if rp.Schema.Ref != "" {
 				if strings.HasPrefix(rp.Schema.Ref, "#/") {
@@ -160,9 +161,9 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 
 			// Only add component schemas that are actually referenced
 			if raw.Components != nil && len(schemaDefs) > 0 {
-				collectComponentRefs := func(s *jschema.Schema, schemaDefs map[string]*jschema.Schema) map[string]struct{} {
+				collectComponentRefs := func(s *jsonschema.Schema, schemaDefs map[string]*jsonschema.Schema) map[string]struct{} {
 					refs := make(map[string]struct{})
-					resolver := func(ref string) *jschema.Schema {
+					resolver := func(ref string) *jsonschema.Schema {
 						if schemaName, ok := strings.CutPrefix(ref, "#/components/schemas/"); ok {
 							return schemaDefs[schemaName]
 						}
@@ -178,7 +179,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 				refs := collectComponentRefs(portSchema, schemaDefs)
 				if len(refs) > 0 {
 					if portSchema.Defs == nil {
-						portSchema.Defs = make(map[string]*jschema.Schema)
+						portSchema.Defs = make(map[string]*jsonschema.Schema)
 					}
 					for ref := range refs {
 						s, ok := schemaDefs[ref]
@@ -190,6 +191,22 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 						}
 						portSchema.Defs[ref] = s
 					}
+					// Rewrite refs from #/components/schemas/ and #/definitions/ to #/$defs/
+					jschema.RewriteRefs(portSchema)
+				}
+			}
+
+			// Validate $defs don't conflict with existing schema names
+			for defName := range portSchema.Defs {
+				if existing, exists := schemas[defName]; exists && existing != portSchema.Defs[defName] {
+					return nil, fmt.Errorf("port %q: schema definition %q conflicts with existing schema", name, defName)
+				}
+			}
+
+			// Validate $defs don't conflict with existing schema names
+			for defName := range portSchema.Defs {
+				if existing, exists := schemas[defName]; exists && existing != portSchema.Defs[defName] {
+					return nil, fmt.Errorf("port %q: schema definition %q conflicts with existing schema", name, defName)
 				}
 			}
 
@@ -248,7 +265,7 @@ type rawConnection struct {
 type rawPort struct {
 	Description string              `yaml:"description,omitempty" json:"description,omitempty"`
 	Connections []rawPortConnection `yaml:"connections" json:"connections"`
-	Schema      *jschema.Schema  `yaml:"schema" json:"schema"`
+	Schema      *jsonschema.Schema  `yaml:"schema" json:"schema"`
 }
 
 type rawPortConnection struct {
@@ -261,7 +278,7 @@ type connectionRef struct {
 }
 
 type rawComponents struct {
-	Schemas map[string]*jschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Schemas map[string]*jsonschema.Schema `yaml:"schemas,omitempty" json:"schemas,omitempty"`
 }
 
 func parseJSON(r io.Reader) (*rawSpec, error) {
@@ -299,4 +316,3 @@ func parseYAML(r io.Reader) (*rawSpec, error) {
 
 	return &raw, nil
 }
-

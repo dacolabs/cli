@@ -411,8 +411,8 @@ func TestParse_RefOnlySchema(t *testing.T) {
 			assert.Len(t, usersPort.Schema.Defs, 1, "Only BaseUser should be in Defs")
 
 			// Verify the schema is the UserWrapper (which is a ref-only schema)
-			// After resolution, the Ref field should still contain the ref string
-			assert.Equal(t, "#/components/schemas/BaseUser", usersPort.Schema.Ref)
+			// After resolution, the Ref field is rewritten to use #/$defs/ format
+			assert.Equal(t, "#/$defs/BaseUser", usersPort.Schema.Ref)
 
 			// Check direct port - uses BaseUser directly
 			directPort, ok := spec.Ports["direct"]
