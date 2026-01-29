@@ -16,7 +16,7 @@ import (
 func registerTranslators() translate.Register {
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
-	translators["pyspark-sql"] = &sparksql.Translator{}
+	translators["spark-sql"] = &sparksql.Translator{}
 	return translators
 }
 
