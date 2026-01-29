@@ -9,12 +9,14 @@ import (
 
 	"github.com/dacolabs/cli/internal/commands"
 	"github.com/dacolabs/cli/internal/translate"
+	"github.com/dacolabs/cli/internal/translate/protobuf"
 	"github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
 func registerTranslators() translate.Register {
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
+	translators["protobuf"] = &protobuf.Translator{}
 	return translators
 }
 
