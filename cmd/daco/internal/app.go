@@ -9,8 +9,8 @@ import (
 
 	"github.com/dacolabs/cli/internal/commands"
 	"github.com/dacolabs/cli/internal/translate"
-	"github.com/dacolabs/cli/internal/translate/pyspark"
 	"github.com/dacolabs/cli/internal/translate/databrickspyspark"
+	"github.com/dacolabs/cli/internal/translate/pyspark"
 )
 
 func registerTranslators() translate.Register {
