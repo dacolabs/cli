@@ -28,7 +28,7 @@ func (t *Translator) FileExtension() string {
 }
 
 // Translate converts a JSON schema to PySpark Python code.
-func (t *Translator) Translate(portName string, schema *jsonschema.Schema) ([]byte, error) {
+func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ string) ([]byte, error) {
 	data, err := translate.Prepare(portName, schema, &resolver{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare schema data: %w", err)

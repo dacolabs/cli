@@ -34,7 +34,8 @@ func Prepare(portName string, schema *jsonschema.Schema, resolver TypeResolver) 
 	}
 
 	data := &SchemaData{
-		Extra: make(map[string]any),
+		Description: schema.Description,
+		Extra:       make(map[string]any),
 	}
 
 	// Process $defs in topological order
@@ -84,9 +85,10 @@ func (c *prepareContext) resolveFields(schema *jsonschema.Schema, path string) [
 		typeStr := c.resolveType(propSchema, propName, propPath)
 
 		f := Field{
-			Name:     propName,
-			Type:     typeStr,
-			Nullable: nullable,
+			Name:        propName,
+			Type:        typeStr,
+			Nullable:    nullable,
+			Description: propSchema.Description,
 		}
 		c.resolver.EnrichField(&f)
 		fields = append(fields, f)
