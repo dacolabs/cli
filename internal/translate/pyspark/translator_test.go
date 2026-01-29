@@ -123,8 +123,9 @@ func TestTranslate_NestedObject(t *testing.T) {
 
 	result := string(output)
 
-	// Should have nested StructType
-	assert.Contains(t, result, `"address", T.StructType`)
+	// Inline object should be extracted as a separate variable
+	assert.Contains(t, result, "_Address = T.StructType")
+	assert.Contains(t, result, `"address", _Address`)
 }
 
 func TestTranslate_WithDefs_VariableReference(t *testing.T) {
@@ -315,8 +316,9 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 
 	result := string(output)
 
-	// Should have ArrayType with nested StructType
-	assert.Contains(t, result, "T.ArrayType(T.StructType")
+	// Array element object should be extracted as a separate variable
+	assert.Contains(t, result, "_Items = T.StructType")
+	assert.Contains(t, result, "T.ArrayType(_Items)")
 }
 
 func TestTranslate_RefToComponentsRewritten(t *testing.T) {

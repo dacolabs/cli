@@ -79,6 +79,7 @@ linters:
       locale: US
 
   exclusions:
+    generated: lax  # Skip files with Code generated header
     rules:
       # Test files can have longer functions
       - path: _test\.go
