@@ -24,6 +24,7 @@ type portsTranslateOptions struct {
 	name       string
 	format     string
 	outputFile string
+	outputDir  string
 }
 
 func newPortsTranslateCmd(translators translate.Register) *cobra.Command {
@@ -39,7 +40,10 @@ Available formats: %s`, strings.Join(translators.Available(), ", ")),
   daco ports translate
 
   # Translate specific port
-  daco ports translate --name my-port --format pyspark --output schema.py`,
+  daco ports translate --name my-port --format pyspark --output schema.py
+
+  # Translate to a custom directory (also sets package name for Go/Protobuf/Scala)
+  daco ports translate --format go --output-dir models`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPortsTranslate(cmd, translators, opts)
 		},
@@ -48,6 +52,7 @@ Available formats: %s`, strings.Join(translators.Available(), ", ")),
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Port name (translates all if not specified)")
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "", fmt.Sprintf("Output format (%s)", strings.Join(translators.Available(), ", ")))
 	cmd.Flags().StringVarP(&opts.outputFile, "output", "o", "", "Output file path (only valid when translating a single port)")
+	cmd.Flags().StringVarP(&opts.outputDir, "output-dir", "d", "schemas", "Output directory (also used as package name for Go/Protobuf/Scala)")
 
 	return cmd
 }
@@ -92,7 +97,7 @@ func runPortsTranslate(cmd *cobra.Command, translators translate.Register, opts 
 				continue
 			}
 
-			err := translatePort(portName, translators, port.Schema, format, "")
+			err := translatePort(portName, translators, port.Schema, format, "", opts.outputDir)
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("%s: %v", portName, err))
 			} else {
@@ -121,27 +126,26 @@ func runPortsTranslate(cmd *cobra.Command, translators translate.Register, opts 
 		return fmt.Errorf("port %q has no schema defined", opts.name)
 	}
 
-	return translatePort(opts.name, translators, port.Schema, format, opts.outputFile)
+	return translatePort(opts.name, translators, port.Schema, format, opts.outputFile, opts.outputDir)
 }
 
-func translatePort(portName string, translators translate.Register, schema *jsonschema.Schema, format, outputFile string) error {
+func translatePort(portName string, translators translate.Register, schema *jsonschema.Schema, format, outputFile, outputDir string) error {
 	translator, err := translators.Get(format)
 	if err != nil {
 		return fmt.Errorf("unsupported format %q. Available formats: %s",
 			format, strings.Join(translators.Available(), ", "))
 	}
 
-	output, err := translator.Translate(portName, schema)
+	output, err := translator.Translate(portName, schema, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to translate schema: %w", err)
 	}
 
 	if outputFile == "" {
-		schemasDir := "schemas"
-		if err := os.MkdirAll(schemasDir, 0o750); err != nil {
-			return fmt.Errorf("failed to create schemas directory: %w", err)
+		if err := os.MkdirAll(outputDir, 0o750); err != nil {
+			return fmt.Errorf("failed to create output directory: %w", err)
 		}
-		outputFile = filepath.Join(schemasDir, portName+translator.FileExtension())
+		outputFile = filepath.Join(outputDir, portName+translator.FileExtension())
 	}
 
 	if err := os.WriteFile(outputFile, output, 0o600); err != nil {

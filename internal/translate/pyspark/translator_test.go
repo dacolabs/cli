@@ -22,7 +22,7 @@ func TestTranslate_SimpleObject(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("users", schema)
+	output, err := translator.Translate("users", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -50,7 +50,7 @@ func TestTranslate_AllPrimitiveTypes(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("types", schema)
+	output, err := translator.Translate("types", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -72,7 +72,7 @@ func TestTranslate_DateFormats(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("dates", schema)
+	output, err := translator.Translate("dates", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -95,7 +95,7 @@ func TestTranslate_ArrayType(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("items", schema)
+	output, err := translator.Translate("items", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -118,13 +118,14 @@ func TestTranslate_NestedObject(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("user", schema)
+	output, err := translator.Translate("user", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
 
-	// Should have nested StructType
-	assert.Contains(t, result, `"address", T.StructType`)
+	// Inline object should be extracted as a separate variable
+	assert.Contains(t, result, "_Address = T.StructType")
+	assert.Contains(t, result, `"address", _Address`)
 }
 
 func TestTranslate_WithDefs_VariableReference(t *testing.T) {
@@ -144,7 +145,7 @@ func TestTranslate_WithDefs_VariableReference(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("user", schema)
+	output, err := translator.Translate("user", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -180,7 +181,7 @@ func TestTranslate_TopologicalOrder(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("order", schema)
+	output, err := translator.Translate("order", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -206,7 +207,7 @@ func TestTranslate_RequiredFields(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("user", schema)
+	output, err := translator.Translate("user", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -248,7 +249,7 @@ func TestTranslate_ChainedDeps(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("root", schema)
+	output, err := translator.Translate("root", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -274,7 +275,7 @@ func TestTranslate_NoDefs(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("simple", schema)
+	output, err := translator.Translate("simple", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
@@ -310,13 +311,14 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("list", schema)
+	output, err := translator.Translate("list", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
 
-	// Should have ArrayType with nested StructType
-	assert.Contains(t, result, "T.ArrayType(T.StructType")
+	// Array element object should be extracted as a separate variable
+	assert.Contains(t, result, "_Items = T.StructType")
+	assert.Contains(t, result, "T.ArrayType(_Items)")
 }
 
 func TestTranslate_RefToComponentsRewritten(t *testing.T) {
@@ -338,7 +340,7 @@ func TestTranslate_RefToComponentsRewritten(t *testing.T) {
 	}
 
 	translator := &Translator{}
-	output, err := translator.Translate("data", schema)
+	output, err := translator.Translate("data", schema, "schemas")
 	require.NoError(t, err)
 
 	result := string(output)
