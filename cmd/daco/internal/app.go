@@ -15,6 +15,7 @@ import (
 func registerTranslators() translate.Register {
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
+	translators["databricks-pyspark"] = &pyspark.Translator{}
 	return translators
 }
 
