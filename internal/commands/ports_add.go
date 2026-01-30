@@ -158,5 +158,5 @@ func runPortsAdd(ctx *session.Context, opts *portsAddOptions) error {
 		writer = opendpi.YAMLWriter
 	}
 
-	return writer.Write(ctx.Spec, ctx.Config)
+	return writer.Write(ctx.Spec, specDir)
 }

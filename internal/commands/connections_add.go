@@ -114,7 +114,7 @@ func runConnectionsAdd(ctx *session.Context, opts *connectionsAddOptions) error 
 		writer = opendpi.YAMLWriter
 	}
 
-	if err := writer.Write(ctx.Spec, ctx.Config); err != nil {
+	if err := writer.Write(ctx.Spec, specDir); err != nil {
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 

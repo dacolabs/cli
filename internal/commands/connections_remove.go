@@ -125,7 +125,7 @@ func runConnectionsRemove(ctx *session.Context, connName string, opts *connectio
 		writer = opendpi.YAMLWriter
 	}
 
-	if err := writer.Write(ctx.Spec, ctx.Config); err != nil {
+	if err := writer.Write(ctx.Spec, specDir); err != nil {
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 

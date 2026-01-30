@@ -62,7 +62,7 @@ func Load(ctx context.Context) (context.Context, error) {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
 
-	if validateErr := cfg.ValidateResolved(); validateErr != nil {
+	if validateErr := cfg.Validate(); validateErr != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, validateErr)
 	}
 
