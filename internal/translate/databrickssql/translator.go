@@ -21,6 +21,9 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"last": func(i int, fields []translate.Field) bool {
 		return i == len(fields)-1
 	},
+	"sqlescape": func(s string) string {
+		return strings.ReplaceAll(s, "'", "''")
+	},
 }).ParseFS(tmplFS, "databrickssql.go.tmpl"))
 
 // Translator translates JSON schemas to Databricks SQL CREATE TABLE statements.

@@ -5,5 +5,5 @@ CREATE TABLE {{ .Root.Name }} (
     {{ $f.Name }} {{ $f.Type }}{{ $f.Tag }}{{ if not (last $i $.Root.Fields) }},{{ end }}
 {{- end }}
 )
-{{ if .Description }}COMMENT '{{ .Description }}'
+{{ if .Description }}COMMENT '{{ sqlescape .Description }}'
 {{ end }}USING DELTA;

@@ -273,3 +273,23 @@ func TestTranslate_NoTableComment(t *testing.T) {
 	assert.NotContains(t, result, "COMMENT")
 	assert.Contains(t, result, "USING DELTA;")
 }
+
+func TestTranslate_TableCommentWithSingleQuote(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type:        "object",
+		Description: "A user's profile data",
+		Properties: map[string]*jsonschema.Schema{
+			"name": {Type: "string"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("users", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+
+	// Single quote should be escaped as '' in SQL
+	assert.Contains(t, result, "COMMENT 'A user''s profile data'")
+	assert.Contains(t, result, "USING DELTA;")
+}
