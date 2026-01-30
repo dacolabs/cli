@@ -43,7 +43,7 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 	for i := range data.Defs {
 		defMap[data.Defs[i].Name] = &data.Defs[i]
 	}
-	inlineStruct(data.Root.Fields, defMap)
+	inlineStruct(data.Root.Fields, defMap, make(map[string]bool))
 
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "sparksql.go.tmpl", data); err != nil {
@@ -54,11 +54,17 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 }
 
 // inlineStruct replaces ref-type fields with inline STRUCT<...> definitions.
-func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef) {
+func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef, visited map[string]bool) {
 	for i := range fields {
-		if def, ok := defs[fields[i].Type]; ok {
-			inlineStruct(def.Fields, defs)
+		name := fields[i].Type
+		if def, ok := defs[name]; ok {
+			if visited[name] {
+				continue
+			}
+			visited[name] = true
+			inlineStruct(def.Fields, defs, visited)
 			fields[i].Type = renderStruct(def.Fields)
+			delete(visited, name)
 		}
 	}
 }
