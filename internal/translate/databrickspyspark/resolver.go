@@ -6,6 +6,7 @@ package databrickspyspark
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/dacolabs/cli/internal/translate"
 )
@@ -56,6 +57,7 @@ func (r *resolver) FormatRootName(portName string) string {
 
 func (r *resolver) EnrichField(f *translate.Field) {
 	if f.Description != "" {
-		f.Tag = `, metadata={"comment": "` + f.Description + `"}`
+		escaped := strconv.Quote(f.Description)
+		f.Tag = `, metadata={"comment": ` + escaped + `}`
 	}
 }
