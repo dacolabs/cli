@@ -33,6 +33,8 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 		return nil, fmt.Errorf("failed to prepare schema data: %w", err)
 	}
 
+	data.Extra["ObjectName"] = translate.ToPascalCase(portName)
+
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "databricksscala.go.tmpl", data); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)

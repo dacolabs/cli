@@ -327,6 +327,24 @@ func TestFileExtension(t *testing.T) {
 	assert.Equal(t, ".scala", translator.FileExtension())
 }
 
+func TestTranslate_ObjectWrapper(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"name": {Type: "string"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("users", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+
+	assert.Contains(t, result, "object Users extends Serializable {")
+	assert.Contains(t, result, "}")
+}
+
 func TestTranslate_GeneratedHeader(t *testing.T) {
 	schema := &jsonschema.Schema{
 		Type: "object",
