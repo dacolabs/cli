@@ -6,6 +6,7 @@ package databricksscala
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dacolabs/cli/internal/translate"
 )
@@ -56,6 +57,8 @@ func (r *resolver) FormatRootName(portName string) string {
 
 func (r *resolver) EnrichField(f *translate.Field) {
 	if f.Description != "" {
-		f.Tag = `.withComment("` + f.Description + `")`
+		escaped := strings.ReplaceAll(f.Description, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+		f.Tag = `.withComment("` + escaped + `")`
 	}
 }
