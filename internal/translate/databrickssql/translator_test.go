@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -179,6 +180,23 @@ func TestTranslate_InlineStruct(t *testing.T) {
 
 	assert.Contains(t, result, "STRUCT<")
 	assert.Equal(t, 1, strings.Count(result, "CREATE TABLE"))
+}
+
+func TestInlineStruct_CircularRef(t *testing.T) {
+	// Construct a circular defMap: A references B, B references A.
+	// inlineStruct must not infinite-loop; it should leave the back-edge
+	// type name un-inlined.
+	defs := map[string]*translate.TypeDef{
+		"A": {Name: "A", Fields: []translate.Field{{Name: "b", Type: "B"}}},
+		"B": {Name: "B", Fields: []translate.Field{{Name: "a", Type: "A"}}},
+	}
+	fields := []translate.Field{{Name: "root", Type: "A"}}
+
+	// This must return without stack overflow.
+	inlineStruct(fields, defs, make(map[string]bool))
+
+	// A was inlined; its child B was inlined; B's child "A" was skipped (visited).
+	assert.Contains(t, fields[0].Type, "STRUCT<")
 }
 
 func TestTranslate_NoDefs(t *testing.T) {
