@@ -6,6 +6,7 @@ package databrickssql
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dacolabs/cli/internal/translate"
 )
@@ -60,7 +61,7 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		tag += " NOT NULL"
 	}
 	if f.Description != "" {
-		tag += fmt.Sprintf(" COMMENT '%s'", f.Description)
+		tag += fmt.Sprintf(" COMMENT '%s'", strings.ReplaceAll(f.Description, "'", "''"))
 	}
 	f.Tag = tag
 }

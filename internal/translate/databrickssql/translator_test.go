@@ -140,7 +140,7 @@ func TestTranslate_FieldComment(t *testing.T) {
 		Type:     "object",
 		Required: []string{"id"},
 		Properties: map[string]*jsonschema.Schema{
-			"id":   {Type: "integer", Description: "Unique identifier"},
+			"id":   {Type: "integer", Description: "User's identifier"},
 			"name": {Type: "string"},
 		},
 	}
@@ -151,7 +151,7 @@ func TestTranslate_FieldComment(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "COMMENT 'Unique identifier'")
+	assert.Contains(t, result, "COMMENT 'User''s identifier'")
 	assert.NotContains(t, result, "name STRING COMMENT")
 }
 
@@ -240,7 +240,7 @@ func TestTranslate_GeneratedHeader(t *testing.T) {
 func TestTranslate_TableComment(t *testing.T) {
 	schema := &jsonschema.Schema{
 		Type:        "object",
-		Description: "A table of user records",
+		Description: "A table of user's records",
 		Properties: map[string]*jsonschema.Schema{
 			"name": {Type: "string"},
 		},
@@ -252,7 +252,7 @@ func TestTranslate_TableComment(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "COMMENT 'A table of user records'")
+	assert.Contains(t, result, "COMMENT 'A table of user''s records'")
 	assert.Contains(t, result, "USING DELTA;")
 }
 
