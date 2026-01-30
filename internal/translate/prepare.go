@@ -161,6 +161,25 @@ func getOrderedKeys(schema *jsonschema.Schema, keyOrder map[string][]string, pat
 	return keys
 }
 
+// ToSnakeCase converts a string to a valid snake_case identifier.
+// It splits on non-alphanumeric characters, lowercases each part,
+// and prefixes with underscore if the result starts with a digit.
+func ToSnakeCase(s string) string {
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
+	})
+
+	for i, part := range parts {
+		parts[i] = strings.ToLower(part)
+	}
+
+	result := strings.Join(parts, "_")
+	if result != "" && result[0] >= '0' && result[0] <= '9' {
+		result = "_" + result
+	}
+	return result
+}
+
 // ToPascalCase converts a snake_case string to PascalCase for type name generation.
 func ToPascalCase(s string) string {
 	parts := strings.FieldsFunc(s, func(r rune) bool {
