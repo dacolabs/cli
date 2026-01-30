@@ -43,7 +43,9 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 	for i := range data.Defs {
 		defMap[data.Defs[i].Name] = &data.Defs[i]
 	}
-	inlineStruct(data.Root.Fields, defMap)
+	if err := inlineStruct(data.Root.Fields, defMap, make(map[string]bool)); err != nil {
+		return nil, fmt.Errorf("failed to inline struct definitions: %w", err)
+	}
 
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "sparksql.go.tmpl", data); err != nil {
@@ -54,13 +56,23 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 }
 
 // inlineStruct replaces ref-type fields with inline STRUCT<...> definitions.
-func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef) {
+// It uses a visited set to detect circular type references and prevent infinite recursion.
+func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef, visited map[string]bool) error {
 	for i := range fields {
-		if def, ok := defs[fields[i].Type]; ok {
-			inlineStruct(def.Fields, defs)
+		typeName := fields[i].Type
+		if def, ok := defs[typeName]; ok {
+			if visited[typeName] {
+				return fmt.Errorf("circular type reference detected: %s", typeName)
+			}
+			visited[typeName] = true
+			if err := inlineStruct(def.Fields, defs, visited); err != nil {
+				return err
+			}
+			delete(visited, typeName)
 			fields[i].Type = renderStruct(def.Fields)
 		}
 	}
+	return nil
 }
 
 // renderStruct renders fields as STRUCT<field1: TYPE, field2: TYPE>.

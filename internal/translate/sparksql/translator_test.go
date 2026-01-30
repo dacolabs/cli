@@ -259,3 +259,34 @@ func TestTranslate_EndsWithSemicolon(t *testing.T) {
 	result := strings.TrimSpace(string(output))
 	assert.True(t, strings.HasSuffix(result, ");"))
 }
+
+func TestTranslate_CircularReferenceError(t *testing.T) {
+	// Schema where TypeA references TypeB and TypeB references TypeA
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"item": {Ref: "#/$defs/TypeA"},
+		},
+		Defs: map[string]*jsonschema.Schema{
+			"TypeA": {
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"name":   {Type: "string"},
+					"nested": {Ref: "#/$defs/TypeB"},
+				},
+			},
+			"TypeB": {
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"value":    {Type: "integer"},
+					"circular": {Ref: "#/$defs/TypeA"},
+				},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	_, err := translator.Translate("circular", schema, "schemas")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "circular type reference detected")
+}
