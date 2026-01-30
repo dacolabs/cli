@@ -9,9 +9,9 @@ import (
 
 	"github.com/dacolabs/cli/internal/commands"
 	"github.com/dacolabs/cli/internal/translate"
-	"github.com/dacolabs/cli/internal/translate/pydantic"
-	"github.com/dacolabs/cli/internal/translate/databrickssql"
 	"github.com/dacolabs/cli/internal/translate/databricksscala"
+	"github.com/dacolabs/cli/internal/translate/databrickssql"
+	"github.com/dacolabs/cli/internal/translate/pydantic"
 	"github.com/dacolabs/cli/internal/translate/pyspark"
 	"github.com/dacolabs/cli/internal/translate/python"
 	"github.com/dacolabs/cli/internal/translate/scala"
