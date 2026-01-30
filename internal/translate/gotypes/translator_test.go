@@ -367,6 +367,27 @@ func TestTranslate_CustomPackageName(t *testing.T) {
 	assert.NotContains(t, result, "package schemas")
 }
 
+func TestToPascalCase_CamelCase(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"userId", "UserID"},
+		{"firstName", "FirstName"},
+		{"httpServer", "HTTPServer"},
+		{"apiURL", "APIURL"},
+		{"simpleCase", "SimpleCase"},
+		// existing formats still work
+		{"snake_case", "SnakeCase"},
+		{"kebab-case", "KebabCase"},
+		{"already", "Already"},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, toPascalCase(tt.input), "toPascalCase(%q)", tt.input)
+	}
+}
+
 func TestFileExtension(t *testing.T) {
 	translator := &Translator{}
 	assert.Equal(t, ".go", translator.FileExtension())

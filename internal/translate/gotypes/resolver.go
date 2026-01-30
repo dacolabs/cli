@@ -5,6 +5,7 @@ package gotypes
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/dacolabs/cli/internal/translate"
 )
@@ -84,9 +85,7 @@ func toPascalCase(s string) string {
 		"uri":  "URI",
 	}
 
-	parts := strings.FieldsFunc(s, func(r rune) bool {
-		return r == '_' || r == '-'
-	})
+	parts := splitWords(s)
 
 	var sb strings.Builder
 	for _, part := range parts {
@@ -99,4 +98,38 @@ func toPascalCase(s string) string {
 	}
 
 	return sb.String()
+}
+
+// splitWords splits a string into words by underscores, hyphens, and camelCase boundaries.
+func splitWords(s string) []string {
+	var parts []string
+	var current strings.Builder
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '_' || r == '-' {
+			if current.Len() > 0 {
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+			continue
+		}
+		if unicode.IsUpper(r) && current.Len() > 0 {
+			// lowercase→uppercase: start new word
+			prev := runes[i-1]
+			if unicode.IsLower(prev) {
+				parts = append(parts, current.String())
+				current.Reset()
+			} else if unicode.IsUpper(prev) && i+1 < len(runes) && unicode.IsLower(runes[i+1]) {
+				// uppercase run followed by lowercase: split before current (e.g. HTTPServer → HTTP, Server)
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+		}
+		current.WriteRune(r)
+	}
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+	return parts
 }
