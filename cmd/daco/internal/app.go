@@ -11,12 +11,15 @@ import (
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/cli/internal/translate/pydantic"
 	"github.com/dacolabs/cli/internal/translate/pyspark"
+	"github.com/dacolabs/cli/internal/translate/scala"
 )
 
 func registerTranslators() translate.Register {
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
 	translators["pydantic"] = &pydantic.Translator{}
+	translators["scala"] = &scala.Translator{}
+	translators["spark-scala"] = &pyspark.Translator{}
 	return translators
 }
 
