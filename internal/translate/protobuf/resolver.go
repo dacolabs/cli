@@ -41,6 +41,7 @@ func (r *resolver) FormatRootName(portName string) string {
 }
 
 func (r *resolver) EnrichField(f *translate.Field) {
+	f.Name = translate.ToSnakeCase(f.Name)
 	if f.Nullable {
 		f.Type = "optional " + f.Type
 	}
