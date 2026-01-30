@@ -9,11 +9,12 @@ import (
 
 	"github.com/dacolabs/cli/internal/commands"
 	"github.com/dacolabs/cli/internal/translate"
-	"github.com/dacolabs/cli/internal/translate/gotypes"
 	"github.com/dacolabs/cli/internal/translate/avro"
 	"github.com/dacolabs/cli/internal/translate/databrickspyspark"
-	"github.com/dacolabs/cli/internal/translate/pydantic"
+	"github.com/dacolabs/cli/internal/translate/databricksscala"
 	"github.com/dacolabs/cli/internal/translate/databrickssql"
+	"github.com/dacolabs/cli/internal/translate/gotypes"
+	"github.com/dacolabs/cli/internal/translate/pydantic"
 	"github.com/dacolabs/cli/internal/translate/pyspark"
 	"github.com/dacolabs/cli/internal/translate/python"
 	"github.com/dacolabs/cli/internal/translate/scala"
@@ -30,6 +31,7 @@ func registerTranslators() translate.Register {
 	translators["databricks-sql"] = &databrickssql.Translator{}
 	translators["scala"] = &scala.Translator{}
 	translators["spark-scala"] = &pyspark.Translator{}
+	translators["databricks-scala"] = &databricksscala.Translator{}
 	return translators
 }
 
