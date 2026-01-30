@@ -17,6 +17,7 @@ func registerTranslators() translate.Register {
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
 	translators["scala"] = &scala.Translator{}
+	translators["spark-scala"] = &pyspark.Translator{}
 	return translators
 }
 
