@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 Daco Labs
 
-// Package internal contains the main application logic for the CLI.
-package internal
+// Command gendocs generates LLM-friendly markdown documentation for the daco CLI.
+//
+// Usage:
+//
+//	go run ./cmd/gendocs [output-dir]
+//
+// Default output directory is ./docs/cli.
+package main
 
 import (
-	"context"
+	"fmt"
+	"os"
 
 	"github.com/dacolabs/cli/internal/commands"
 	"github.com/dacolabs/cli/internal/translate"
@@ -21,9 +28,15 @@ import (
 	"github.com/dacolabs/cli/internal/translate/scala"
 	"github.com/dacolabs/cli/internal/translate/sparkscala"
 	"github.com/dacolabs/cli/internal/translate/sparksql"
+	"github.com/spf13/cobra/doc"
 )
 
-func registerTranslators() translate.Register {
+func main() {
+	dir := "./docs/cli"
+	if len(os.Args) > 1 {
+		dir = os.Args[1]
+	}
+
 	translators := make(translate.Register)
 	translators["pyspark"] = &pyspark.Translator{}
 	translators["gotypes"] = &gotypes.Translator{}
@@ -37,13 +50,19 @@ func registerTranslators() translate.Register {
 	translators["databricks-scala"] = &databricksscala.Translator{}
 	translators["protobuf"] = &protobuf.Translator{}
 	translators["spark-sql"] = &sparksql.Translator{}
-	return translators
-}
 
-// Run is the main application logic, extracted for testability.
-// It accepts OS dependencies as parameters (context, env lookup).
-func Run(ctx context.Context, getenv func(string) string) error {
-	translators := registerTranslators()
 	rootCmd := commands.NewRootCmd(translators)
-	return rootCmd.ExecuteContext(ctx)
+	rootCmd.DisableAutoGenTag = true
+
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		fmt.Fprintf(os.Stderr, "error creating output dir: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := doc.GenMarkdownTree(rootCmd, dir); err != nil {
+		fmt.Fprintf(os.Stderr, "error generating docs: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Documentation generated in %s\n", dir)
 }
