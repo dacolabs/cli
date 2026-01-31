@@ -67,7 +67,7 @@ func runConnectionsList(ctx *session.Context, opts *connectionsListOptions) erro
 
 func printConnectionsTable(connections map[string]opendpi.Connection, ports map[string]opendpi.Port) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "NAME\tPROTOCOL\tHOST\tDESCRIPTION\tUSED BY")
+	_, _ = fmt.Fprintln(w, "NAME\tTYPE\tHOST\tDESCRIPTION\tUSED BY")
 
 	// Sort connection names for consistent output
 	names := make([]string, 0, len(connections))

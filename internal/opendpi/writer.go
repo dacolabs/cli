@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
@@ -25,12 +26,15 @@ var (
 
 // Write encodes the spec to the given specDir as opendpi.<ext>.
 func (wr Writer) Write(spec *Spec, specDir string) error {
-	raw := toRaw(spec)
+	raw, err := toRaw(spec)
+	if err != nil {
+		return err
+	}
 	specPath := filepath.Join(specDir, "opendpi"+wr.extension)
 	return wr.write(specPath, raw)
 }
 
-func toRaw(spec *Spec) *rawSpec {
+func toRaw(spec *Spec) (*rawSpec, error) {
 	connections := make(map[string]rawConnection, len(spec.Connections))
 	for name, c := range spec.Connections {
 		connections[name] = rawConnection(c)
@@ -56,7 +60,10 @@ func toRaw(spec *Spec) *rawSpec {
 
 		for _, pc := range p.Connections {
 			// Find connection name by matching pointer or by iterating
-			connName := findConnectionName(spec.Connections, pc.Connection)
+			connName, err := findConnectionName(spec.Connections, pc.Connection)
+			if err != nil {
+				return nil, fmt.Errorf("port %q: %w", name, err)
+			}
 			rp.Connections = append(rp.Connections, rawPortConnection{
 				Connection: "#/connections/" + connName,
 				Location:   pc.Location,
@@ -79,16 +86,35 @@ func toRaw(spec *Spec) *rawSpec {
 	if len(tags) > 0 {
 		raw.Tags = tags
 	}
-	return raw
+	return raw, nil
 }
 
-func findConnectionName(connections map[string]Connection, target *Connection) string {
-	for name, c := range connections {
-		if c.Type == target.Type && c.Host == target.Host && c.Description == target.Description {
-			return name
+func variablesEqual(a, b map[string]any) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || !reflect.DeepEqual(v, bv) {
+			return false
 		}
 	}
-	return ""
+	return true
+}
+
+func findConnectionName(connections map[string]Connection, target *Connection) (string, error) {
+	for name, c := range connections {
+		if c.Type == target.Type &&
+			c.Host == target.Host &&
+			c.Description == target.Description &&
+			variablesEqual(c.Variables, target.Variables) {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("connection not found in spec (type=%q, host=%q, description=%q)",
+		target.Type, target.Host, target.Description)
 }
 
 // WriteSchemaFile writes an empty object schema to the given path.
@@ -132,5 +158,6 @@ func writeYaml(path string, v any) error {
 	defer f.Close() //nolint:errcheck
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
+	defer func() { _ = enc.Close() }()
 	return enc.Encode(v)
 }

@@ -67,6 +67,9 @@ func runPortsAdd(cmd *cobra.Command, ctx *session.Context, opts *portsAddOptions
 		connName = opts.connection
 		location = opts.location
 
+		if name == "" {
+			return fmt.Errorf("--name cannot be empty")
+		}
 		if _, exists := ctx.Spec.Ports[name]; exists {
 			return fmt.Errorf("port %q already exists", name)
 		}

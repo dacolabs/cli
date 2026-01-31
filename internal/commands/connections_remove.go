@@ -75,7 +75,7 @@ func runConnectionsRemove(ctx *session.Context, connName string, opts *connectio
 
 	// Show connection summary
 	fmt.Printf("Connection: %s\n", connName)
-	fmt.Printf("Protocol:   %s\n", conn.Type)
+	fmt.Printf("Type:       %s\n", conn.Type)
 	fmt.Printf("Host:       %s\n", conn.Host)
 	if conn.Description != "" {
 		fmt.Printf("Description: %s\n", conn.Description)

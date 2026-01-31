@@ -131,7 +131,7 @@ func runConnectionsDescribe(ctx *session.Context, connName string, opts *connect
 	default:
 		// Text format
 		fmt.Printf("Name:        %s\n", connName)
-		fmt.Printf("Protocol:    %s\n", conn.Type)
+		fmt.Printf("Type:        %s\n", conn.Type)
 		fmt.Printf("Host:        %s\n", conn.Host)
 
 		if conn.Description != "" {

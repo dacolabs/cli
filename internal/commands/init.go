@@ -31,8 +31,8 @@ func newInitCmd() *cobra.Command {
 		Example: `  # Interactive mode
   daco init
 
-  # Non-interactive
-  daco init --name "Customer Analytics" --non-interactive`,
+  # Non-interactive (runs automatically when --name is provided)
+  daco init --name "Customer Analytics"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit(cmd, opts)
 		},
@@ -63,6 +63,11 @@ func runInit(cmd *cobra.Command, opts *initOptions) error {
 			&opts.description,
 		); err != nil {
 			return err
+		}
+	} else {
+		// Non-interactive: validate the provided name
+		if opts.name == "" {
+			return fmt.Errorf("--name cannot be empty")
 		}
 	}
 

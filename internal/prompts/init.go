@@ -4,8 +4,6 @@
 package prompts
 
 import (
-	"errors"
-
 	"github.com/charmbracelet/huh"
 )
 
@@ -17,12 +15,7 @@ func RunInitForm(name, version, description *string) error {
 				Title("Data product name").
 				Prompt(": ").
 				Inline(true).
-				Validate(func(s string) error {
-					if s == "" {
-						return errors.New("data product name is required")
-					}
-					return nil
-				}).
+				Validate(requiredValidator("data product name")).
 				Value(name),
 			huh.NewInput().
 				Title("Version").

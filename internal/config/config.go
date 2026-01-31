@@ -45,6 +45,7 @@ func (c *Config) Save(path string) error {
 
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
+	defer func() { _ = enc.Close() }()
 	return enc.Encode(c)
 }
 

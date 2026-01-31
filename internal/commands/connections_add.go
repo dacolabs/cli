@@ -16,7 +16,7 @@ import (
 
 type connectionsAddOptions struct {
 	name        string
-	protocol    string
+	connType    string
 	host        string
 	description string
 }
@@ -43,7 +43,7 @@ func newConnectionsAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Connection name")
-	cmd.Flags().StringVarP(&opts.protocol, "type", "t", "", "Connection type (kafka, postgresql, mysql, s3, http, etc.)")
+	cmd.Flags().StringVarP(&opts.connType, "type", "t", "", "Connection type (kafka, postgresql, mysql, s3, http, etc.)")
 	cmd.Flags().StringVar(&opts.host, "host", "", "Host/endpoint")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description")
 
@@ -51,15 +51,18 @@ func newConnectionsAddCmd() *cobra.Command {
 }
 
 func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectionsAddOptions) error {
-	var name, protocol, host, description string
+	var name, connType, host, description string
 
 	if cmd.Flags().Changed("name") {
 		name = opts.name
-		protocol = opts.protocol
+		connType = opts.connType
 		host = opts.host
 		description = opts.description
 
-		if protocol == "" {
+		if name == "" {
+			return fmt.Errorf("--name cannot be empty")
+		}
+		if connType == "" {
 			return fmt.Errorf("--type is required when --name is specified")
 		}
 		if host == "" {
@@ -70,7 +73,7 @@ func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectio
 		}
 	} else {
 		if err := prompts.RunAddNewConnectionForm(
-			&name, &protocol, &host, &description,
+			&name, &connType, &host, &description,
 			ctx.Spec.Connections,
 		); err != nil {
 			return err
@@ -81,7 +84,7 @@ func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectio
 		ctx.Spec.Connections = make(map[string]opendpi.Connection)
 	}
 	ctx.Spec.Connections[name] = opendpi.Connection{
-		Type:        protocol,
+		Type:        connType,
 		Host:        host,
 		Description: description,
 	}
@@ -109,7 +112,7 @@ func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectio
 
 	prompts.PrintResult([]prompts.ResultField{
 		{Label: "Connection", Value: name},
-		{Label: "Type", Value: protocol},
+		{Label: "Type", Value: connType},
 		{Label: "Host", Value: host},
 	}, "✓ Connection added")
 
