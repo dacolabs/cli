@@ -8,15 +8,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   users_yaml:
     description: User data from YAML schema
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: users
     schema:
       $ref: "schemas/user.yaml"
@@ -24,8 +23,7 @@ ports:
   users_json:
     description: User data from JSON schema
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: users
     schema:
       $ref: "schemas/user.json"
@@ -33,8 +31,7 @@ ports:
   profiles_yaml:
     description: Profile with YAML schema referencing YAML address
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: profiles
     schema:
       $ref: "schemas/user-profile.yaml"
@@ -42,8 +39,7 @@ ports:
   profiles_json:
     description: Profile with JSON schema referencing JSON address
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: profiles
     schema:
       $ref: "schemas/user-profile.json"
@@ -51,8 +47,7 @@ ports:
   mixed_inline:
     description: Inline schema with mixed format refs
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: mixed
     schema:
       type: object

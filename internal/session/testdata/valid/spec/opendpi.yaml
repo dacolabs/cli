@@ -9,14 +9,13 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   users:
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: users
     schema:
       type: object

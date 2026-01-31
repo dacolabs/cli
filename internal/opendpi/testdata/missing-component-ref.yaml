@@ -9,15 +9,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   broken:
     description: References non-existent component
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: broken
     schema:
       $ref: "#/components/schemas/DoesNotExist"

@@ -6,17 +6,15 @@
   },
   "connections": {
     "database": {
-      "protocol": "postgresql",
-      "host": "localhost:5432"
+      "host": "localhost:5432",
+      "type": "postgresql"
     }
   },
   "ports": {
     "users": {
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/database"
-          },
+          "connection": "#/connections/database",
           "location": "users"
         }
       ],

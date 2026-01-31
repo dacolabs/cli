@@ -7,16 +7,16 @@
   },
   "connections": {
     "users_db": {
-      "protocol": "postgresql",
       "host": "users.db.example.com:5432",
       "variables": {
         "database": "users",
         "schema": "public"
-      }
+      },
+      "type": "postgresql"
     },
     "activity_stream": {
-      "protocol": "kafka",
-      "host": "kafka.example.com:9092"
+      "host": "kafka.example.com:9092",
+      "type": "kafka"
     }
   },
   "ports": {
@@ -24,9 +24,7 @@
       "description": "User account data",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/users_db"
-          },
+          "connection": "#/connections/users_db",
           "location": "users"
         }
       ],
@@ -38,9 +36,7 @@
       "description": "Extended user profile information",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/users_db"
-          },
+          "connection": "#/connections/users_db",
           "location": "user_profiles"
         }
       ],
@@ -52,9 +48,7 @@
       "description": "User activity events",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/activity_stream"
-          },
+          "connection": "#/connections/activity_stream",
           "location": "user-activity-v1"
         }
       ],
@@ -66,9 +60,7 @@
       "description": "User login/logout events",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/activity_stream"
-          },
+          "connection": "#/connections/activity_stream",
           "location": "user-auth-events"
         }
       ],
@@ -115,7 +107,11 @@
       },
       "User": {
         "type": "object",
-        "required": ["id", "email", "status"],
+        "required": [
+          "id",
+          "email",
+          "status"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -132,7 +128,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["active", "inactive", "suspended", "deleted"]
+            "enum": [
+              "active",
+              "inactive",
+              "suspended",
+              "deleted"
+            ]
           },
           "created_at": {
             "type": "string",
@@ -191,7 +192,10 @@
       },
       "BaseEvent": {
         "type": "object",
-        "required": ["event_id", "timestamp"],
+        "required": [
+          "event_id",
+          "timestamp"
+        ],
         "properties": {
           "event_id": {
             "type": "string",
@@ -217,7 +221,10 @@
           },
           {
             "type": "object",
-            "required": ["user_id", "action"],
+            "required": [
+              "user_id",
+              "action"
+            ],
             "properties": {
               "user_id": {
                 "type": "string",
@@ -247,7 +254,10 @@
           },
           {
             "type": "object",
-            "required": ["user_id", "event_type"],
+            "required": [
+              "user_id",
+              "event_type"
+            ],
             "properties": {
               "user_id": {
                 "type": "string",
@@ -255,7 +265,13 @@
               },
               "event_type": {
                 "type": "string",
-                "enum": ["login", "logout", "password_change", "mfa_enabled", "mfa_disabled"]
+                "enum": [
+                  "login",
+                  "logout",
+                  "password_change",
+                  "mfa_enabled",
+                  "mfa_disabled"
+                ]
               },
               "ip_address": {
                 "type": "string"

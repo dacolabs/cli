@@ -9,15 +9,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   broken:
     description: References non-existent file
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: broken
     schema:
       $ref: "schemas/does-not-exist.yaml"

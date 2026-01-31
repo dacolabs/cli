@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/session"
@@ -17,12 +16,10 @@ import (
 )
 
 type portsAddOptions struct {
-	name           string
-	description    string
-	schemaFile     string
-	connectionName string
-	location       string
-	nonInteractive bool
+	name        string
+	description string
+	connection  string
+	location    string
 }
 
 func newPortsAddCmd() *cobra.Command {
@@ -31,118 +28,85 @@ func newPortsAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new port to the OpenDPI spec",
-		Long: `Add a new port to the OpenDPI spec with schema and connection configuration.
-Ports can have optional schemas (from file or created interactively) and
-connections that define where data flows.`,
+		Long: `Add a new port to the OpenDPI spec.
+An empty schema file is created in the schemas/ directory for you to fill in.`,
 		Example: `  # Interactive mode
   daco ports add
 
-  # Non-interactive with existing connection
-  daco ports add --name events --schema-file ./schemas/event.json \
-    --connection kafka --location events_topic --non-interactive`,
+  # Non-interactive
+  daco ports add --name events --connection kafka --location events_topic`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
-			return runPortsAdd(ctx, opts)
+			return runPortsAdd(cmd, ctx, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Port name")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Port description")
-	cmd.Flags().StringVarP(&opts.schemaFile, "schema-file", "s", "", "Path to JSON schema file")
-	cmd.Flags().StringVarP(&opts.connectionName, "connection", "c", "", "Connection name")
+	cmd.Flags().StringVarP(&opts.connection, "connection", "c", "", "Connection name")
 	cmd.Flags().StringVarP(&opts.location, "location", "l", "", "Location (table, topic, path, etc.)")
-	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts")
 
 	return cmd
 }
 
-func runPortsAdd(ctx *session.Context, opts *portsAddOptions) error {
+func runPortsAdd(cmd *cobra.Command, ctx *session.Context, opts *portsAddOptions) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	// Non-interactive validation
-	if opts.nonInteractive {
-		if opts.name == "" {
-			return fmt.Errorf("--name is required in non-interactive mode")
-		}
-		if opts.connectionName != "" && opts.location == "" {
-			return fmt.Errorf("--location is required when --connection is specified")
-		}
-		if opts.connectionName != "" {
-			if _, exists := ctx.Spec.Connections[opts.connectionName]; !exists {
-				return fmt.Errorf("connection %q not found", opts.connectionName)
-			}
-		}
-		if _, exists := ctx.Spec.Ports[opts.name]; exists {
-			return fmt.Errorf("port %q already exists", opts.name)
-		}
-	}
+	var name, description, connName, location string
 
-	var name, description string
-	var schema *jsonschema.Schema
-	var conns []opendpi.PortConnection
-
-	// Load schema from file if specified via flag
-	if opts.schemaFile != "" {
-		loader := jschema.NewLoader(os.DirFS(cwd))
-		schema, err = loader.LoadFile(opts.schemaFile)
-		if err != nil {
-			return fmt.Errorf("failed to load schema file: %w", err)
-		}
-	}
-
-	if opts.nonInteractive {
+	if cmd.Flags().Changed("name") {
+		// Non-interactive: use flags
 		name = opts.name
 		description = opts.description
-		if opts.connectionName != "" {
-			conn := ctx.Spec.Connections[opts.connectionName]
-			conns = append(conns, opendpi.PortConnection{
-				Connection: &conn,
-				Location:   opts.location,
-			})
+		connName = opts.connection
+		location = opts.location
+
+		if name == "" {
+			return fmt.Errorf("--name cannot be empty")
+		}
+		if _, exists := ctx.Spec.Ports[name]; exists {
+			return fmt.Errorf("port %q already exists", name)
+		}
+		if connName != "" {
+			if _, exists := ctx.Spec.Connections[connName]; !exists {
+				return fmt.Errorf("connection %q not found", connName)
+			}
+			if location == "" {
+				return fmt.Errorf("--location is required when --connection is specified")
+			}
 		}
 	} else {
 		// Interactive mode
-		result, err := prompts.RunAddPortForm(
-			ctx.Spec.Ports,
-			ctx.Spec.Connections,
-			ctx.Spec.Schemas,
-		)
-		if err != nil {
+		if err := prompts.RunAddPortForm(
+			&name, &description, &connName, &location,
+			ctx.Spec.Ports, ctx.Spec.Connections,
+		); err != nil {
 			return err
 		}
-
-		name = result.Name
-		description = result.Description
-		schema = result.Schema
-		conns = result.Connections
-
-		// Add any newly created connections to the spec
-		for connName, conn := range result.NewConns {
-			ctx.Spec.Connections[connName] = conn
-		}
-
-		// Load schema from file if user chose file option
-		if result.SchemaPath != "" && schema == nil {
-			loader := jschema.NewLoader(os.DirFS(cwd))
-			schema, err = loader.LoadFile(result.SchemaPath)
-			if err != nil {
-				return fmt.Errorf("failed to load schema file: %w", err)
-			}
-		}
 	}
 
-	// Create port
-	ctx.Spec.Ports[name] = opendpi.Port{
+	// Build port
+	port := opendpi.Port{
 		Description: description,
-		Connections: conns,
-		Schema:      schema,
+		Schema: &jsonschema.Schema{
+			Ref: "schemas/" + name + ".schema.yaml",
+		},
 	}
+
+	if connName != "" {
+		conn := ctx.Spec.Connections[connName]
+		port.Connections = []opendpi.PortConnection{
+			{Connection: &conn, Location: location},
+		}
+	}
+
+	ctx.Spec.Ports[name] = port
 
 	// Determine spec directory
 	specDir := ctx.Config.Path
@@ -158,5 +122,27 @@ func runPortsAdd(ctx *session.Context, opts *portsAddOptions) error {
 		writer = opendpi.YAMLWriter
 	}
 
-	return writer.Write(ctx.Spec, ctx.Config)
+	if err := writer.Write(ctx.Spec, specDir); err != nil {
+		return fmt.Errorf("failed to write spec: %w", err)
+	}
+
+	// Create empty schema file
+	schemasDir := filepath.Join(specDir, "schemas")
+	if err := opendpi.WriteEmptySchemaYAML(schemasDir, name); err != nil {
+		return fmt.Errorf("failed to create schema file: %w", err)
+	}
+
+	fields := []prompts.ResultField{
+		{Label: "Port", Value: name},
+	}
+	if description != "" {
+		fields = append(fields, prompts.ResultField{Label: "Description", Value: description})
+	}
+	fields = append(fields, prompts.ResultField{Label: "Schema", Value: "schemas/" + name + ".schema.yaml"})
+	if connName != "" {
+		fields = append(fields, prompts.ResultField{Label: "Connection", Value: connName + " → " + location})
+	}
+	prompts.PrintResult(fields, "✓ Port added")
+
+	return nil
 }

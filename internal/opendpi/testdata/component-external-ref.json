@@ -6,8 +6,8 @@
   },
   "connections": {
     "database": {
-      "protocol": "postgresql",
-      "host": "localhost:5432"
+      "host": "localhost:5432",
+      "type": "postgresql"
     }
   },
   "ports": {
@@ -15,31 +15,42 @@
       "description": "Users using component that refs external file",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "users"
         }
       ],
-      "schema": { "$ref": "#/components/schemas/User" }
+      "schema": {
+        "$ref": "#/components/schemas/User"
+      }
     },
     "profiles": {
       "description": "Profiles using component that refs external file with nested refs",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "profiles"
         }
       ],
-      "schema": { "$ref": "#/components/schemas/UserProfile" }
+      "schema": {
+        "$ref": "#/components/schemas/UserProfile"
+      }
     }
   },
   "components": {
     "schemas": {
-      "User": { "$ref": "schemas/user.json" },
-      "UserProfile": { "$ref": "schemas/user-profile.json" },
+      "User": {
+        "$ref": "schemas/user.json"
+      },
+      "UserProfile": {
+        "$ref": "schemas/user-profile.json"
+      },
       "Metadata": {
         "type": "object",
         "properties": {
-          "created_at": { "type": "string", "format": "date-time" }
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       }
     }

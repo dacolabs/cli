@@ -2,14 +2,11 @@ package opendpi
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"reflect"
 
-	"github.com/dacolabs/cli/internal/config"
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"gopkg.in/yaml.v3"
 )
@@ -27,19 +24,17 @@ var (
 	YAMLWriter = Writer{writeYaml, ".yaml"}
 )
 
-// Write encodes the spec to cfg.Path/opendpi.{yaml,json} based on the writer type.
-func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
-	if spec == nil {
-		return errors.New("nil spec")
+// Write encodes the spec to the given specDir as opendpi.<ext>.
+func (wr Writer) Write(spec *Spec, specDir string) error {
+	raw, err := toRaw(spec)
+	if err != nil {
+		return err
 	}
-	if cfg == nil {
-		return errors.New("nil config")
-	}
-	if _, err := os.Stat(cfg.Path); os.IsNotExist(err) {
-		return fmt.Errorf("spec directory does not exist: %s", cfg.Path)
-	}
+	specPath := filepath.Join(specDir, "opendpi"+wr.extension)
+	return wr.write(specPath, raw)
+}
 
-	// Convert Spec to rawSpec (ignoring schemas and components for now)
+func toRaw(spec *Spec) (*rawSpec, error) {
 	connections := make(map[string]rawConnection, len(spec.Connections))
 	for name, c := range spec.Connections {
 		connections[name] = rawConnection(c)
@@ -50,148 +45,98 @@ func (wr Writer) Write(spec *Spec, cfg *config.Config) error {
 		tags[i] = rawTag(t)
 	}
 
-	// Collect schema names and check for duplicates
-	schemaNames := make(map[string]string) // name -> port that defined it
-	for name, p := range spec.Ports {
-		if p.Schema == nil {
-			continue
-		}
-		if existingPort, ok := schemaNames[name]; ok {
-			return fmt.Errorf("duplicate schema name %q: defined by ports %q and %q", name, existingPort, name)
-		}
-		schemaNames[name] = name
-		for defName := range p.Schema.Defs {
-			if existingPort, ok := schemaNames[defName]; ok {
-				return fmt.Errorf("duplicate schema name %q: defined in port %q and port %q", defName, existingPort, name)
-			}
-			schemaNames[defName] = name
-		}
+	// Build reverse lookup: *Connection → name
+	connNames := make(map[*Connection]string)
+	for name := range spec.Connections {
+		c := spec.Connections[name]
+		connNames[&c] = name
 	}
 
 	ports := make(map[string]rawPort, len(spec.Ports))
-	var components *rawComponents
-
-	switch cfg.Schema.Organization {
-	case config.SchemaModular:
-		schemasDir := filepath.Join(cfg.Path, "schemas")
-		if err := os.MkdirAll(schemasDir, 0o750); err != nil {
-			return fmt.Errorf("failed to create schemas directory: %w", err)
+	for name, p := range spec.Ports {
+		rp := rawPort{
+			Description: p.Description,
 		}
 
-		// Remove stale schema files
-		if entries, err := os.ReadDir(schemasDir); err == nil {
-			for _, entry := range entries {
-				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
-					name := strings.TrimSuffix(entry.Name(), ".yaml")
-					if _, exists := schemaNames[name]; !exists {
-						_ = os.Remove(filepath.Join(schemasDir, entry.Name()))
-					}
-				}
+		for _, pc := range p.Connections {
+			// Find connection name by matching pointer or by iterating
+			connName, err := findConnectionName(spec.Connections, pc.Connection)
+			if err != nil {
+				return nil, fmt.Errorf("port %q: %w", name, err)
 			}
+			rp.Connections = append(rp.Connections, rawPortConnection{
+				Connection: "#/connections/" + connName,
+				Location:   pc.Location,
+			})
 		}
 
-		for name, p := range spec.Ports {
-			var schema *jsonschema.Schema
-			if p.Schema != nil {
-				// Write main schema (without $defs - they go to separate files)
-				schemaToWrite := *p.Schema
-				schemaToWrite.Defs = nil
-				// Rewrite $refs to point to external files
-				for s := range jschema.Traverse(&schemaToWrite, nil) {
-					if strings.HasPrefix(s.Ref, "#/components/schemas/") {
-						refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
-						s.Ref = refName + ".yaml"
-					} else if strings.HasPrefix(s.Ref, "#/$defs/") {
-						refName := strings.TrimPrefix(s.Ref, "#/$defs/")
-						s.Ref = refName + ".yaml"
-					}
-				}
-				schemaFile := filepath.Join(schemasDir, name+".yaml")
-				if err := wr.write(schemaFile, &schemaToWrite); err != nil {
-					return fmt.Errorf("failed to write schema file %s: %w", schemaFile, err)
-				}
-
-				// Write $defs as separate files
-				for defName, defSchema := range p.Schema.Defs {
-					defSchemaToWrite := *defSchema
-					// Rewrite $refs in def schemas too
-					for s := range jschema.Traverse(&defSchemaToWrite, nil) {
-						if strings.HasPrefix(s.Ref, "#/components/schemas/") {
-							refName := strings.TrimPrefix(s.Ref, "#/components/schemas/")
-							s.Ref = refName + ".yaml"
-						} else if strings.HasPrefix(s.Ref, "#/$defs/") {
-							refName := strings.TrimPrefix(s.Ref, "#/$defs/")
-							s.Ref = refName + ".yaml"
-						}
-					}
-					defFile := filepath.Join(schemasDir, defName+".yaml")
-					if err := wr.write(defFile, &defSchemaToWrite); err != nil {
-						return fmt.Errorf("failed to write schema file %s: %w", defFile, err)
-					}
-				}
-
-				schema = &jsonschema.Schema{Ref: "schemas/" + name + ".yaml"}
-			}
-
-			ports[name] = createRawPort(spec, &p, schema)
+		if p.Schema != nil {
+			rp.Schema = p.Schema
 		}
 
-	case config.SchemaComponents:
-		components = &rawComponents{Schemas: make(map[string]*jsonschema.Schema)}
-
-		for name, p := range spec.Ports {
-			var schema *jsonschema.Schema
-			if p.Schema != nil {
-				// Add main schema (without $defs)
-				schemaToAdd := *p.Schema
-				schemaToAdd.Defs = nil
-				// Rewrite $refs from $defs to components
-				for s := range jschema.Traverse(&schemaToAdd, nil) {
-					if strings.HasPrefix(s.Ref, "#/$defs/") {
-						refName := strings.TrimPrefix(s.Ref, "#/$defs/")
-						s.Ref = "#/components/schemas/" + refName
-					}
-				}
-				components.Schemas[name] = &schemaToAdd
-
-				// Add $defs as separate component schemas
-				for defName, defSchema := range p.Schema.Defs {
-					defSchemaToAdd := *defSchema
-					// Rewrite $refs in def schemas too
-					for s := range jschema.Traverse(&defSchemaToAdd, nil) {
-						if strings.HasPrefix(s.Ref, "#/$defs/") {
-							refName := strings.TrimPrefix(s.Ref, "#/$defs/")
-							s.Ref = "#/components/schemas/" + refName
-						}
-					}
-					components.Schemas[defName] = &defSchemaToAdd
-				}
-
-				schema = &jsonschema.Schema{Ref: "#/components/schemas/" + name}
-			}
-
-			ports[name] = createRawPort(spec, &p, schema)
-		}
-
-	case config.SchemaInline:
-		for name, p := range spec.Ports {
-			ports[name] = createRawPort(spec, &p, p.Schema)
-		}
-	default:
-		return fmt.Errorf("schema organization not supported")
+		ports[name] = rp
 	}
 
 	raw := &rawSpec{
 		OpenDPI:     spec.OpenDPI,
-		Info:        rawInfo{Title: spec.Info.Title, Version: spec.Info.Version, Description: spec.Info.Description},
-		Tags:        tags,
+		Info:        rawInfo(spec.Info),
 		Connections: connections,
 		Ports:       ports,
-		Components:  components,
 	}
+	if len(tags) > 0 {
+		raw.Tags = tags
+	}
+	return raw, nil
+}
 
-	specFile := filepath.Join(cfg.Path, "opendpi"+wr.extension)
-	return wr.write(specFile, raw)
+func variablesEqual(a, b map[string]any) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || !reflect.DeepEqual(v, bv) {
+			return false
+		}
+	}
+	return true
+}
+
+func findConnectionName(connections map[string]Connection, target *Connection) (string, error) {
+	for name, c := range connections {
+		if c.Type == target.Type &&
+			c.Host == target.Host &&
+			c.Description == target.Description &&
+			variablesEqual(c.Variables, target.Variables) {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("connection not found in spec (type=%q, host=%q, description=%q)",
+		target.Type, target.Host, target.Description)
+}
+
+// WriteSchemaFile writes an empty object schema to the given path.
+func WriteSchemaFile(dir, portName string, writeFunc func(string, any) error) error {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return fmt.Errorf("failed to create schemas directory: %w", err)
+	}
+	schema := &jsonschema.Schema{
+		Type:       "object",
+		Properties: make(map[string]*jsonschema.Schema),
+	}
+	return writeFunc(filepath.Join(dir, portName+".schema.yaml"), schema)
+}
+
+// WriteEmptySchemaYAML writes an empty object schema as YAML.
+func WriteEmptySchemaYAML(dir, portName string) error {
+	return WriteSchemaFile(dir, portName, writeYaml)
+}
+
+// WriteEmptySchemaJSON writes an empty object schema as JSON.
+func WriteEmptySchemaJSON(dir, portName string) error {
+	return WriteSchemaFile(dir, portName, writeJSON)
 }
 
 func writeJSON(path string, v any) error {
@@ -213,28 +158,6 @@ func writeYaml(path string, v any) error {
 	defer f.Close() //nolint:errcheck
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
+	defer func() { _ = enc.Close() }()
 	return enc.Encode(v)
-}
-
-func createRawPort(spec *Spec, p *Port, schema *jsonschema.Schema) rawPort {
-	portConns := make([]rawPortConnection, len(p.Connections))
-	for i, pc := range p.Connections {
-		var connName string
-		for cname, c := range spec.Connections {
-			if pc.Connection.Protocol == c.Protocol && pc.Connection.Host == c.Host {
-				connName = cname
-				break
-			}
-		}
-		portConns[i] = rawPortConnection{
-			Connection: connectionRef{Ref: "#/connections/" + connName},
-			Location:   pc.Location,
-		}
-	}
-
-	return rawPort{
-		Description: p.Description,
-		Connections: portConns,
-		Schema:      schema,
-	}
 }

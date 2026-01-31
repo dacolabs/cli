@@ -37,7 +37,7 @@ func TestParse_Minimal(t *testing.T) {
 			require.Len(t, spec.Connections, 1)
 			conn, ok := spec.Connections["database"]
 			require.True(t, ok, "connection 'database' not found")
-			assert.Equal(t, "postgresql", conn.Protocol)
+			assert.Equal(t, "postgresql", conn.Type)
 			assert.Equal(t, "localhost:5432", conn.Host)
 
 			// Check port
@@ -49,7 +49,7 @@ func TestParse_Minimal(t *testing.T) {
 			// Check connection ref was resolved
 			pc := port.Connections[0]
 			require.NotNil(t, pc.Connection, "port connection was not resolved")
-			assert.Equal(t, "postgresql", pc.Connection.Protocol)
+			assert.Equal(t, "postgresql", pc.Connection.Type)
 			assert.Equal(t, "users", pc.Location)
 
 			// Check inline schema
@@ -88,7 +88,7 @@ func TestParse_MultiPort(t *testing.T) {
 			require.Len(t, spec.Connections, 2)
 			warehouse, ok := spec.Connections["warehouse"]
 			require.True(t, ok, "connection 'warehouse' not found")
-			assert.Equal(t, "postgresql", warehouse.Protocol)
+			assert.Equal(t, "postgresql", warehouse.Type)
 			assert.Len(t, warehouse.Variables, 2)
 
 			// Check ports
@@ -97,12 +97,12 @@ func TestParse_MultiPort(t *testing.T) {
 			// Check daily_orders port resolves to warehouse connection
 			dailyOrders, ok := spec.Ports["daily_orders"]
 			require.True(t, ok, "port 'daily_orders' not found")
-			assert.Equal(t, "postgresql", dailyOrders.Connections[0].Connection.Protocol)
+			assert.Equal(t, "postgresql", dailyOrders.Connections[0].Connection.Type)
 
 			// Check order_events port resolves to event_stream connection
 			orderEvents, ok := spec.Ports["order_events"]
 			require.True(t, ok, "port 'order_events' not found")
-			assert.Equal(t, "kafka", orderEvents.Connections[0].Connection.Protocol)
+			assert.Equal(t, "kafka", orderEvents.Connections[0].Connection.Type)
 		})
 	}
 }

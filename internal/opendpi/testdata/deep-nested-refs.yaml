@@ -9,15 +9,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   entities:
     description: Uses schema from nested directory that refs parent directory
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: entities
     schema:
       $ref: "schemas/nested/deep-schema.yaml"
@@ -25,8 +24,7 @@ ports:
   mixed:
     description: Inline schema with mix of external and component refs
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: mixed
     schema:
       type: object

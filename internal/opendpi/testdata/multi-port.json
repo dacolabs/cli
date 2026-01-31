@@ -21,21 +21,21 @@
   ],
   "connections": {
     "warehouse": {
-      "protocol": "postgresql",
       "host": "warehouse.db.example.com:5432",
       "description": "Main analytics data warehouse",
       "variables": {
         "database": "analytics",
         "schema": "public"
-      }
+      },
+      "type": "postgresql"
     },
     "event_stream": {
-      "protocol": "kafka",
       "host": "kafka-1.example.com:9092,kafka-2.example.com:9092",
       "description": "Real-time event streaming",
       "variables": {
         "security.protocol": "SASL_SSL"
-      }
+      },
+      "type": "kafka"
     }
   },
   "ports": {
@@ -43,15 +43,17 @@
       "description": "Daily aggregated order metrics",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/warehouse"
-          },
+          "connection": "#/connections/warehouse",
           "location": "daily_order_summary"
         }
       ],
       "schema": {
         "type": "object",
-        "required": ["date", "total_orders", "total_revenue"],
+        "required": [
+          "date",
+          "total_orders",
+          "total_revenue"
+        ],
         "properties": {
           "date": {
             "type": "string",
@@ -76,9 +78,7 @@
       "description": "User segmentation data",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/warehouse"
-          },
+          "connection": "#/connections/warehouse",
           "location": "user_segments"
         }
       ],
@@ -90,7 +90,12 @@
           },
           "segment": {
             "type": "string",
-            "enum": ["high_value", "regular", "at_risk", "churned"]
+            "enum": [
+              "high_value",
+              "regular",
+              "at_risk",
+              "churned"
+            ]
           },
           "score": {
             "type": "number"
@@ -106,15 +111,18 @@
       "description": "Real-time order events",
       "connections": [
         {
-          "connection": {
-            "$ref": "#/connections/event_stream"
-          },
+          "connection": "#/connections/event_stream",
           "location": "order-events-v2"
         }
       ],
       "schema": {
         "type": "object",
-        "required": ["event_id", "order_id", "event_type", "timestamp"],
+        "required": [
+          "event_id",
+          "order_id",
+          "event_type",
+          "timestamp"
+        ],
         "properties": {
           "event_id": {
             "type": "string",
@@ -125,7 +133,12 @@
           },
           "event_type": {
             "type": "string",
-            "enum": ["created", "updated", "completed", "cancelled"]
+            "enum": [
+              "created",
+              "updated",
+              "completed",
+              "cancelled"
+            ]
           },
           "timestamp": {
             "type": "string",

@@ -1,4 +1,2 @@
 version: 1
 path: spec/spec.yaml
-schema:
-  organization: modular

@@ -6,8 +6,8 @@
   },
   "connections": {
     "database": {
-      "protocol": "postgresql",
-      "host": "localhost:5432"
+      "host": "localhost:5432",
+      "type": "postgresql"
     }
   },
   "ports": {
@@ -15,11 +15,13 @@
       "description": "Tree nodes with parent/child refs",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "nodes"
         }
       ],
-      "schema": { "$ref": "#/components/schemas/Node" }
+      "schema": {
+        "$ref": "#/components/schemas/Node"
+      }
     }
   },
   "components": {
@@ -27,30 +29,48 @@
       "Node": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "parent": { "$ref": "#/components/schemas/Node" },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Node"
+          },
           "children": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Node" }
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            }
           }
         }
       },
       "Person": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "employer": { "$ref": "#/components/schemas/Company" }
+          "name": {
+            "type": "string"
+          },
+          "employer": {
+            "$ref": "#/components/schemas/Company"
+          }
         }
       },
       "Company": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "ceo": { "$ref": "#/components/schemas/Person" },
+          "name": {
+            "type": "string"
+          },
+          "ceo": {
+            "$ref": "#/components/schemas/Person"
+          },
           "employees": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Person" }
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            }
           }
         }
       }

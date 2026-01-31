@@ -6,8 +6,8 @@
   },
   "connections": {
     "database": {
-      "protocol": "postgresql",
-      "host": "localhost:5432"
+      "host": "localhost:5432",
+      "type": "postgresql"
     }
   },
   "ports": {
@@ -15,29 +15,37 @@
       "description": "Uses schema from nested directory that refs parent directory",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "entities"
         }
       ],
-      "schema": { "$ref": "schemas/nested/deep-schema.json" }
+      "schema": {
+        "$ref": "schemas/nested/deep-schema.json"
+      }
     },
     "mixed": {
       "description": "Inline schema with mix of external and component refs",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "mixed"
         }
       ],
       "schema": {
         "type": "object",
         "properties": {
-          "direct_address": { "$ref": "schemas/address.json" },
-          "component_timestamp": { "$ref": "#/components/schemas/Timestamp" },
+          "direct_address": {
+            "$ref": "schemas/address.json"
+          },
+          "component_timestamp": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
           "nested_data": {
             "type": "object",
             "properties": {
-              "inner_address": { "$ref": "schemas/address.json" }
+              "inner_address": {
+                "$ref": "schemas/address.json"
+              }
             }
           }
         }
@@ -49,8 +57,14 @@
       "Timestamp": {
         "type": "object",
         "properties": {
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" }
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       }
     }

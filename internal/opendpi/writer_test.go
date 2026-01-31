@@ -1,822 +1,516 @@
 package opendpi
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestWrite_NilSpec(t *testing.T) {
+func TestVariablesEqual(t *testing.T) {
 	tests := []struct {
-		name   string
-		writer Writer
+		name string
+		a    map[string]any
+		b    map[string]any
+		want bool
 	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
+		{
+			name: "both nil",
+			a:    nil,
+			b:    nil,
+			want: true,
+		},
+		{
+			name: "both empty",
+			a:    map[string]any{},
+			b:    map[string]any{},
+			want: true,
+		},
+		{
+			name: "nil and empty are equal",
+			a:    nil,
+			b:    map[string]any{},
+			want: true,
+		},
+		{
+			name: "same values",
+			a:    map[string]any{"key": "value", "num": 42},
+			b:    map[string]any{"key": "value", "num": 42},
+			want: true,
+		},
+		{
+			name: "different values",
+			a:    map[string]any{"key": "value1"},
+			b:    map[string]any{"key": "value2"},
+			want: false,
+		},
+		{
+			name: "different keys",
+			a:    map[string]any{"key1": "value"},
+			b:    map[string]any{"key2": "value"},
+			want: false,
+		},
+		{
+			name: "different lengths",
+			a:    map[string]any{"key": "value"},
+			b:    map[string]any{"key": "value", "extra": "data"},
+			want: false,
+		},
+		{
+			name: "nested maps equal",
+			a:    map[string]any{"nested": map[string]any{"inner": "value"}},
+			b:    map[string]any{"nested": map[string]any{"inner": "value"}},
+			want: true,
+		},
+		{
+			name: "nested maps different",
+			a:    map[string]any{"nested": map[string]any{"inner": "value1"}},
+			b:    map[string]any{"nested": map[string]any{"inner": "value2"}},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{Path: tmpDir}
-
-			err := tt.writer.Write(nil, cfg)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "nil spec")
+			got := variablesEqual(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("variablesEqual() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
 
-func TestWrite_NilConfig(t *testing.T) {
+func TestFindConnectionName(t *testing.T) {
+	connections := map[string]Connection{
+		"conn1": {
+			Type:        "kafka",
+			Host:        "localhost:9092",
+			Description: "Local Kafka",
+			Variables:   nil,
+		},
+		"conn2": {
+			Type:        "postgresql",
+			Host:        "db.example.com",
+			Description: "Production DB",
+			Variables:   map[string]any{"ssl": true},
+		},
+		"conn3": {
+			Type:        "s3",
+			Host:        "s3.amazonaws.com",
+			Description: "Data Lake",
+			Variables:   map[string]any{"bucket": "my-bucket", "region": "us-east-1"},
+		},
+	}
+
 	tests := []struct {
-		name   string
-		writer Writer
+		name       string
+		target     *Connection
+		wantName   string
+		wantErrMsg string
 	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
+		{
+			name: "exact match without variables",
+			target: &Connection{
+				Type:        "kafka",
+				Host:        "localhost:9092",
+				Description: "Local Kafka",
+				Variables:   nil,
+			},
+			wantName:   "conn1",
+			wantErrMsg: "",
+		},
+		{
+			name: "exact match with variables",
+			target: &Connection{
+				Type:        "postgresql",
+				Host:        "db.example.com",
+				Description: "Production DB",
+				Variables:   map[string]any{"ssl": true},
+			},
+			wantName:   "conn2",
+			wantErrMsg: "",
+		},
+		{
+			name: "exact match with complex variables",
+			target: &Connection{
+				Type:        "s3",
+				Host:        "s3.amazonaws.com",
+				Description: "Data Lake",
+				Variables:   map[string]any{"bucket": "my-bucket", "region": "us-east-1"},
+			},
+			wantName:   "conn3",
+			wantErrMsg: "",
+		},
+		{
+			name: "no match - different type",
+			target: &Connection{
+				Type:        "http",
+				Host:        "localhost:9092",
+				Description: "Local Kafka",
+				Variables:   nil,
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
+		{
+			name: "no match - different host",
+			target: &Connection{
+				Type:        "kafka",
+				Host:        "remote:9092",
+				Description: "Local Kafka",
+				Variables:   nil,
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
+		{
+			name: "no match - different description",
+			target: &Connection{
+				Type:        "kafka",
+				Host:        "localhost:9092",
+				Description: "Remote Kafka",
+				Variables:   nil,
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
+		{
+			name: "no match - different variables",
+			target: &Connection{
+				Type:        "postgresql",
+				Host:        "db.example.com",
+				Description: "Production DB",
+				Variables:   map[string]any{"ssl": false},
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
+		{
+			name: "no match - missing variables",
+			target: &Connection{
+				Type:        "postgresql",
+				Host:        "db.example.com",
+				Description: "Production DB",
+				Variables:   nil,
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
+		{
+			name: "no match - extra variables",
+			target: &Connection{
+				Type:        "kafka",
+				Host:        "localhost:9092",
+				Description: "Local Kafka",
+				Variables:   map[string]any{"extra": "value"},
+			},
+			wantName:   "",
+			wantErrMsg: "connection not found",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test", Version: "1.0.0"},
-			}
-
-			err := tt.writer.Write(spec, nil)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "nil config")
-		})
-	}
-}
-
-func TestWrite_DirectoryDoesNotExist(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &config.Config{
-				Path: "/nonexistent/path/that/does/not/exist",
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaInline,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test", Version: "1.0.0"},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "spec directory does not exist")
-		})
-	}
-}
-
-func TestWrite_Inline(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaInline,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0", Description: "A test product"},
-				Tags: []Tag{
-					{Name: "customer-data", Description: "Customer related data"},
-				},
-				Connections: map[string]Connection{
-					"db": {
-						Protocol:    "postgresql",
-						Host:        "localhost:5432",
-						Description: "Main database",
-						Variables:   map[string]any{"schema": "public"},
-					},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Description: "User data",
-						Connections: []PortConnection{
-							{Connection: &Connection{
-								Protocol:    "postgresql",
-								Host:        "localhost:5432",
-								Description: "Main database",
-								Variables:   map[string]any{"schema": "public"},
-							}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":   {Type: "integer"},
-								"name": {Type: "string"},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify the spec file was created
-			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-			data, err := os.ReadFile(specFile) //nolint:gosec // test file
-			require.NoError(t, err)
-
-			content := string(data)
-			// Schema should be inline in the port
-			assert.Contains(t, content, "object")
-			assert.Contains(t, content, "integer")
-			assert.Contains(t, content, "string")
-			// Metadata should be present
-			assert.Contains(t, content, "customer-data")
-			assert.Contains(t, content, "Main database")
-			assert.Contains(t, content, "User data")
-			// Verify schema structure is present (format-agnostic)
-			assert.True(t, strings.Contains(content, `"id"`) || strings.Contains(content, "id:"))
-			assert.True(t, strings.Contains(content, `"name"`) || strings.Contains(content, "name:"))
-
-			// Verify no schemas directory was created
-			_, err = os.Stat(filepath.Join(tmpDir, "schemas"))
-			assert.True(t, os.IsNotExist(err))
-		})
-	}
-}
-
-func TestWrite_Modular(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaModular,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":      {Type: "integer"},
-								"address": {Ref: "#/$defs/Address"},
-							},
-							Defs: map[string]*jsonschema.Schema{
-								"Address": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"street": {Type: "string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify schemas directory was created
-			schemasDir := filepath.Join(tmpDir, "schemas")
-			_, err = os.Stat(schemasDir)
-			require.NoError(t, err)
-
-			// Verify users.yaml was created with rewritten refs
-			usersFile := filepath.Join(schemasDir, "users.yaml")
-			data, err := os.ReadFile(usersFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			usersContent := string(data)
-			assert.Contains(t, usersContent, "Address.yaml")
-			assert.NotContains(t, usersContent, "#/$defs/")
-
-			// Verify Address.yaml was created
-			addressFile := filepath.Join(schemasDir, "Address.yaml")
-			_, err = os.Stat(addressFile)
-			require.NoError(t, err)
-
-			// Verify the opendpi.yaml references the schema file
-			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-			data, err = os.ReadFile(specFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			content := string(data)
-			assert.Contains(t, content, "schemas/users.yaml")
-		})
-	}
-}
-
-func TestWrite_Modular_NestedRefs(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaModular,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"orders": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"customer": {Ref: "#/$defs/Customer"},
-							},
-							Defs: map[string]*jsonschema.Schema{
-								"Customer": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"address": {Ref: "#/$defs/Address"},
-									},
-								},
-								"Address": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"street": {Type: "string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify Customer.yaml has rewritten nested refs
-			customerFile := filepath.Join(tmpDir, "schemas", "Customer.yaml")
-			data, err := os.ReadFile(customerFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			customerContent := string(data)
-			assert.Contains(t, customerContent, "Address.yaml")
-			assert.NotContains(t, customerContent, "#/$defs/")
-		})
-	}
-}
-
-func TestWrite_Modular_ComponentsRefRewrite(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaModular,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"profile": {Ref: "#/components/schemas/Profile"},
-							},
-							Defs: map[string]*jsonschema.Schema{
-								"Profile": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"bio": {Type: "string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify users.yaml has #/components/schemas/ refs rewritten to .yaml
-			usersFile := filepath.Join(tmpDir, "schemas", "users.yaml")
-			data, err := os.ReadFile(usersFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			usersContent := string(data)
-			assert.Contains(t, usersContent, "Profile.yaml")
-			assert.NotContains(t, usersContent, "#/components/schemas/")
-		})
-	}
-}
-
-func TestWrite_ModularCleansStaleFiles(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaModular,
-				},
-			}
-
-			// Create schemas directory with a stale file
-			schemasDir := filepath.Join(tmpDir, "schemas")
-			require.NoError(t, os.MkdirAll(schemasDir, 0o750))
-			staleFile := filepath.Join(schemasDir, "OldSchema.yaml")
-			require.NoError(t, os.WriteFile(staleFile, []byte("type: object\n"), 0o600))
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{Type: "object"},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify stale file was removed
-			_, err = os.Stat(staleFile)
-			assert.True(t, os.IsNotExist(err), "stale file should be removed")
-
-			// Verify users.yaml still exists
-			usersSchemaFile := filepath.Join(schemasDir, "users.yaml")
-			_, err = os.Stat(usersSchemaFile)
-			require.NoError(t, err)
-		})
-	}
-}
-
-func TestWrite_Components(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaComponents,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":      {Type: "integer"},
-								"address": {Ref: "#/$defs/Address"},
-							},
-							Defs: map[string]*jsonschema.Schema{
-								"Address": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"street": {Type: "string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Read the spec file
-			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-			data, err := os.ReadFile(specFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			content := string(data)
-
-			// Should have components section (format-agnostic)
-			assert.True(t, strings.Contains(content, `"components"`) || strings.Contains(content, "components:"))
-			assert.True(t, strings.Contains(content, `"schemas"`) || strings.Contains(content, "schemas:"))
-			// Port should reference component schema
-			assert.Contains(t, content, "#/components/schemas/users")
-			// $defs refs should be rewritten to components
-			assert.Contains(t, content, "#/components/schemas/Address")
-			// Old $defs refs should NOT be present
-			assert.NotContains(t, content, "#/$defs/")
-
-			// Verify no schemas directory was created
-			_, err = os.Stat(filepath.Join(tmpDir, "schemas"))
-			assert.True(t, os.IsNotExist(err))
-		})
-	}
-}
-
-func TestWrite_Components_NestedRefs(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaComponents,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"orders": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"customer": {Ref: "#/$defs/Customer"},
-							},
-							Defs: map[string]*jsonschema.Schema{
-								"Customer": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"address": {Ref: "#/$defs/Address"},
-									},
-								},
-								"Address": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"street": {Type: "string"},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Read the spec file
-			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-			data, err := os.ReadFile(specFile) //nolint:gosec // test file
-			require.NoError(t, err)
-			content := string(data)
-
-			// All nested refs should be rewritten to components format
-			assert.Contains(t, content, "#/components/schemas/Customer")
-			assert.Contains(t, content, "#/components/schemas/Address")
-			// No $defs refs should remain
-			assert.NotContains(t, content, "#/$defs/")
-		})
-	}
-}
-
-func TestWrite_DuplicateSchemaNames(t *testing.T) {
-	tests := []struct {
-		name         string
-		writer       Writer
-		organization config.SchemaOrganization
-	}{
-		{"YAML/Modular", YAMLWriter, config.SchemaModular},
-		{"JSON/Modular", JSONWriter, config.SchemaModular},
-		{"YAML/Components", YAMLWriter, config.SchemaComponents},
-		{"JSON/Components", JSONWriter, config.SchemaComponents},
-		{"YAML/Inline", YAMLWriter, config.SchemaInline},
-		{"JSON/Inline", JSONWriter, config.SchemaInline},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: tt.organization,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Defs: map[string]*jsonschema.Schema{
-								"Address": {Type: "object"},
-							},
-						},
-					},
-					"profiles": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.profiles"},
-						},
-						Schema: &jsonschema.Schema{
-							Type: "object",
-							Defs: map[string]*jsonschema.Schema{
-								"Address": {Type: "object"}, // Duplicate!
-							},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "duplicate schema name")
-			assert.Contains(t, err.Error(), "Address")
-		})
-	}
-}
-
-func TestWrite_UnsupportedOrganization(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: "unsupported-mode",
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "schema organization not supported")
-		})
-	}
-}
-
-func TestWrite_PortsWithoutSchemas(t *testing.T) {
-	tests := []struct {
-		name   string
-		writer Writer
-	}{
-		{"YAML", YAMLWriter},
-		{"JSON", JSONWriter},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: config.SchemaInline,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Description: "Has schema",
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{Type: "object"},
-					},
-					"logs": {
-						Description: "No schema",
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.logs"},
-						},
-						Schema: nil, // No schema
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			// Verify both ports are written
-			specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-			data, err := os.ReadFile(specFile) //nolint:gosec // test file
-			require.NoError(t, err)
-
-			content := string(data)
-			// Both ports should be present (format-agnostic)
-			assert.True(t, strings.Contains(content, `"users"`) || strings.Contains(content, "users:"))
-			assert.True(t, strings.Contains(content, `"logs"`) || strings.Contains(content, "logs:"))
-		})
-	}
-}
-
-func TestWrite_MultiplePorts(t *testing.T) {
-	tests := []struct {
-		name         string
-		writer       Writer
-		organization config.SchemaOrganization
-	}{
-		{"YAML/Modular", YAMLWriter, config.SchemaModular},
-		{"JSON/Modular", JSONWriter, config.SchemaModular},
-		{"YAML/Components", YAMLWriter, config.SchemaComponents},
-		{"JSON/Components", JSONWriter, config.SchemaComponents},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			cfg := &config.Config{
-				Path: tmpDir,
-				Schema: config.SchemaConfig{
-					Organization: tt.organization,
-				},
-			}
-
-			spec := &Spec{
-				OpenDPI: "1.0.0",
-				Info:    Info{Title: "Test Product", Version: "1.0.0"},
-				Connections: map[string]Connection{
-					"db": {Protocol: "postgresql", Host: "localhost:5432"},
-				},
-				Ports: map[string]Port{
-					"users": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.users"},
-						},
-						Schema: &jsonschema.Schema{Type: "object"},
-					},
-					"orders": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.orders"},
-						},
-						Schema: &jsonschema.Schema{Type: "object"},
-					},
-					"products": {
-						Connections: []PortConnection{
-							{Connection: &Connection{Protocol: "postgresql", Host: "localhost:5432"}, Location: "public.products"},
-						},
-						Schema: &jsonschema.Schema{Type: "object"},
-					},
-				},
-			}
-
-			err := tt.writer.Write(spec, cfg)
-			require.NoError(t, err)
-
-			if tt.organization == config.SchemaModular {
-				// Verify all schema files were created
-				schemasDir := filepath.Join(tmpDir, "schemas")
-				for _, portName := range []string{"users", "orders", "products"} {
-					schemaFile := filepath.Join(schemasDir, portName+".yaml")
-					_, err := os.Stat(schemaFile)
-					require.NoError(t, err, "schema file %s should exist", portName)
+			gotName, err := findConnectionName(connections, tt.target)
+			if tt.wantErrMsg != "" {
+				if err == nil {
+					t.Errorf("findConnectionName() error = nil, want error containing %q", tt.wantErrMsg)
+					return
 				}
-			} else {
-				// Verify all schemas are in components
-				specFile := filepath.Join(tmpDir, "opendpi"+tt.writer.extension)
-				data, err := os.ReadFile(specFile) //nolint:gosec // test file
-				require.NoError(t, err)
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("findConnectionName() error = %q, want error containing %q", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("findConnectionName() unexpected error = %v", err)
+				return
+			}
+			if gotName != tt.wantName {
+				t.Errorf("findConnectionName() = %q, want %q", gotName, tt.wantName)
+			}
+		})
+	}
+}
 
-				content := string(data)
-				assert.Contains(t, content, "#/components/schemas/users")
-				assert.Contains(t, content, "#/components/schemas/orders")
-				assert.Contains(t, content, "#/components/schemas/products")
+func TestToRaw(t *testing.T) {
+	tests := []struct {
+		name        string
+		spec        *Spec
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "valid spec with matching connection",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{
+					"myconn": {
+						Type: "kafka",
+						Host: "localhost:9092",
+					},
+				},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type: "kafka",
+									Host: "localhost:9092",
+								},
+								Location: "test.topic",
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "port references non-existent connection",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{
+					"myconn": {
+						Type: "kafka",
+						Host: "localhost:9092",
+					},
+				},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type: "postgresql",
+									Host: "db.example.com",
+								},
+								Location: "test.table",
+							},
+						},
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "port \"output\": connection not found",
+		},
+		{
+			name: "empty connections map",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type: "kafka",
+									Host: "localhost:9092",
+								},
+								Location: "test.topic",
+							},
+						},
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "port \"output\": connection not found",
+		},
+		{
+			name: "connection with different variables",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{
+					"myconn": {
+						Type:      "kafka",
+						Host:      "localhost:9092",
+						Variables: map[string]any{"ssl": true},
+					},
+				},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type:      "kafka",
+									Host:      "localhost:9092",
+									Variables: map[string]any{"ssl": false},
+								},
+								Location: "test.topic",
+							},
+						},
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "port \"output\": connection not found",
+		},
+		{
+			name: "valid spec with variables",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{
+					"myconn": {
+						Type:      "kafka",
+						Host:      "localhost:9092",
+						Variables: map[string]any{"ssl": true, "port": 9092},
+					},
+				},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type:      "kafka",
+									Host:      "localhost:9092",
+									Variables: map[string]any{"ssl": true, "port": 9092},
+								},
+								Location: "test.topic",
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, err := toRaw(tt.spec)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("toRaw() error = nil, want error")
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("toRaw() error = %q, want error containing %q", err.Error(), tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("toRaw() unexpected error = %v", err)
+				return
+			}
+			if raw == nil {
+				t.Errorf("toRaw() returned nil rawSpec")
+			}
+		})
+	}
+}
+
+func TestWriterWrite(t *testing.T) {
+	tests := []struct {
+		name        string
+		spec        *Spec
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "valid spec",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{
+					"myconn": {
+						Type: "kafka",
+						Host: "localhost:9092",
+					},
+				},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type: "kafka",
+									Host: "localhost:9092",
+								},
+								Location: "test.topic",
+							},
+						},
+						Schema: &jsonschema.Schema{
+							Type: "object",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid spec - missing connection",
+			spec: &Spec{
+				OpenDPI: "0.1.0",
+				Info: Info{
+					Title:   "Test Product",
+					Version: "1.0.0",
+				},
+				Connections: map[string]Connection{},
+				Ports: map[string]Port{
+					"output": {
+						Description: "Test output",
+						Connections: []PortConnection{
+							{
+								Connection: &Connection{
+									Type: "kafka",
+									Host: "localhost:9092",
+								},
+								Location: "test.topic",
+							},
+						},
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "connection not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Use a temporary directory for testing
+			tmpDir := t.TempDir()
+
+			err := YAMLWriter.Write(tt.spec, tmpDir)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Writer.Write() error = nil, want error")
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("Writer.Write() error = %q, want error containing %q", err.Error(), tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("Writer.Write() unexpected error = %v", err)
 			}
 		})
 	}

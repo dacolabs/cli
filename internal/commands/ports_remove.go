@@ -118,7 +118,7 @@ func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOpti
 		writer = opendpi.YAMLWriter
 	}
 
-	if err := writer.Write(ctx.Spec, ctx.Config); err != nil {
+	if err := writer.Write(ctx.Spec, specDir); err != nil {
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 
