@@ -26,14 +26,9 @@ import (
 	"github.com/dacolabs/cli/internal/translate/pyspark"
 	"github.com/dacolabs/cli/internal/translate/python"
 	"github.com/dacolabs/cli/internal/translate/scala"
-<<<<<<< HEAD
 	"github.com/dacolabs/cli/internal/translate/sparkscala"
 	"github.com/dacolabs/cli/internal/translate/sparksql"
 	"github.com/spf13/cobra/doc"
-=======
-	"github.com/dacolabs/cli/internal/translate/sparksql"
-	doc "github.com/spf13/cobra/doc"
->>>>>>> 45f0b393029713400ba4e6f2226ec3201b2bb3e5
 )
 
 func main() {
