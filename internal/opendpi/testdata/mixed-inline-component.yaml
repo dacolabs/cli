@@ -9,15 +9,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   orders:
     description: Orders with inline schema referencing components
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: orders
     # Inline schema (not a $ref) that references components
     schema:

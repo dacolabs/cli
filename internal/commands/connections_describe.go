@@ -77,7 +77,7 @@ func selectConnectionToDescribe(conns map[string]opendpi.Connection) (string, er
 	options := make([]huh.Option[string], 0, len(conns))
 	for _, name := range names {
 		conn := conns[name]
-		label := fmt.Sprintf("%s (%s://%s)", name, conn.Protocol, conn.Host)
+		label := fmt.Sprintf("%s (%s://%s)", name, conn.Type, conn.Host)
 		options = append(options, huh.NewOption(label, name))
 	}
 
@@ -131,7 +131,7 @@ func runConnectionsDescribe(ctx *session.Context, connName string, opts *connect
 	default:
 		// Text format
 		fmt.Printf("Name:        %s\n", connName)
-		fmt.Printf("Protocol:    %s\n", conn.Protocol)
+		fmt.Printf("Protocol:    %s\n", conn.Type)
 		fmt.Printf("Host:        %s\n", conn.Host)
 
 		if conn.Description != "" {
@@ -175,7 +175,7 @@ func findPortsUsingConnectionWithLocation(conn *opendpi.Connection, ports map[st
 	for portName, port := range ports {
 		for _, pc := range port.Connections {
 			if pc.Connection != nil &&
-				pc.Connection.Protocol == conn.Protocol &&
+				pc.Connection.Type == conn.Type &&
 				pc.Connection.Host == conn.Host {
 				usages = append(usages, portUsage{
 					portName: portName,
@@ -195,7 +195,7 @@ func findPortsUsingConnectionNames(conn *opendpi.Connection, ports map[string]op
 	for portName, port := range ports {
 		for _, pc := range port.Connections {
 			if pc.Connection != nil &&
-				pc.Connection.Protocol == conn.Protocol &&
+				pc.Connection.Type == conn.Type &&
 				pc.Connection.Host == conn.Host {
 				usingPorts = append(usingPorts, portName)
 				break

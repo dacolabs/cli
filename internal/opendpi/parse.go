@@ -108,10 +108,10 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 	for name, rp := range raw.Ports {
 		portConns := make([]PortConnection, len(rp.Connections))
 		for i, rpc := range rp.Connections {
-			ref := strings.TrimPrefix(rpc.Connection.Ref, "#/connections/")
+			ref := strings.TrimPrefix(rpc.Connection, "#/connections/")
 			conn, ok := connections[ref]
 			if !ok {
-				return nil, fmt.Errorf("port %q: connection %q not found", name, rpc.Connection.Ref)
+				return nil, fmt.Errorf("port %q: connection %q not found", name, rpc.Connection)
 			}
 			portConns[i] = PortConnection{
 				Connection: &conn,
@@ -242,7 +242,7 @@ type rawTag struct {
 }
 
 type rawConnection struct {
-	Protocol    string         `yaml:"protocol" json:"protocol"`
+	Type        string         `yaml:"type" json:"type"`
 	Host        string         `yaml:"host" json:"host"`
 	Description string         `yaml:"description,omitempty" json:"description,omitempty"`
 	Variables   map[string]any `yaml:"variables,omitempty" json:"variables,omitempty"`
@@ -255,12 +255,8 @@ type rawPort struct {
 }
 
 type rawPortConnection struct {
-	Connection connectionRef `yaml:"connection" json:"connection"`
-	Location   string        `yaml:"location" json:"location"`
-}
-
-type connectionRef struct {
-	Ref string `yaml:"$ref" json:"$ref"`
+	Connection string `yaml:"connection" json:"connection"`
+	Location   string `yaml:"location" json:"location"`
 }
 
 type rawComponents struct {

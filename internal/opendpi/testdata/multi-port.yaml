@@ -18,7 +18,7 @@ tags:
 
 connections:
   warehouse:
-    protocol: postgresql
+    type: postgresql
     host: warehouse.db.example.com:5432
     description: Main analytics data warehouse
     variables:
@@ -26,19 +26,18 @@ connections:
       schema: public
 
   event_stream:
-    protocol: kafka
+    type: kafka
     host: kafka-1.example.com:9092,kafka-2.example.com:9092
     description: Real-time event streaming
     variables:
-      security.protocol: SASL_SSL
+      security.type: SASL_SSL
 
 ports:
   # Database tables
   daily_orders:
     description: Daily aggregated order metrics
     connections:
-      - connection:
-          $ref: "#/connections/warehouse"
+      - connection: "#/connections/warehouse"
         location: daily_order_summary
     schema:
       type: object
@@ -62,8 +61,7 @@ ports:
   user_segments:
     description: User segmentation data
     connections:
-      - connection:
-          $ref: "#/connections/warehouse"
+      - connection: "#/connections/warehouse"
         location: user_segments
     schema:
       type: object
@@ -87,8 +85,7 @@ ports:
   order_events:
     description: Real-time order events
     connections:
-      - connection:
-          $ref: "#/connections/event_stream"
+      - connection: "#/connections/event_stream"
         location: order-events-v2
     schema:
       type: object

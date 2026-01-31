@@ -9,15 +9,14 @@ info:
 
 connections:
   database:
-    protocol: postgresql
+    type: postgresql
     host: localhost:5432
 
 ports:
   users:
     description: Users using component that refs external file
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: users
     schema:
       $ref: "#/components/schemas/User"
@@ -25,8 +24,7 @@ ports:
   profiles:
     description: Profiles using component that refs external file with nested refs
     connections:
-      - connection:
-          $ref: "#/connections/database"
+      - connection: "#/connections/database"
         location: profiles
     schema:
       $ref: "#/components/schemas/UserProfile"

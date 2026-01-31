@@ -75,7 +75,7 @@ func runConnectionsRemove(ctx *session.Context, connName string, opts *connectio
 
 	// Show connection summary
 	fmt.Printf("Connection: %s\n", connName)
-	fmt.Printf("Protocol:   %s\n", conn.Protocol)
+	fmt.Printf("Protocol:   %s\n", conn.Type)
 	fmt.Printf("Host:       %s\n", conn.Host)
 	if conn.Description != "" {
 		fmt.Printf("Description: %s\n", conn.Description)
@@ -147,7 +147,7 @@ func selectConnectionToRemove(conns map[string]opendpi.Connection) (string, erro
 	options := make([]huh.Option[string], 0, len(conns))
 	for _, name := range names {
 		conn := conns[name]
-		label := fmt.Sprintf("%s (%s://%s)", name, conn.Protocol, conn.Host)
+		label := fmt.Sprintf("%s (%s://%s)", name, conn.Type, conn.Host)
 		options = append(options, huh.NewOption(label, name))
 	}
 
@@ -173,7 +173,7 @@ func findPortsUsingConnection(conn *opendpi.Connection, ports map[string]opendpi
 	for portName, port := range ports {
 		for _, pc := range port.Connections {
 			if pc.Connection != nil &&
-				pc.Connection.Protocol == conn.Protocol &&
+				pc.Connection.Type == conn.Type &&
 				pc.Connection.Host == conn.Host {
 				usingPorts = append(usingPorts, portName)
 				break

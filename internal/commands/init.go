@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/prompts"
@@ -78,7 +77,7 @@ func runInit(cmd *cobra.Command, opts *initOptions) error {
 		return fmt.Errorf("failed to create spec directory: %w", err)
 	}
 
-	_ = &opendpi.Spec{
+	spec := &opendpi.Spec{
 		OpenDPI: "1.0.0",
 		Info: opendpi.Info{
 			Title:       opts.name,
@@ -89,9 +88,9 @@ func runInit(cmd *cobra.Command, opts *initOptions) error {
 		Ports:       map[string]opendpi.Port{},
 	}
 
-	// if err := opendpi.YAMLWriter.Write(spec, specDir); err != nil {
-		// return fmt.Errorf("failed to write spec file: %w", err)
-	// }
+	if err := opendpi.YAMLWriter.Write(spec, specDir); err != nil {
+		return fmt.Errorf("failed to write spec file: %w", err)
+	}
 
 	cfg := config.Config{
 		Version: config.CurrentConfigVersion,
@@ -104,12 +103,11 @@ func runInit(cmd *cobra.Command, opts *initOptions) error {
 		return fmt.Errorf("config file couldn't be saved: %w", err)
 	}
 
-	success := lipgloss.NewStyle().Foreground(lipgloss.Color("#27ca3f"))
-	label := lipgloss.NewStyle().Foreground(lipgloss.Color("#bababa"))
-	check := success.Render("?")
-	fmt.Printf("\n%s %s %s\n", check, label.Render("Data product name:"), opts.name)
-	fmt.Printf("\n%s %s %s\n", check, label.Render("Version:"), opts.version)
-	fmt.Printf("\n%s %s %s\n", check, label.Render("Description:"), opts.description)
-	fmt.Println(success.Render("\n✓ Created opendpi.yaml"))
+	prompts.PrintResult([]prompts.ResultField{
+		{Label: "Data product name", Value: opts.name},
+		{Label: "Version", Value: opts.version},
+		{Label: "Description", Value: opts.description},
+	}, "✓ Created opendpi.yaml")
+
 	return nil
 }

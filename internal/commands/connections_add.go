@@ -15,11 +15,10 @@ import (
 )
 
 type connectionsAddOptions struct {
-	name           string
-	protocol       string
-	host           string
-	description    string
-	nonInteractive bool
+	name        string
+	protocol    string
+	host        string
+	description string
 }
 
 func newConnectionsAddCmd() *cobra.Command {
@@ -33,69 +32,60 @@ func newConnectionsAddCmd() *cobra.Command {
   daco connections add
 
   # Non-interactive
-  daco connections add -n kafka_prod -p kafka --host broker:9092 --non-interactive`,
+  daco connections add -n kafka_prod -t kafka --host broker:9092`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, err := session.RequireFromCommand(cmd)
 			if err != nil {
 				return err
 			}
-			return runConnectionsAdd(ctx, opts)
+			return runConnectionsAdd(cmd, ctx, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Connection name")
-	cmd.Flags().StringVarP(&opts.protocol, "protocol", "p", "", "Protocol (kafka, postgresql, mysql, s3, http, etc.)")
+	cmd.Flags().StringVarP(&opts.protocol, "type", "t", "", "Connection type (kafka, postgresql, mysql, s3, http, etc.)")
 	cmd.Flags().StringVar(&opts.host, "host", "", "Host/endpoint")
 	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Description")
-	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "Run without prompts")
 
 	return cmd
 }
 
-func runConnectionsAdd(ctx *session.Context, opts *connectionsAddOptions) error {
-	// Non-interactive validation
-	if opts.nonInteractive {
-		if opts.name == "" {
-			return fmt.Errorf("--name is required in non-interactive mode")
-		}
-		if opts.protocol == "" {
-			return fmt.Errorf("--protocol is required in non-interactive mode")
-		}
-		if opts.host == "" {
-			return fmt.Errorf("--host is required in non-interactive mode")
-		}
-		if _, exists := ctx.Spec.Connections[opts.name]; exists {
-			return fmt.Errorf("connection %q already exists", opts.name)
-		}
-	}
+func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectionsAddOptions) error {
+	var name, protocol, host, description string
 
-	var result prompts.ConnectionAddResult
-	if opts.nonInteractive {
-		result = prompts.ConnectionAddResult{
-			Name: opts.name,
-			Connection: opendpi.Connection{
-				Protocol:    opts.protocol,
-				Host:        opts.host,
-				Description: opts.description,
-			},
+	if cmd.Flags().Changed("name") {
+		name = opts.name
+		protocol = opts.protocol
+		host = opts.host
+		description = opts.description
+
+		if protocol == "" {
+			return fmt.Errorf("--type is required when --name is specified")
+		}
+		if host == "" {
+			return fmt.Errorf("--host is required when --name is specified")
+		}
+		if _, exists := ctx.Spec.Connections[name]; exists {
+			return fmt.Errorf("connection %q already exists", name)
 		}
 	} else {
-		var err error
-		result, err = prompts.RunAddNewConnectionForm(ctx.Spec.Connections)
-		if err != nil {
+		if err := prompts.RunAddNewConnectionForm(
+			&name, &protocol, &host, &description,
+			ctx.Spec.Connections,
+		); err != nil {
 			return err
 		}
 	}
 
-	// Initialize connections map if nil
 	if ctx.Spec.Connections == nil {
 		ctx.Spec.Connections = make(map[string]opendpi.Connection)
 	}
+	ctx.Spec.Connections[name] = opendpi.Connection{
+		Type:        protocol,
+		Host:        host,
+		Description: description,
+	}
 
-	// Add the connection
-	ctx.Spec.Connections[result.Name] = result.Connection
-
-	// Get working directory and spec directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -106,7 +96,6 @@ func runConnectionsAdd(ctx *session.Context, opts *connectionsAddOptions) error 
 		specDir = filepath.Join(cwd, specDir)
 	}
 
-	// Determine writer format based on existing spec file
 	var writer opendpi.Writer
 	if _, err := os.Stat(filepath.Join(specDir, "opendpi.json")); err == nil {
 		writer = opendpi.JSONWriter
@@ -118,6 +107,11 @@ func runConnectionsAdd(ctx *session.Context, opts *connectionsAddOptions) error 
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 
-	fmt.Printf("Connection %q added.\n", result.Name)
+	prompts.PrintResult([]prompts.ResultField{
+		{Label: "Connection", Value: name},
+		{Label: "Type", Value: protocol},
+		{Label: "Host", Value: host},
+	}, "✓ Connection added")
+
 	return nil
 }

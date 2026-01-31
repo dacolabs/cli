@@ -98,7 +98,7 @@ func printConnectionsTable(connections map[string]opendpi.Connection, ports map[
 			usageStr = "-"
 		}
 
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, conn.Protocol, conn.Host, desc, usageStr)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, conn.Type, conn.Host, desc, usageStr)
 	}
 
 	return w.Flush()
@@ -122,7 +122,7 @@ func countConnectionUsage(conn *opendpi.Connection, ports map[string]opendpi.Por
 	for _, port := range ports {
 		for _, pc := range port.Connections {
 			if pc.Connection != nil &&
-				pc.Connection.Protocol == conn.Protocol &&
+				pc.Connection.Type == conn.Type &&
 				pc.Connection.Host == conn.Host {
 				count++
 				break

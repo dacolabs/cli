@@ -33,7 +33,7 @@ type Tag struct {
 
 // Connection represents an infrastructure endpoint where data resides.
 type Connection struct {
-	Protocol    string
+	Type        string
 	Host        string
 	Description string
 	Variables   map[string]any

@@ -7,8 +7,8 @@
   },
   "connections": {
     "database": {
-      "protocol": "postgresql",
-      "host": "localhost:5432"
+      "host": "localhost:5432",
+      "type": "postgresql"
     }
   },
   "ports": {
@@ -16,55 +16,67 @@
       "description": "User data from YAML schema",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "users"
         }
       ],
-      "schema": { "$ref": "schemas/user.yaml" }
+      "schema": {
+        "$ref": "schemas/user.yaml"
+      }
     },
     "users_json": {
       "description": "User data from JSON schema",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "users"
         }
       ],
-      "schema": { "$ref": "schemas/user.json" }
+      "schema": {
+        "$ref": "schemas/user.json"
+      }
     },
     "profiles_yaml": {
       "description": "Profile with YAML schema referencing YAML address",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "profiles"
         }
       ],
-      "schema": { "$ref": "schemas/user-profile.yaml" }
+      "schema": {
+        "$ref": "schemas/user-profile.yaml"
+      }
     },
     "profiles_json": {
       "description": "Profile with JSON schema referencing JSON address",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "profiles"
         }
       ],
-      "schema": { "$ref": "schemas/user-profile.json" }
+      "schema": {
+        "$ref": "schemas/user-profile.json"
+      }
     },
     "mixed_inline": {
       "description": "Inline schema with mixed format refs",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/database" },
+          "connection": "#/connections/database",
           "location": "mixed"
         }
       ],
       "schema": {
         "type": "object",
         "properties": {
-          "yaml_address": { "$ref": "schemas/address.yaml" },
-          "json_address": { "$ref": "schemas/address.json" }
+          "yaml_address": {
+            "$ref": "schemas/address.yaml"
+          },
+          "json_address": {
+            "$ref": "schemas/address.json"
+          }
         }
       }
     }

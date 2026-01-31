@@ -150,7 +150,7 @@ func runPortsDescribe(ctx *session.Context, portName string, opts *portsDescribe
 			for _, pc := range port.Connections {
 				connName := findConnectionName(pc.Connection, ctx.Spec.Connections)
 				if pc.Connection != nil {
-					fmt.Printf("  - %s (%s://%s) -> %s\n", connName, pc.Connection.Protocol, pc.Connection.Host, pc.Location)
+					fmt.Printf("  - %s (%s://%s) -> %s\n", connName, pc.Connection.Type, pc.Connection.Host, pc.Location)
 				} else {
 					fmt.Printf("  - %s -> %s\n", connName, pc.Location)
 				}

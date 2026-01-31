@@ -7,12 +7,12 @@
   },
   "connections": {
     "users_db": {
-      "protocol": "postgresql",
       "host": "users.db.example.com:5432",
       "variables": {
         "database": "users",
         "schema": "public"
-      }
+      },
+      "type": "postgresql"
     }
   },
   "ports": {
@@ -20,21 +20,25 @@
       "description": "User account data",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/users_db" },
+          "connection": "#/connections/users_db",
           "location": "users"
         }
       ],
-      "schema": { "$ref": "schemas/user.json" }
+      "schema": {
+        "$ref": "schemas/user.json"
+      }
     },
     "user_profiles": {
       "description": "Extended user profile information",
       "connections": [
         {
-          "connection": { "$ref": "#/connections/users_db" },
+          "connection": "#/connections/users_db",
           "location": "user_profiles"
         }
       ],
-      "schema": { "$ref": "schemas/user-profile.json" }
+      "schema": {
+        "$ref": "schemas/user-profile.json"
+      }
     }
   }
 }

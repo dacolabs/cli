@@ -131,7 +131,7 @@ func findConnectionName(conn *opendpi.Connection, connections map[string]opendpi
 		return "unknown"
 	}
 	for name, c := range connections {
-		if c.Protocol == conn.Protocol && c.Host == conn.Host {
+		if c.Type == conn.Type && c.Host == conn.Host {
 			return name
 		}
 	}
