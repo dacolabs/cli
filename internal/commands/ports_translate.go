@@ -43,7 +43,7 @@ Available formats: %s`, strings.Join(translators.Available(), ", ")),
   daco ports translate --name my-port --format pyspark --output schema.py
 
   # Translate to a custom directory (also sets package name for Go/Protobuf/Scala)
-  daco ports translate --format go --output-dir models`,
+  daco ports translate --format gotypes --output-dir models`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPortsTranslate(cmd, translators, opts)
 		},
