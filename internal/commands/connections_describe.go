@@ -7,9 +7,9 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
-	"unicode/utf8"
 	"strings"
 	"text/tabwriter"
+	"unicode/utf8"
 
 	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/session"

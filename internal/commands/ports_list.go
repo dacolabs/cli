@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"unicode/utf8"
 	"strings"
 	"text/tabwriter"
+	"unicode/utf8"
 
 	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
