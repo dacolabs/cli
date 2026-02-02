@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/opendpi"
@@ -73,8 +74,8 @@ func runPortsRemove(ctx *session.Context, args []string, opts *portsRemoveOption
 			label := name
 			if port.Description != "" {
 				desc := port.Description
-				if len(desc) > 40 {
-					desc = desc[:37] + "..."
+				if utf8.RuneCountInString(desc) > 40 {
+					desc = string([]rune(desc)[:37]) + "..."
 				}
 				label = fmt.Sprintf("%s - %s", name, desc)
 			}

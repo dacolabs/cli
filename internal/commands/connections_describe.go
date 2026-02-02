@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"unicode/utf8"
 	"strings"
 	"text/tabwriter"
 
@@ -93,8 +94,8 @@ func runConnectionsDescribe(ctx *session.Context, args []string) error {
 		for _, pc := range port.Connections {
 			if pc.Connection != nil && pc.Connection.Type == conn.Type && pc.Connection.Host == conn.Host {
 				desc := port.Description
-				if len(desc) > 40 {
-					desc = desc[:37] + "..."
+				if utf8.RuneCountInString(desc) > 40 {
+					desc = string([]rune(desc)[:37]) + "..."
 				}
 				if desc == "" {
 					desc = "-"

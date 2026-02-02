@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"unicode/utf8"
 	"strings"
 	"text/tabwriter"
 
@@ -53,8 +54,8 @@ func runPortsList(ctx *session.Context) error {
 		port := ctx.Spec.Ports[name]
 
 		desc := port.Description
-		if len(desc) > 40 {
-			desc = desc[:37] + "..."
+		if utf8.RuneCountInString(desc) > 40 {
+			desc = string([]rune(desc)[:37]) + "..."
 		}
 		if desc == "" {
 			desc = "-"

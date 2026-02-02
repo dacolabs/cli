@@ -25,8 +25,9 @@ func RunPortsDescribeForm(value *string, ports map[string]opendpi.Port) error {
 		label := name
 		if port.Description != "" {
 			desc := port.Description
-			if len(desc) > 40 {
-				desc = desc[:37] + "..."
+			runes := []rune(desc)
+			if len(runes) > 40 {
+				desc = string(runes[:37]) + "..."
 			}
 			label = fmt.Sprintf("%s - %s", name, desc)
 		}

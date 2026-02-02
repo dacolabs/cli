@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"unicode/utf8"
 	"text/tabwriter"
 
 	"github.com/dacolabs/cli/internal/session"
@@ -51,8 +52,8 @@ func runConnectionsList(ctx *session.Context) error {
 		conn := ctx.Spec.Connections[name]
 
 		desc := conn.Description
-		if len(desc) > 30 {
-			desc = desc[:27] + "..."
+		if utf8.RuneCountInString(desc) > 30 {
+			desc = string([]rune(desc)[:27]) + "..."
 		}
 		if desc == "" {
 			desc = "-"

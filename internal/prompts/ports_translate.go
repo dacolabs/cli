@@ -27,6 +27,9 @@ func RunTranslateForm(
 	var groups []*huh.Group
 
 	if len(*selectedPorts) == 0 {
+		if len(ports) == 0 {
+			return fmt.Errorf("no ports available")
+		}
 		names := make([]string, 0, len(ports))
 		for name := range ports {
 			names = append(names, name)
