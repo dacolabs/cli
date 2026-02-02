@@ -40,7 +40,10 @@ func PrintResult(fields []ResultField, successMsg string) {
 	for _, f := range fields {
 		fmt.Printf("%s %s %s\n", check, label.Render(f.Label+":"), f.Value)
 	}
-	fmt.Println(success.Render("\n" + successMsg))
+
+	if successMsg != "" {
+		fmt.Println(success.Render("\n" + successMsg))
+	}
 }
 
 func identifierValidator[T any](existing map[string]T) func(string) error {
