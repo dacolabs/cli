@@ -20,6 +20,7 @@ Translates JSON Schema to Python dataclass definitions (.py).
 
 ```python
 import dataclasses
+from typing import Optional
 
 @dataclasses.dataclass
 class UsersSchema:
