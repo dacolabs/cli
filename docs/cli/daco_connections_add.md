@@ -17,7 +17,7 @@ daco connections add [flags]
   daco connections add
 
   # Non-interactive
-  daco connections add -n kafka_prod -p kafka --host broker:9092 --non-interactive
+  daco connections add -n kafka_prod -t kafka --host broker:9092
 ```
 
 ### Options
@@ -27,8 +27,7 @@ daco connections add [flags]
   -h, --help                 help for add
       --host string          Host/endpoint
   -n, --name string          Connection name
-      --non-interactive      Run without prompts
-  -p, --protocol string      Protocol (kafka, postgresql, mysql, s3, http, etc.)
+  -t, --type string          Connection type (kafka, postgresql, mysql, s3, http, etc.)
 ```
 
 ### SEE ALSO

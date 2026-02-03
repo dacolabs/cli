@@ -6,7 +6,7 @@ Translate a port schema to a target format
 
 Translate a port schema to a target format.
 
-Available formats: avro, databricks-sql, spark-scala, databricks-scala, spark-sql, pyspark, gotypes, databricks-pyspark, pydantic, python, scala, protobuf
+Available formats: databricks-pyspark, pydantic, python, databricks-sql, scala, protobuf, pyspark, avro, spark-scala, databricks-scala, spark-sql, gotypes
 
 ```
 daco ports translate [flags]
@@ -28,7 +28,7 @@ daco ports translate [flags]
 ### Options
 
 ```
-  -f, --format string       Output format (databricks-scala, spark-sql, avro, databricks-sql, spark-scala, pydantic, python, scala, protobuf, pyspark, gotypes, databricks-pyspark)
+  -f, --format string       Output format (pyspark, avro, spark-scala, databricks-scala, spark-sql, gotypes, databricks-pyspark, pydantic, python, databricks-sql, scala, protobuf)
   -h, --help                help for translate
   -n, --name string         Port name (translates all if not specified)
   -o, --output string       Output file path (only valid when translating a single port)

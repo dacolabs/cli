@@ -64,5 +64,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Rename daco.md to index.md
+	oldPath := dir + "/daco.md"
+	newPath := dir + "/index.md"
+	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "error renaming %s to %s: %v\n", oldPath, newPath, err)
+		os.Exit(1)
+	}
+
 	fmt.Printf("Documentation generated in %s\n", dir)
 }
