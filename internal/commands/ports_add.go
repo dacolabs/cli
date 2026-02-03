@@ -83,7 +83,7 @@ func runPortsAdd(cmd *cobra.Command, ctx *session.Context, opts *portsAddOptions
 		}
 	} else {
 		// Interactive mode
-		if err := prompts.RunAddPortForm(
+		if err := prompts.RunPortsAddForm(
 			&name, &description, &connName, &location,
 			ctx.Spec.Ports, ctx.Spec.Connections,
 		); err != nil {
@@ -138,11 +138,10 @@ func runPortsAdd(cmd *cobra.Command, ctx *session.Context, opts *portsAddOptions
 	if description != "" {
 		fields = append(fields, prompts.ResultField{Label: "Description", Value: description})
 	}
-	fields = append(fields, prompts.ResultField{Label: "Schema", Value: "schemas/" + name + ".schema.yaml"})
 	if connName != "" {
-		fields = append(fields, prompts.ResultField{Label: "Connection", Value: connName + " → " + location})
+		fields = append(fields, prompts.ResultField{Label: "Connection", Value: connName + ":" + location})
 	}
-	prompts.PrintResult(fields, "✓ Port added")
+	prompts.PrintResult(fields, "✓ Port added, schema created in schemas/"+name+".schema.yaml")
 
 	return nil
 }

@@ -5,6 +5,7 @@
 package commands
 
 import (
+	"github.com/dacolabs/cli/internal/opendpi"
 	"github.com/dacolabs/cli/internal/session"
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/cli/internal/version"
@@ -55,7 +56,20 @@ and are referenced by ports. Use subcommands to add, list, describe, or remove c
 
 	rootCmd.AddCommand(
 		newInitCmd(),
+		newDescribeCmd(),
 		portsCmd,
 		connsCmd)
 	return rootCmd
+}
+
+func findConnectionName(conn *opendpi.Connection, connections map[string]opendpi.Connection) string {
+	if conn == nil {
+		return "unknown"
+	}
+	for name, c := range connections {
+		if c.Type == conn.Type && c.Host == conn.Host {
+			return name
+		}
+	}
+	return "unknown"
 }

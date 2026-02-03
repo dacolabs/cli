@@ -72,7 +72,7 @@ func runConnectionsAdd(cmd *cobra.Command, ctx *session.Context, opts *connectio
 			return fmt.Errorf("connection %q already exists", name)
 		}
 	} else {
-		if err := prompts.RunAddNewConnectionForm(
+		if err := prompts.RunConnectionsAddForm(
 			&name, &connType, &host, &description,
 			ctx.Spec.Connections,
 		); err != nil {

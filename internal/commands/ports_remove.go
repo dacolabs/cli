@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/huh"
 	"github.com/dacolabs/cli/internal/opendpi"
+	"github.com/dacolabs/cli/internal/prompts"
 	"github.com/dacolabs/cli/internal/session"
 	"github.com/spf13/cobra"
 )
@@ -42,17 +44,7 @@ Requires confirmation unless --force is specified.`,
 			if err != nil {
 				return err
 			}
-
-			var portName string
-			if len(args) > 0 {
-				portName = args[0]
-			} else {
-				portName, err = selectPortToRemove(ctx.Spec.Ports)
-				if err != nil {
-					return err
-				}
-			}
-			return runPortsRemove(ctx, portName, opts)
+			return runPortsRemove(ctx, args, opts)
 		},
 	}
 
@@ -61,7 +53,49 @@ Requires confirmation unless --force is specified.`,
 	return cmd
 }
 
-func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOptions) error {
+func runPortsRemove(ctx *session.Context, args []string, opts *portsRemoveOptions) error {
+	var portName string
+	if len(args) > 0 {
+		portName = args[0]
+	} else {
+		if len(ctx.Spec.Ports) == 0 {
+			return fmt.Errorf("no ports defined")
+		}
+
+		names := make([]string, 0, len(ctx.Spec.Ports))
+		for name := range ctx.Spec.Ports {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		options := make([]huh.Option[string], 0, len(ctx.Spec.Ports))
+		for _, name := range names {
+			port := ctx.Spec.Ports[name]
+			label := name
+			if port.Description != "" {
+				desc := port.Description
+				if utf8.RuneCountInString(desc) > 40 {
+					desc = string([]rune(desc)[:37]) + "..."
+				}
+				label = fmt.Sprintf("%s - %s", name, desc)
+			}
+			options = append(options, huh.NewOption(label, name))
+		}
+
+		if err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Select port to remove").
+					Options(options...).
+					Filtering(true).
+					Value(&portName).
+					Height(10),
+			),
+		).WithTheme(prompts.Theme()).Run(); err != nil {
+			return err
+		}
+	}
+
 	port, exists := ctx.Spec.Ports[portName]
 	if !exists {
 		return fmt.Errorf("port %q not found", portName)
@@ -86,7 +120,7 @@ func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOpti
 					Negative("No, cancel").
 					Value(&confirmed),
 			),
-		).Run(); err != nil {
+		).WithTheme(prompts.Theme()).Run(); err != nil {
 			return err
 		}
 
@@ -96,10 +130,8 @@ func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOpti
 		}
 	}
 
-	// Remove the port
 	delete(ctx.Spec.Ports, portName)
 
-	// Get working directory and spec directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -110,7 +142,6 @@ func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOpti
 		specDir = filepath.Join(cwd, specDir)
 	}
 
-	// Determine writer format based on existing spec file
 	var writer opendpi.Writer
 	if _, err := os.Stat(filepath.Join(specDir, "opendpi.json")); err == nil {
 		writer = opendpi.JSONWriter
@@ -122,48 +153,9 @@ func runPortsRemove(ctx *session.Context, portName string, opts *portsRemoveOpti
 		return fmt.Errorf("failed to write spec: %w", err)
 	}
 
-	fmt.Printf("Port %q removed.\n", portName)
+	prompts.PrintResult([]prompts.ResultField{
+		{Label: "Port", Value: portName},
+	}, "✓ Port removed")
+
 	return nil
-}
-
-func selectPortToRemove(ports map[string]opendpi.Port) (string, error) {
-	if len(ports) == 0 {
-		return "", fmt.Errorf("no ports defined")
-	}
-
-	names := make([]string, 0, len(ports))
-	for name := range ports {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	options := make([]huh.Option[string], 0, len(ports))
-	for _, name := range names {
-		port := ports[name]
-		label := name
-		if port.Description != "" {
-			desc := port.Description
-			if len(desc) > 40 {
-				desc = desc[:37] + "..."
-			}
-			label = fmt.Sprintf("%s - %s", name, desc)
-		}
-		options = append(options, huh.NewOption(label, name))
-	}
-
-	var selected string
-	if err := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Select port to remove").
-				Options(options...).
-				Filtering(true).
-				Value(&selected).
-				Height(10),
-		),
-	).Run(); err != nil {
-		return "", err
-	}
-
-	return selected, nil
 }

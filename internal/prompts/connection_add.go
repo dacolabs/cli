@@ -8,8 +8,8 @@ import (
 	"github.com/dacolabs/cli/internal/opendpi"
 )
 
-// RunAddNewConnectionForm runs the interactive form for creating a new connection.
-func RunAddNewConnectionForm(
+// RunConnectionsAddForm runs the interactive form for creating a new connection.
+func RunConnectionsAddForm(
 	name, connType, host, description *string,
 	existingConns map[string]opendpi.Connection,
 ) error {
