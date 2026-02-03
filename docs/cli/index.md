@@ -20,4 +20,3 @@ Avro, Protobuf, Go types, and more.
 * [daco connections](daco_connections.md)	 - Manage data product connections
 * [daco init](daco_init.md)	 - Initialize a new daco project
 * [daco ports](daco_ports.md)	 - Manage data product ports
-
