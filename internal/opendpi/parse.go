@@ -120,6 +120,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 		}
 
 		var portSchema *jsonschema.Schema
+		var schemaRef string
 		if rp.Schema != nil {
 			if rp.Schema.Ref != "" {
 				if strings.HasPrefix(rp.Schema.Ref, "#/") {
@@ -135,6 +136,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 					portSchema = resolved
 				} else {
 					// External file ref - already loaded in schemaDefs with full path
+					schemaRef = rp.Schema.Ref
 					resolved, ok := schemaDefs[rp.Schema.Ref]
 					if !ok {
 						return nil, fmt.Errorf("port %q: external schema %q not found", name, rp.Schema.Ref)
@@ -208,6 +210,7 @@ func (p Parser) Parse(r io.Reader, fsys fs.FS) (*Spec, error) {
 			Description: rp.Description,
 			Connections: portConns,
 			Schema:      portSchema,
+			SchemaRef:   schemaRef,
 		}
 	}
 

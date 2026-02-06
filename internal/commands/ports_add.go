@@ -92,10 +92,12 @@ func runPortsAdd(cmd *cobra.Command, ctx *session.Context, opts *portsAddOptions
 	}
 
 	// Build port
+	schemaRef := "schemas/" + name + ".schema.yaml"
 	port := opendpi.Port{
 		Description: description,
+		SchemaRef:   schemaRef,
 		Schema: &jsonschema.Schema{
-			Ref: "schemas/" + name + ".schema.yaml",
+			Ref: schemaRef,
 		},
 	}
 
