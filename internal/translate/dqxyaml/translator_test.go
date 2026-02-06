@@ -4,6 +4,7 @@
 package dqxyaml
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dacolabs/cli/internal/translate"
@@ -511,10 +512,236 @@ func TestQuoteSQL(t *testing.T) {
 		{"username", "`username`"},
 		{"address.street", "`address`.`street`"},
 		{"customer.address.city", "`customer`.`address`.`city`"},
+		{"user`name", "`user``name`"},
 	}
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, quoteSQL(tt.input))
 	}
+}
+
+func TestYamlScalar(t *testing.T) {
+	tests := []struct {
+		input any
+		want  string
+	}{
+		// Safe plain string scalars — returned unchanged.
+		{"hello", "hello"},
+		{`^[A-Z]{2}$`, `^[A-Z]{2}$`},
+		{"simple column", "simple column"},
+		{"it's", "it's"},
+
+		// Strings that look like numbers — must be quoted to stay strings.
+		{"42", `"42"`},
+		{"18.5", `"18.5"`},
+
+		// Leading YAML indicator characters — must be quoted.
+		{"`rate` > 0", "'`rate` > 0'"},
+		{"@directive", "'@directive'"},
+		{"#comment", "'#comment'"},
+		{"*alias", "'*alias'"},
+		{": mapping", "': mapping'"},
+		{"[a-z]+", "'[a-z]+'"},
+		{"{foo}", "'{foo}'"},
+
+		// Inline comment marker.
+		{"foo # bar", "'foo # bar'"},
+
+		// Mapping-value indicator in the middle.
+		{"key: value", "'key: value'"},
+
+		// Trailing colon.
+		{"foo:", "'foo:'"},
+
+		// YAML 1.1 booleans and null — must be quoted to stay strings.
+		{"off", `"off"`},
+		{"OFF", `"OFF"`},
+		{"true", `"true"`},
+		{"True", `"True"`},
+		{"yes", `"yes"`},
+		{"Yes", `"Yes"`},
+		{"no", `"no"`},
+		{"null", `"null"`},
+		{"y", `"y"`},
+		{"n", `"n"`},
+
+		// Empty string.
+		{"", `""`},
+
+		// Value that needs quoting AND contains a single quote.
+		{"#it's", "'#it''s'"},
+
+		// Numeric types — rendered as plain YAML numbers.
+		{float64(42), "42"},
+		{float64(18.5), "18.5"},
+		{float64(0), "0"},
+		{float64(100), "100"},
+		{int64(7), "7"},
+
+		// Booleans — rendered as plain YAML booleans.
+		{true, "true"},
+		{false, "false"},
+
+		// Nil — rendered as null.
+		{nil, "null"},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%v", tt.input), func(t *testing.T) {
+			assert.Equal(t, tt.want, yamlScalar(tt.input))
+		})
+	}
+}
+
+func TestTranslate_ConstBooleanString(t *testing.T) {
+	constVal := any("off")
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"flag": {
+				Type:  "string",
+				Const: &constVal,
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_equal_to", "flag")
+	assert.Equal(t, "off", checks[0].Check.Arguments["value"])
+}
+
+func TestTranslate_PatternWithHash(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"color": {
+				Type:    "string",
+				Pattern: `^#[0-9a-fA-F]{6}$`,
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "regex_match", "color")
+	assert.Equal(t, `^#[0-9a-fA-F]{6}$`, checks[0].Check.Arguments["regex"])
+}
+
+func TestTranslate_EnumWithBooleanStrings(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"toggle": {
+				Type: "string",
+				Enum: []any{"on", "off", "auto"},
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_in_list", "toggle")
+	allowed := checks[0].Check.Arguments["allowed"].([]any)
+	assert.Equal(t, "on", allowed[0])
+	assert.Equal(t, "off", allowed[1])
+	assert.Equal(t, "auto", allowed[2])
+}
+
+func TestTranslate_PatternWithBracket(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"code": {
+				Type:    "string",
+				Pattern: `[a-z]+`,
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "regex_match", "code")
+	assert.Equal(t, "[a-z]+", checks[0].Check.Arguments["regex"])
+}
+
+func TestTranslate_ConstPreservesStringType(t *testing.T) {
+	constVal := any("123")
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"code": {
+				Type:  "string",
+				Const: &constVal,
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_equal_to", "code")
+	assert.Equal(t, "123", checks[0].Check.Arguments["value"])
+}
+
+func TestTranslate_ConstNumeric(t *testing.T) {
+	constVal := any(float64(42))
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"version": {
+				Const: &constVal,
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_equal_to", "version")
+	assert.EqualValues(t, 42, checks[0].Check.Arguments["value"])
+}
+
+func TestTranslate_EnumWithNumericStrings(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"code": {
+				Type: "string",
+				Enum: []any{"123", "456"},
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_in_list", "code")
+	allowed := checks[0].Check.Arguments["allowed"].([]any)
+	assert.Equal(t, "123", allowed[0])
+	assert.Equal(t, "456", allowed[1])
+}
+
+func TestTranslate_EnumWithSpecialChars(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"status": {
+				Enum: []any{"on", "key: value", "[bracket]"},
+			},
+		},
+	}
+
+	checks := translateSchema(t, schema)
+
+	require.Len(t, checks, 1)
+	assertCheck(t, checks[0], "is_in_list", "status")
+	allowed := checks[0].Check.Arguments["allowed"].([]any)
+	assert.Equal(t, "on", allowed[0])
+	assert.Equal(t, "key: value", allowed[1])
+	assert.Equal(t, "[bracket]", allowed[2])
 }
 
 func TestFileExtension(t *testing.T) {

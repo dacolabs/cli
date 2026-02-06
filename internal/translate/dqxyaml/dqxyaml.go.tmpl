@@ -9,7 +9,7 @@
 {{- if .List }}
       {{ .Key }}:
 {{- range .List }}
-        - {{ . }}
+        - {{ yamlScalar . }}
 {{- end }}
 {{- else }}
       {{ .Key }}: {{ yamlScalar .Value }}

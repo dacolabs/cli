@@ -12,6 +12,7 @@ import (
 
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
+	"gopkg.in/yaml.v3"
 )
 
 //go:embed dqxyaml.go.tmpl
@@ -40,8 +41,8 @@ type dqxCheck struct {
 // dqxArg represents a single argument in a quality check.
 type dqxArg struct {
 	Key   string
-	Value string   // pre-formatted scalar (empty if List is set)
-	List  []string // for list values like enum allowed
+	Value any   // original typed value (empty if List is set)
+	List  []any // for list values like enum allowed
 }
 
 // Translate converts a JSON schema's constraints into DQX YAML quality checks.
@@ -106,15 +107,11 @@ func collectChecks(colName string, c *translate.Constraints, checks *[]dqxCheck)
 
 	// Enum
 	if len(c.Enum) > 0 {
-		allowed := make([]string, len(c.Enum))
-		for i, v := range c.Enum {
-			allowed[i] = fmt.Sprintf("%v", v)
-		}
 		*checks = append(*checks, dqxCheck{
 			Function: "is_in_list",
 			Args: []dqxArg{
 				{Key: "column", Value: colName},
-				{Key: "allowed", List: allowed},
+				{Key: "allowed", List: c.Enum},
 			},
 		})
 	}
@@ -123,7 +120,7 @@ func collectChecks(colName string, c *translate.Constraints, checks *[]dqxCheck)
 	if c.Const != nil {
 		*checks = append(*checks, newCheckWithArgs("is_equal_to",
 			dqxArg{Key: "column", Value: colName},
-			dqxArg{Key: "value", Value: fmt.Sprintf("%v", *c.Const)},
+			dqxArg{Key: "value", Value: *c.Const},
 		))
 	}
 
@@ -210,19 +207,19 @@ func collectNumericChecks(colName string, c *translate.Constraints, checks *[]dq
 			Function: "is_in_range",
 			Args: []dqxArg{
 				{Key: "column", Value: colName},
-				{Key: "min_limit", Value: formatFloat(*c.Minimum)},
-				{Key: "max_limit", Value: formatFloat(*c.Maximum)},
+				{Key: "min_limit", Value: *c.Minimum},
+				{Key: "max_limit", Value: *c.Maximum},
 			},
 		})
 	case hasMin:
 		*checks = append(*checks, newCheckWithArgs("is_not_less_than",
 			dqxArg{Key: "column", Value: colName},
-			dqxArg{Key: "limit", Value: formatFloat(*c.Minimum)},
+			dqxArg{Key: "limit", Value: *c.Minimum},
 		))
 	case hasMax:
 		*checks = append(*checks, newCheckWithArgs("is_not_greater_than",
 			dqxArg{Key: "column", Value: colName},
-			dqxArg{Key: "limit", Value: formatFloat(*c.Maximum)},
+			dqxArg{Key: "limit", Value: *c.Maximum},
 		))
 	}
 
@@ -264,14 +261,25 @@ func newSQLCheck(expression, msg string) dqxCheck {
 	}
 }
 
-// yamlScalar returns s unchanged when it is safe as a YAML plain scalar.
-// If s starts with a character that YAML reserves (backtick, @), the value
-// is wrapped in single quotes so the YAML parser accepts it.
-func yamlScalar(s string) string {
-	if s != "" && (s[0] == '`' || s[0] == '@') {
-		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+// yamlScalar formats any Go value as a YAML scalar string suitable for
+// inline embedding in a YAML template. It delegates to yaml.Marshal to
+// guarantee correct quoting for all YAML special characters, boolean
+// literals, numeric strings, etc.
+func yamlScalar(v any) string {
+	if v == nil {
+		return "null"
 	}
-	return s
+	// Render whole-number floats as integers (18.0 → 18).
+	if f, ok := v.(float64); ok {
+		if f == float64(int64(f)) {
+			v = int64(f)
+		}
+	}
+	out, err := yaml.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf("%v", v)
+	}
+	return strings.TrimRight(string(out), "\n")
 }
 
 // quoteSQL backtick-quotes a column name for use in Spark SQL expressions.
@@ -281,15 +289,8 @@ func yamlScalar(s string) string {
 func quoteSQL(colName string) string {
 	parts := strings.Split(colName, ".")
 	for i, p := range parts {
-		parts[i] = "`" + p + "`"
+		parts[i] = "`" + strings.ReplaceAll(p, "`", "``") + "`"
 	}
 	return strings.Join(parts, ".")
 }
 
-// formatFloat formats a float64 as a clean number string (no trailing zeros).
-func formatFloat(v float64) string {
-	if v == float64(int64(v)) {
-		return fmt.Sprintf("%d", int64(v))
-	}
-	return fmt.Sprintf("%v", v)
-}
