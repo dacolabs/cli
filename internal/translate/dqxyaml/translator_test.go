@@ -6,6 +6,7 @@ package dqxyaml
 import (
 	"testing"
 
+	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,8 +36,8 @@ func TestTranslate_RequiredFields(t *testing.T) {
 	checks := translateSchema(t, schema)
 
 	require.Len(t, checks, 2)
-	assertCheck(t, checks[0], "is_not_null", "id")
-	assertCheck(t, checks[1], "is_not_null", "name")
+	assertCheckExists(t, checks, "is_not_null", "id")
+	assertCheckExists(t, checks, "is_not_null", "name")
 }
 
 func TestTranslate_EnumConstraint(t *testing.T) {
@@ -176,9 +177,9 @@ func TestTranslate_ExclusiveBounds(t *testing.T) {
 
 	require.Len(t, checks, 2)
 	assertCheck(t, checks[0], "sql_expression", "")
-	assert.Equal(t, "rate > 0", checks[0].Check.Arguments["expression"])
+	assert.Equal(t, "`rate` > 0", checks[0].Check.Arguments["expression"])
 	assertCheck(t, checks[1], "sql_expression", "")
-	assert.Equal(t, "rate < 100", checks[1].Check.Arguments["expression"])
+	assert.Equal(t, "`rate` < 100", checks[1].Check.Arguments["expression"])
 }
 
 func TestTranslate_StringLength(t *testing.T) {
@@ -199,9 +200,9 @@ func TestTranslate_StringLength(t *testing.T) {
 
 	require.Len(t, checks, 2)
 	assertCheck(t, checks[0], "sql_expression", "")
-	assert.Equal(t, "length(username) >= 3", checks[0].Check.Arguments["expression"])
+	assert.Equal(t, "length(`username`) >= 3", checks[0].Check.Arguments["expression"])
 	assertCheck(t, checks[1], "sql_expression", "")
-	assert.Equal(t, "length(username) <= 50", checks[1].Check.Arguments["expression"])
+	assert.Equal(t, "length(`username`) <= 50", checks[1].Check.Arguments["expression"])
 }
 
 func TestTranslate_FormatDate(t *testing.T) {
@@ -365,9 +366,9 @@ func TestTranslate_ArrayConstraints(t *testing.T) {
 
 	require.Len(t, checks, 2)
 	assertCheck(t, checks[0], "sql_expression", "")
-	assert.Equal(t, "size(tags) >= 1", checks[0].Check.Arguments["expression"])
+	assert.Equal(t, "size(`tags`) >= 1", checks[0].Check.Arguments["expression"])
 	assertCheck(t, checks[1], "sql_expression", "")
-	assert.Equal(t, "size(tags) <= 10", checks[1].Check.Arguments["expression"])
+	assert.Equal(t, "size(`tags`) <= 10", checks[1].Check.Arguments["expression"])
 }
 
 func TestTranslate_MultipleOf(t *testing.T) {
@@ -386,7 +387,7 @@ func TestTranslate_MultipleOf(t *testing.T) {
 
 	require.Len(t, checks, 1)
 	assertCheck(t, checks[0], "sql_expression", "")
-	assert.Equal(t, "quantity % 5 = 0", checks[0].Check.Arguments["expression"])
+	assert.Equal(t, "`quantity` % 5 = 0", checks[0].Check.Arguments["expression"])
 }
 
 func TestTranslate_MultipleConstraints(t *testing.T) {
@@ -478,6 +479,44 @@ func TestTranslate_ChainedDefs(t *testing.T) {
 	assert.Contains(t, columns, "customer.address.city")
 }
 
+func TestFlattenFields_CircularRef(t *testing.T) {
+	// Construct a circular defMap: A references B, B references A.
+	// flattenFields must not infinite-loop; it should skip the back-edge.
+	defs := map[string]*translate.TypeDef{
+		"A": {Name: "A", Fields: []translate.Field{
+			{Name: "name", Type: "string", Nullable: false},
+			{Name: "b", Type: "B"},
+		}},
+		"B": {Name: "B", Fields: []translate.Field{
+			{Name: "a", Type: "A"},
+		}},
+	}
+	fields := []translate.Field{{Name: "root", Type: "A"}}
+
+	var checks []dqxCheck
+	flattenFields(fields, "", defs, &checks, make(map[string]bool))
+
+	// A was expanded; B was expanded; B's child "A" was skipped (visited).
+	// Only the leaf field "root.name" (non-nullable) should produce a check.
+	require.Len(t, checks, 1)
+	assert.Equal(t, "is_not_null", checks[0].Function)
+	assert.Equal(t, "root.name", checks[0].Args[0].Value)
+}
+
+func TestQuoteSQL(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"username", "`username`"},
+		{"address.street", "`address`.`street`"},
+		{"customer.address.city", "`customer`.`address`.`city`"},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, quoteSQL(tt.input))
+	}
+}
+
 func TestFileExtension(t *testing.T) {
 	translator := &Translator{}
 	assert.Equal(t, ".yaml", translator.FileExtension())
@@ -512,4 +551,15 @@ func assertCheck(t *testing.T, c testCheck, function, column string) {
 	if column != "" {
 		assert.Equal(t, column, c.Check.Arguments["column"])
 	}
+}
+
+func assertCheckExists(t *testing.T, checks []testCheck, function, column string) {
+	t.Helper()
+	for _, c := range checks {
+		if c.Check.Function == function && c.Check.Arguments["column"] == column {
+			assert.Equal(t, "error", c.Criticality)
+			return
+		}
+	}
+	t.Errorf("check with function=%q column=%q not found", function, column)
 }

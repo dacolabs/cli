@@ -73,10 +73,10 @@ func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef, 
 
 func renderStruct(fields []translate.Field) string {
 	parts := make([]string, len(fields))
-	for i, f := range fields {
-		parts[i] = f.Name + ": " + f.Type
-		if f.Tag != "" {
-			parts[i] += f.Tag
+	for i := range fields {
+		parts[i] = fields[i].Name + ": " + fields[i].Type
+		if fields[i].Tag != "" {
+			parts[i] += fields[i].Tag
 		}
 	}
 	return "STRUCT<" + strings.Join(parts, ", ") + ">"

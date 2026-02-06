@@ -12,7 +12,7 @@
         - {{ . }}
 {{- end }}
 {{- else }}
-      {{ .Key }}: {{ .Value }}
+      {{ .Key }}: {{ yamlScalar .Value }}
 {{- end }}
 {{- end }}
 {{- end }}

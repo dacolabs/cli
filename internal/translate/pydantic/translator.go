@@ -38,14 +38,14 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 	// checks if any field type contains datetime.
 	data.Extra["NeedsDatetimeImport"] = false
 	for _, def := range data.Defs {
-		for _, f := range def.Fields {
-			if strings.Contains(f.Type, "datetime.") {
+		for i := range def.Fields {
+			if strings.Contains(def.Fields[i].Type, "datetime.") {
 				data.Extra["NeedsDatetimeImport"] = true
 			}
 		}
 	}
-	for _, f := range data.Root.Fields {
-		if strings.Contains(f.Type, "datetime.") {
+	for i := range data.Root.Fields {
+		if strings.Contains(data.Root.Fields[i].Type, "datetime.") {
 			data.Extra["NeedsDatetimeImport"] = true
 		}
 	}

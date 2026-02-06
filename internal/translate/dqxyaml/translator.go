@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/dacolabs/cli/internal/translate"
@@ -16,7 +17,11 @@ import (
 //go:embed dqxyaml.go.tmpl
 var tmplFS embed.FS
 
-var tmpl = template.Must(template.ParseFS(tmplFS, "dqxyaml.go.tmpl"))
+var tmpl = template.Must(
+	template.New("").Funcs(template.FuncMap{
+		"yamlScalar": yamlScalar,
+	}).ParseFS(tmplFS, "dqxyaml.go.tmpl"),
+)
 
 // Translator translates JSON Schema constraints to DQX YAML quality check definitions.
 type Translator struct{}
@@ -54,7 +59,7 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 
 	// Flatten TypeDef graph into checks with dot-notation column paths
 	var checks []dqxCheck
-	flattenFields(data.Root.Fields, "", defsByName, &checks)
+	flattenFields(data.Root.Fields, "", defsByName, &checks, make(map[string]bool))
 
 	data.Extra["Checks"] = checks
 
@@ -68,29 +73,34 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 
 // flattenFields walks the TypeDef graph recursively, building dot-notation
 // column paths and collecting quality checks from field constraints.
-func flattenFields(fields []translate.Field, prefix string, defs map[string]*translate.TypeDef, checks *[]dqxCheck) {
-	for _, f := range fields {
-		colName := f.Name
+func flattenFields(fields []translate.Field, prefix string, defs map[string]*translate.TypeDef, checks *[]dqxCheck, visited map[string]bool) {
+	for i := range fields {
+		colName := fields[i].Name
 		if prefix != "" {
-			colName = prefix + "." + f.Name
+			colName = prefix + "." + fields[i].Name
 		}
 
 		// If field references a def, recurse into its fields
-		if def, ok := defs[f.Type]; ok {
-			flattenFields(def.Fields, colName, defs, checks)
+		if def, ok := defs[fields[i].Type]; ok {
+			if visited[fields[i].Type] {
+				continue
+			}
+			visited[fields[i].Type] = true
+			flattenFields(def.Fields, colName, defs, checks, visited)
+			delete(visited, fields[i].Type)
 			continue
 		}
 
 		// Emit checks from field constraints
-		if !f.Nullable {
+		if !fields[i].Nullable {
 			*checks = append(*checks, newCheck("is_not_null", colName))
 		}
-		collectChecks(colName, f.Constraints, checks)
+		collectChecks(colName, &fields[i].Constraints, checks)
 	}
 }
 
 // collectChecks inspects a field's constraints and appends DQX checks.
-func collectChecks(colName string, c translate.Constraints, checks *[]dqxCheck) {
+func collectChecks(colName string, c *translate.Constraints, checks *[]dqxCheck) {
 	// Format checks
 	collectFormatChecks(colName, c.Format, checks)
 
@@ -123,13 +133,13 @@ func collectChecks(colName string, c translate.Constraints, checks *[]dqxCheck) 
 	// String length checks
 	if c.MinLength != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("length(%s) >= %d", colName, *c.MinLength),
+			fmt.Sprintf("length(%s) >= %d", quoteSQL(colName), *c.MinLength),
 			fmt.Sprintf("%s must have minimum length of %d", colName, *c.MinLength),
 		))
 	}
 	if c.MaxLength != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("length(%s) <= %d", colName, *c.MaxLength),
+			fmt.Sprintf("length(%s) <= %d", quoteSQL(colName), *c.MaxLength),
 			fmt.Sprintf("%s must have maximum length of %d", colName, *c.MaxLength),
 		))
 	}
@@ -145,7 +155,7 @@ func collectChecks(colName string, c translate.Constraints, checks *[]dqxCheck) 
 	// MultipleOf
 	if c.MultipleOf != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("%s %% %v = 0", colName, *c.MultipleOf),
+			fmt.Sprintf("%s %% %v = 0", quoteSQL(colName), *c.MultipleOf),
 			fmt.Sprintf("%s must be a multiple of %v", colName, *c.MultipleOf),
 		))
 	}
@@ -153,13 +163,13 @@ func collectChecks(colName string, c translate.Constraints, checks *[]dqxCheck) 
 	// Array constraints
 	if c.MinItems != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("size(%s) >= %d", colName, *c.MinItems),
+			fmt.Sprintf("size(%s) >= %d", quoteSQL(colName), *c.MinItems),
 			fmt.Sprintf("%s must have at least %d items", colName, *c.MinItems),
 		))
 	}
 	if c.MaxItems != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("size(%s) <= %d", colName, *c.MaxItems),
+			fmt.Sprintf("size(%s) <= %d", quoteSQL(colName), *c.MaxItems),
 			fmt.Sprintf("%s must have at most %d items", colName, *c.MaxItems),
 		))
 	}
@@ -190,11 +200,12 @@ func collectFormatChecks(colName, format string, checks *[]dqxCheck) {
 }
 
 // collectNumericChecks emits checks for minimum, maximum, exclusiveMinimum, and exclusiveMaximum.
-func collectNumericChecks(colName string, c translate.Constraints, checks *[]dqxCheck) {
+func collectNumericChecks(colName string, c *translate.Constraints, checks *[]dqxCheck) {
 	hasMin := c.Minimum != nil
 	hasMax := c.Maximum != nil
 
-	if hasMin && hasMax {
+	switch {
+	case hasMin && hasMax:
 		*checks = append(*checks, dqxCheck{
 			Function: "is_in_range",
 			Args: []dqxArg{
@@ -203,12 +214,12 @@ func collectNumericChecks(colName string, c translate.Constraints, checks *[]dqx
 				{Key: "max_limit", Value: formatFloat(*c.Maximum)},
 			},
 		})
-	} else if hasMin {
+	case hasMin:
 		*checks = append(*checks, newCheckWithArgs("is_not_less_than",
 			dqxArg{Key: "column", Value: colName},
 			dqxArg{Key: "limit", Value: formatFloat(*c.Minimum)},
 		))
-	} else if hasMax {
+	case hasMax:
 		*checks = append(*checks, newCheckWithArgs("is_not_greater_than",
 			dqxArg{Key: "column", Value: colName},
 			dqxArg{Key: "limit", Value: formatFloat(*c.Maximum)},
@@ -217,13 +228,13 @@ func collectNumericChecks(colName string, c translate.Constraints, checks *[]dqx
 
 	if c.ExclusiveMinimum != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("%s > %v", colName, *c.ExclusiveMinimum),
+			fmt.Sprintf("%s > %v", quoteSQL(colName), *c.ExclusiveMinimum),
 			fmt.Sprintf("%s must be greater than %v", colName, *c.ExclusiveMinimum),
 		))
 	}
 	if c.ExclusiveMaximum != nil {
 		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("%s < %v", colName, *c.ExclusiveMaximum),
+			fmt.Sprintf("%s < %v", quoteSQL(colName), *c.ExclusiveMaximum),
 			fmt.Sprintf("%s must be less than %v", colName, *c.ExclusiveMaximum),
 		))
 	}
@@ -251,6 +262,28 @@ func newSQLCheck(expression, msg string) dqxCheck {
 			{Key: "msg", Value: msg},
 		},
 	}
+}
+
+// yamlScalar returns s unchanged when it is safe as a YAML plain scalar.
+// If s starts with a character that YAML reserves (backtick, @), the value
+// is wrapped in single quotes so the YAML parser accepts it.
+func yamlScalar(s string) string {
+	if s != "" && (s[0] == '`' || s[0] == '@') {
+		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	}
+	return s
+}
+
+// quoteSQL backtick-quotes a column name for use in Spark SQL expressions.
+// Dot-notation paths are split and each segment is quoted individually:
+//
+//	"address.street" → "`address`.`street`"
+func quoteSQL(colName string) string {
+	parts := strings.Split(colName, ".")
+	for i, p := range parts {
+		parts[i] = "`" + p + "`"
+	}
+	return strings.Join(parts, ".")
 }
 
 // formatFloat formats a float64 as a clean number string (no trailing zeros).
