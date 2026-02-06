@@ -44,6 +44,7 @@ type Port struct {
 	Description string
 	Connections []PortConnection
 	Schema      *jsonschema.Schema
+	SchemaRef   string // original external $ref path (e.g. "schemas/user.yaml"), preserved for round-trip
 }
 
 // PortConnection represents a connection-location pair for a port.
