@@ -11,6 +11,7 @@ import (
 	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/cli/internal/translate/avro"
 	"github.com/dacolabs/cli/internal/translate/databrickspyspark"
+	"github.com/dacolabs/cli/internal/translate/dqxyaml"
 	"github.com/dacolabs/cli/internal/translate/databricksscala"
 	"github.com/dacolabs/cli/internal/translate/databrickssql"
 	"github.com/dacolabs/cli/internal/translate/gotypes"
@@ -37,6 +38,7 @@ func registerTranslators() translate.Register {
 	translators["databricks-scala"] = &databricksscala.Translator{}
 	translators["protobuf"] = &protobuf.Translator{}
 	translators["spark-sql"] = &sparksql.Translator{}
+	translators["dqx-yaml"] = &dqxyaml.Translator{}
 	return translators
 }
 

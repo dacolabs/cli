@@ -359,6 +359,86 @@ func TestPrepare_ChainedDefs(t *testing.T) {
 	assert.Equal(t, "C", data.Defs[2].Name)
 }
 
+func TestPrepare_Constraints(t *testing.T) {
+	minLen := 3
+	maxLen := 50
+	min := 0.0
+	max := 100.0
+	constVal := any("fixed")
+	multipleOf := 5.0
+	minItems := 1
+
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"username": {
+				Type:      "string",
+				MinLength: &minLen,
+				MaxLength: &maxLen,
+				Pattern:   `^[a-z]+$`,
+			},
+			"score": {
+				Type:    "number",
+				Minimum: &min,
+				Maximum: &max,
+			},
+			"status": {
+				Type: "string",
+				Enum: []any{"active", "inactive"},
+			},
+			"version": {
+				Type:  "string",
+				Const: &constVal,
+			},
+			"created_at": {
+				Type:   "string",
+				Format: "date-time",
+			},
+			"step": {
+				Type:       "integer",
+				MultipleOf: &multipleOf,
+			},
+			"tags": {
+				Type:     "array",
+				MinItems: &minItems,
+				Items:    &jsonschema.Schema{Type: "string"},
+			},
+		},
+	}
+
+	data, err := Prepare("test", schema, &stubResolver{})
+	require.NoError(t, err)
+
+	fieldsByName := make(map[string]Field)
+	for _, f := range data.Root.Fields {
+		fieldsByName[f.Name] = f
+	}
+
+	// String constraints
+	assert.Equal(t, 3, *fieldsByName["username"].Constraints.MinLength)
+	assert.Equal(t, 50, *fieldsByName["username"].Constraints.MaxLength)
+	assert.Equal(t, `^[a-z]+$`, fieldsByName["username"].Constraints.Pattern)
+
+	// Numeric constraints
+	assert.Equal(t, 0.0, *fieldsByName["score"].Constraints.Minimum)
+	assert.Equal(t, 100.0, *fieldsByName["score"].Constraints.Maximum)
+
+	// Enum
+	assert.Equal(t, []any{"active", "inactive"}, fieldsByName["status"].Constraints.Enum)
+
+	// Const
+	assert.Equal(t, "fixed", *fieldsByName["version"].Constraints.Const)
+
+	// Format
+	assert.Equal(t, "date-time", fieldsByName["created_at"].Constraints.Format)
+
+	// MultipleOf
+	assert.Equal(t, 5.0, *fieldsByName["step"].Constraints.MultipleOf)
+
+	// Array constraints
+	assert.Equal(t, 1, *fieldsByName["tags"].Constraints.MinItems)
+}
+
 func TestExtractDefName(t *testing.T) {
 	tests := []struct {
 		ref  string
