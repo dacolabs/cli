@@ -80,13 +80,13 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 // buildFields converts translate.Fields to avroFields, inlining defs at first use.
 func buildFields(fields []translate.Field, defs map[string]*translate.TypeDef, inlined map[string]bool) []avroField {
 	result := make([]avroField, 0, len(fields))
-	for _, f := range fields {
-		avroType := buildAvroType(f.Type, defs, inlined)
-		if f.Nullable {
+	for i := range fields {
+		avroType := buildAvroType(fields[i].Type, defs, inlined)
+		if fields[i].Nullable {
 			avroType = []any{"null", avroType}
 		}
 		result = append(result, avroField{
-			Name: f.Name,
+			Name: fields[i].Name,
 			Type: avroType,
 		})
 	}

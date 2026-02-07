@@ -89,6 +89,7 @@ func (c *prepareContext) resolveFields(schema *jsonschema.Schema, path string) [
 			Type:        typeStr,
 			Nullable:    nullable,
 			Description: propSchema.Description,
+			Constraints: extractConstraints(propSchema),
 		}
 		c.resolver.EnrichField(&f)
 		fields = append(fields, f)
@@ -126,6 +127,25 @@ func (c *prepareContext) resolveType(schema *jsonschema.Schema, fieldName, path 
 
 	// Handle primitives (format checked inside PrimitiveType)
 	return c.resolver.PrimitiveType(schema.Type, schema.Format)
+}
+
+// extractConstraints copies JSON Schema validation constraints from a property schema.
+func extractConstraints(s *jsonschema.Schema) Constraints {
+	return Constraints{
+		Enum:             s.Enum,
+		Const:            s.Const,
+		Pattern:          s.Pattern,
+		Format:           s.Format,
+		MinLength:        s.MinLength,
+		MaxLength:        s.MaxLength,
+		Minimum:          s.Minimum,
+		Maximum:          s.Maximum,
+		ExclusiveMinimum: s.ExclusiveMinimum,
+		ExclusiveMaximum: s.ExclusiveMaximum,
+		MultipleOf:       s.MultipleOf,
+		MinItems:         s.MinItems,
+		MaxItems:         s.MaxItems,
+	}
 }
 
 // extractDefName extracts the definition name from a $ref string.

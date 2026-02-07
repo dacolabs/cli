@@ -41,14 +41,14 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, outpu
 	// checks if any field type contains time.Time.
 	data.Extra["NeedsTimeImport"] = false
 	for _, def := range data.Defs {
-		for _, f := range def.Fields {
-			if strings.Contains(f.Type, "time.Time") {
+		for i := range def.Fields {
+			if strings.Contains(def.Fields[i].Type, "time.Time") {
 				data.Extra["NeedsTimeImport"] = true
 			}
 		}
 	}
-	for _, f := range data.Root.Fields {
-		if strings.Contains(f.Type, "time.Time") {
+	for i := range data.Root.Fields {
+		if strings.Contains(data.Root.Fields[i].Type, "time.Time") {
 			data.Extra["NeedsTimeImport"] = true
 		}
 	}

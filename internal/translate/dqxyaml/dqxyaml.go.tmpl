@@ -1,0 +1,19 @@
+{{- if not .Extra.Checks }}[]
+{{ else }}{{- range .Extra.Checks }}
+- criticality: error
+  check:
+    function: {{ .Function }}
+{{- if .Args }}
+    arguments:
+{{- range .Args }}
+{{- if .List }}
+      {{ .Key }}:
+{{- range .List }}
+        - {{ yamlScalar . }}
+{{- end }}
+{{- else }}
+      {{ .Key }}: {{ yamlScalar .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{ end }}{{ end }}
