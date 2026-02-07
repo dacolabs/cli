@@ -15,6 +15,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func loadAndExtractOrder(data []byte, filePath string) (*jsonschema.Schema, map[string][]string, error) {
+	var schema jsonschema.Schema
+
+	switch {
+	case strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml"):
+		if err := yaml.Unmarshal(data, &schema); err != nil {
+			return nil, nil, err
+		}
+		keyOrder, err := ExtractKeyOrderFromYAML(data)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &schema, keyOrder, nil
+	case strings.HasSuffix(filePath, ".json"):
+		if err := json.Unmarshal(data, &schema); err != nil {
+			return nil, nil, err
+		}
+		keyOrder, err := ExtractKeyOrderFromJSON(data)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &schema, keyOrder, nil
+	default:
+		return nil, nil, fmt.Errorf("format not supported")
+	}
+}
+
 // Loader loads schemas from a filesystem.
 type Loader struct {
 	fsys fs.FS
@@ -39,20 +66,14 @@ func (l *Loader) LoadFile(filePath string) (*jsonschema.Schema, error) {
 		return nil, err
 	}
 
-	var schema jsonschema.Schema
-	switch {
-	case strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml"):
-		err = yaml.Unmarshal(data, &schema)
-	case strings.HasSuffix(filePath, ".json"):
-		err = json.Unmarshal(data, &schema)
-	default:
-		return nil, fmt.Errorf("format not supported")
-	}
-
+	schema, keyOrder, err := loadAndExtractOrder(data, filePath)
 	if err != nil {
 		return nil, err
 	}
-	return &schema, nil
+
+	SetPropertyOrder(schema, keyOrder)
+
+	return schema, nil
 }
 
 // ResolveRefs resolves all external file $refs in the schema tree in-place.

@@ -65,6 +65,26 @@ func TestPrepare_RootFields(t *testing.T) {
 	assert.Equal(t, "integer", fieldsByName["age"].Type)
 }
 
+func TestPrepare_RootFields_OrderPreserved(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"zeta":  {Type: "string"},
+			"alpha": {Type: "integer"},
+			"mu":    {Type: "boolean"},
+		},
+		PropertyOrder: []string{"zeta", "alpha", "mu"},
+	}
+
+	data, err := Prepare("ordered", schema, &stubResolver{})
+	require.NoError(t, err)
+
+	require.Len(t, data.Root.Fields, 3)
+	assert.Equal(t, "zeta", data.Root.Fields[0].Name)
+	assert.Equal(t, "alpha", data.Root.Fields[1].Name)
+	assert.Equal(t, "mu", data.Root.Fields[2].Name)
+}
+
 func TestPrepare_RequiredFields(t *testing.T) {
 	schema := &jsonschema.Schema{
 		Type:     "object",
