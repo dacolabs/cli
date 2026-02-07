@@ -54,11 +54,23 @@ and are referenced by ports. Use subcommands to add, list, describe, or remove c
 		newConnectionsListCmd(),
 		newConnectionsRemoveCmd())
 
+	productCmd := &cobra.Command{
+		Use:   "product",
+		Short: "Manage data product metadata",
+		Long: `Manage data product metadata defined in the OpenDPI spec.
+Use subcommands to view or upgrade the product version.`,
+		PersistentPreRunE: session.PreRunLoad,
+	}
+	productCmd.AddCommand(
+		newProductVersionCmd(),
+		newProductUpgradeCmd())
+
 	rootCmd.AddCommand(
 		newInitCmd(),
 		newDescribeCmd(),
 		portsCmd,
-		connsCmd)
+		connsCmd,
+		productCmd)
 	return rootCmd
 }
 
