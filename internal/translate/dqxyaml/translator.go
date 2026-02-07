@@ -95,8 +95,14 @@ func flattenFields(fields []translate.Field, prefix string, defs map[string]*tra
 		// Emit checks from field constraints
 		if !fields[i].Nullable {
 			*checks = append(*checks, newCheck("is_not_null", colName))
+			collectChecks(colName, &fields[i].Constraints, checks)
+		} else {
+			var fieldChecks []dqxCheck
+			collectChecks(colName, &fields[i].Constraints, &fieldChecks)
+			for _, c := range fieldChecks {
+				*checks = append(*checks, nullSafeCheck(colName, c))
+			}
 		}
-		collectChecks(colName, &fields[i].Constraints, checks)
 	}
 }
 
@@ -275,6 +281,20 @@ func yamlScalar(v any) string {
 			v = int64(f)
 		}
 	}
+	// Force double-quote style for strings so multi-line values and long
+	// lines are rendered as single-line escaped strings, safe to embed
+	// inline in the YAML template without indentation concerns.
+	if s, ok := v.(string); ok {
+		out, err := yaml.Marshal(&yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: s,
+			Style: yaml.DoubleQuotedStyle,
+		})
+		if err != nil {
+			return fmt.Sprintf("%v", v)
+		}
+		return strings.TrimRight(string(out), "\n")
+	}
 	out, err := yaml.Marshal(v)
 	if err != nil {
 		return fmt.Sprintf("%v", v)
@@ -294,3 +314,98 @@ func quoteSQL(colName string) string {
 	return strings.Join(parts, ".")
 }
 
+// Regex patterns for Spark SQL RLIKE (backslashes doubled for SQL string literals).
+const (
+	ipv4Regex = `^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`
+	ipv6Regex = `^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$`
+)
+
+// sqlLiteral formats a Go value as a Spark SQL literal.
+func sqlLiteral(v any) string {
+	switch val := v.(type) {
+	case string:
+		escaped := strings.ReplaceAll(val, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, "'", "''")
+		return "'" + escaped + "'"
+	case float64:
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%d", int64(val))
+		}
+		return fmt.Sprintf("%v", val)
+	case int64:
+		return fmt.Sprintf("%d", val)
+	case bool:
+		if val {
+			return "TRUE"
+		}
+		return "FALSE"
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// nullSafeCheck converts a DQX check into a null-safe sql_expression.
+// For nullable fields, constraint checks must pass when the column is NULL.
+// Each check is converted to: col IS NULL OR (sql_equivalent).
+func nullSafeCheck(colName string, c dqxCheck) dqxCheck {
+	col := quoteSQL(colName)
+	var expr, msg string
+
+	switch c.Function {
+	case "sql_expression":
+		expr = c.Args[0].Value.(string)
+		msg = c.Args[1].Value.(string)
+
+	case "is_in_list":
+		vals := c.Args[1].List
+		parts := make([]string, len(vals))
+		for i, v := range vals {
+			parts[i] = sqlLiteral(v)
+		}
+		expr = fmt.Sprintf("%s IN (%s)", col, strings.Join(parts, ", "))
+		msg = fmt.Sprintf("%s must be in the allowed values", colName)
+
+	case "is_equal_to":
+		expr = fmt.Sprintf("%s = %s", col, sqlLiteral(c.Args[1].Value))
+		msg = fmt.Sprintf("%s must equal %v", colName, c.Args[1].Value)
+
+	case "regex_match":
+		expr = fmt.Sprintf("%s RLIKE %s", col, sqlLiteral(c.Args[1].Value))
+		msg = fmt.Sprintf("%s must match pattern %v", colName, c.Args[1].Value)
+
+	case "is_in_range":
+		minVal := c.Args[1].Value
+		maxVal := c.Args[2].Value
+		expr = fmt.Sprintf("%s >= %s AND %s <= %s", col, sqlLiteral(minVal), col, sqlLiteral(maxVal))
+		msg = fmt.Sprintf("%s must be between %v and %v", colName, minVal, maxVal)
+
+	case "is_not_less_than":
+		expr = fmt.Sprintf("%s >= %s", col, sqlLiteral(c.Args[1].Value))
+		msg = fmt.Sprintf("%s must not be less than %v", colName, c.Args[1].Value)
+
+	case "is_not_greater_than":
+		expr = fmt.Sprintf("%s <= %s", col, sqlLiteral(c.Args[1].Value))
+		msg = fmt.Sprintf("%s must not be greater than %v", colName, c.Args[1].Value)
+
+	case "is_valid_date":
+		expr = fmt.Sprintf("to_date(%s) IS NOT NULL", col)
+		msg = fmt.Sprintf("%s must be a valid date", colName)
+
+	case "is_valid_timestamp":
+		expr = fmt.Sprintf("to_timestamp(%s) IS NOT NULL", col)
+		msg = fmt.Sprintf("%s must be a valid timestamp", colName)
+
+	case "is_valid_ipv4_address":
+		expr = fmt.Sprintf("%s RLIKE '%s'", col, ipv4Regex)
+		msg = fmt.Sprintf("%s must be a valid IPv4 address", colName)
+
+	case "is_valid_ipv6_address":
+		expr = fmt.Sprintf("%s RLIKE '%s'", col, ipv6Regex)
+		msg = fmt.Sprintf("%s must be a valid IPv6 address", colName)
+
+	default:
+		return c
+	}
+
+	return newSQLCheck(fmt.Sprintf("%s IS NULL OR (%s)", col, expr), msg)
+}

@@ -47,11 +47,10 @@ Translates JSON Schema constraints to [DQX YAML quality checks](https://databric
       column: status
 - criticality: error
   check:
-    function: is_in_range
+    function: sql_expression
     arguments:
-      column: age
-      max_limit: 150
-      min_limit: 0
+      expression: "`age` IS NULL OR (`age` >= 0 AND `age` <= 150)"
+      msg: age must be between 0 and 150
 ```
 
 ## Supported JSON Schema Features
