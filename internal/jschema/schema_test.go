@@ -171,13 +171,15 @@ func TestExtractKeyOrder_AllOf(t *testing.T) {
 			{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"base": {Type: "string"},
+					"base":  {Type: "string"},
+					"alpha": {Type: "string"},
 				},
 			},
 			{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
 					"extended": {Type: "string"},
+					"beta":     {Type: "string"},
 				},
 			},
 		},
@@ -185,10 +187,12 @@ func TestExtractKeyOrder_AllOf(t *testing.T) {
 
 	keyOrder, err := ExtractKeyOrder(schema)
 	require.NoError(t, err)
+	require.Contains(t, keyOrder, "allOf.properties")
 
-	// Should have properties from allOf schemas
-	// Note: the exact path depends on how allOf is serialized
-	assert.NotEmpty(t, keyOrder)
+	// Apply the extracted order back to the schema and verify it is set
+	SetPropertyOrder(schema, keyOrder)
+	assert.NotNil(t, schema.AllOf[1].PropertyOrder)
+	assert.Equal(t, keyOrder["allOf.properties"], schema.AllOf[1].PropertyOrder)
 }
 
 func TestExtractKeyOrder_PrimitiveSchema(t *testing.T) {
@@ -265,6 +269,26 @@ func TestExtractKeyOrderFromJSON_WithDefs(t *testing.T) {
 
 	assert.Equal(t, []string{"zip", "street", "city"}, keyOrder["$defs.Address.properties"])
 	assert.Equal(t, []string{"address"}, keyOrder["properties"])
+}
+
+func TestExtractKeyOrderFromJSON_EmptyInput(t *testing.T) {
+	keyOrder, err := ExtractKeyOrderFromJSON([]byte{})
+	require.NoError(t, err)
+	assert.Empty(t, keyOrder)
+}
+
+func TestExtractKeyOrderFromJSON_InvalidJSON(t *testing.T) {
+	data := []byte(`{not valid json}`)
+	_, err := ExtractKeyOrderFromJSON(data)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse JSON for key order extraction")
+}
+
+func TestExtractKeyOrderFromJSON_TruncatedJSON(t *testing.T) {
+	data := []byte(`{"type": "object", "properties": {"name":`)
+	_, err := ExtractKeyOrderFromJSON(data)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse JSON for key order extraction")
 }
 
 func TestExtractKeyOrderFromYAML_PreservesOrder(t *testing.T) {

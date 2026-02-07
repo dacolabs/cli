@@ -75,18 +75,31 @@ func ExtractKeyOrder(s *jsonschema.Schema) (map[string][]string, error) {
 // directly from raw JSON bytes, preserving the original file order.
 func ExtractKeyOrderFromJSON(data []byte) (map[string][]string, error) {
 	result := make(map[string][]string)
+	if len(data) == 0 {
+		return result, nil
+	}
+	var extractErr error
+
 	var extract func(dec *json.Decoder, path string)
 	extract = func(dec *json.Decoder, path string) {
+		if extractErr != nil {
+			return
+		}
 		token, err := dec.Token()
 		if err != nil {
+			extractErr = err
 			return
 		}
 		if t, ok := token.(json.Delim); ok {
 			if t == '{' {
 				var keys []string
 				for dec.More() {
+					if extractErr != nil {
+						return
+					}
 					keyToken, err := dec.Token()
 					if err != nil {
+						extractErr = err
 						return
 					}
 					key, ok := keyToken.(string)
@@ -102,20 +115,34 @@ func ExtractKeyOrderFromJSON(data []byte) (map[string][]string, error) {
 					}
 					extract(dec, newPath)
 				}
-				_, _ = dec.Token()
+				if _, err := dec.Token(); err != nil {
+					extractErr = err
+					return
+				}
 				if strings.HasSuffix(path, "properties") || path == "properties" {
 					result[path] = keys
 				}
 			} else if t == '[' {
 				for dec.More() {
+					if extractErr != nil {
+						return
+					}
 					extract(dec, path)
 				}
-				_, _ = dec.Token()
+				if _, err := dec.Token(); err != nil {
+					extractErr = err
+					return
+				}
 			}
 		}
 	}
+
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	extract(dec, "")
+
+	if extractErr != nil {
+		return nil, fmt.Errorf("failed to parse JSON for key order extraction: %w", extractErr)
+	}
 	return result, nil
 }
 
@@ -233,13 +260,25 @@ func setPropertyOrderRecursive(schema *jsonschema.Schema, path string, keyOrder 
 	}
 
 	for _, s := range schema.AllOf {
-		setPropertyOrderRecursive(s, path, keyOrder)
+		allOfPath := "allOf"
+		if path != "" {
+			allOfPath = path + ".allOf"
+		}
+		setPropertyOrderRecursive(s, allOfPath, keyOrder)
 	}
 	for _, s := range schema.AnyOf {
-		setPropertyOrderRecursive(s, path, keyOrder)
+		anyOfPath := "anyOf"
+		if path != "" {
+			anyOfPath = path + ".anyOf"
+		}
+		setPropertyOrderRecursive(s, anyOfPath, keyOrder)
 	}
 	for _, s := range schema.OneOf {
-		setPropertyOrderRecursive(s, path, keyOrder)
+		oneOfPath := "oneOf"
+		if path != "" {
+			oneOfPath = path + ".oneOf"
+		}
+		setPropertyOrderRecursive(s, oneOfPath, keyOrder)
 	}
 
 	if schema.AdditionalProperties != nil {
