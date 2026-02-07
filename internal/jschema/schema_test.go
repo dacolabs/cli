@@ -202,3 +202,218 @@ func TestExtractKeyOrder_PrimitiveSchema(t *testing.T) {
 	// Primitive schema has no properties
 	assert.Empty(t, keyOrder)
 }
+
+func TestExtractKeyOrderFromJSON_PreservesOrder(t *testing.T) {
+	// JSON with intentionally non-alphabetical property order
+	data := []byte(`{
+		"type": "object",
+		"properties": {
+			"zeta": {"type": "string"},
+			"alpha": {"type": "integer"},
+			"mu": {"type": "boolean"}
+		}
+	}`)
+
+	keyOrder, err := ExtractKeyOrderFromJSON(data)
+	require.NoError(t, err)
+
+	assert.Contains(t, keyOrder, "properties")
+	assert.Equal(t, []string{"zeta", "alpha", "mu"}, keyOrder["properties"])
+}
+
+func TestExtractKeyOrderFromJSON_NestedObject(t *testing.T) {
+	data := []byte(`{
+		"type": "object",
+		"properties": {
+			"user": {
+				"type": "object",
+				"properties": {
+					"lastName": {"type": "string"},
+					"firstName": {"type": "string"}
+				}
+			}
+		}
+	}`)
+
+	keyOrder, err := ExtractKeyOrderFromJSON(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"user"}, keyOrder["properties"])
+	assert.Equal(t, []string{"lastName", "firstName"}, keyOrder["properties.user.properties"])
+}
+
+func TestExtractKeyOrderFromJSON_WithDefs(t *testing.T) {
+	data := []byte(`{
+		"type": "object",
+		"$defs": {
+			"Address": {
+				"type": "object",
+				"properties": {
+					"zip": {"type": "string"},
+					"street": {"type": "string"},
+					"city": {"type": "string"}
+				}
+			}
+		},
+		"properties": {
+			"address": {"$ref": "#/$defs/Address"}
+		}
+	}`)
+
+	keyOrder, err := ExtractKeyOrderFromJSON(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"zip", "street", "city"}, keyOrder["$defs.Address.properties"])
+	assert.Equal(t, []string{"address"}, keyOrder["properties"])
+}
+
+func TestExtractKeyOrderFromYAML_PreservesOrder(t *testing.T) {
+	data := []byte(`type: object
+properties:
+  zeta:
+    type: string
+  alpha:
+    type: integer
+  mu:
+    type: boolean
+`)
+
+	keyOrder, err := ExtractKeyOrderFromYAML(data)
+	require.NoError(t, err)
+
+	assert.Contains(t, keyOrder, "properties")
+	assert.Equal(t, []string{"zeta", "alpha", "mu"}, keyOrder["properties"])
+}
+
+func TestExtractKeyOrderFromYAML_NestedObject(t *testing.T) {
+	data := []byte(`type: object
+properties:
+  user:
+    type: object
+    properties:
+      lastName:
+        type: string
+      firstName:
+        type: string
+`)
+
+	keyOrder, err := ExtractKeyOrderFromYAML(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"user"}, keyOrder["properties"])
+	assert.Equal(t, []string{"lastName", "firstName"}, keyOrder["properties.user.properties"])
+}
+
+func TestExtractKeyOrderFromYAML_WithDefs(t *testing.T) {
+	data := []byte(`type: object
+$defs:
+  Address:
+    type: object
+    properties:
+      zip:
+        type: string
+      street:
+        type: string
+      city:
+        type: string
+properties:
+  address:
+    $ref: "#/$defs/Address"
+`)
+
+	keyOrder, err := ExtractKeyOrderFromYAML(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"zip", "street", "city"}, keyOrder["$defs.Address.properties"])
+	assert.Equal(t, []string{"address"}, keyOrder["properties"])
+}
+
+func TestSetPropertyOrder_Simple(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"zeta":  {Type: "string"},
+			"alpha": {Type: "integer"},
+			"mu":    {Type: "boolean"},
+		},
+	}
+
+	keyOrder := map[string][]string{
+		"properties": {"zeta", "alpha", "mu"},
+	}
+
+	SetPropertyOrder(schema, keyOrder)
+
+	assert.Equal(t, []string{"zeta", "alpha", "mu"}, schema.PropertyOrder)
+}
+
+func TestSetPropertyOrder_Nested(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"user": {
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"lastName":  {Type: "string"},
+					"firstName": {Type: "string"},
+				},
+			},
+		},
+	}
+
+	keyOrder := map[string][]string{
+		"properties":                 {"user"},
+		"properties.user.properties": {"lastName", "firstName"},
+	}
+
+	SetPropertyOrder(schema, keyOrder)
+
+	assert.Equal(t, []string{"user"}, schema.PropertyOrder)
+	assert.Equal(t, []string{"lastName", "firstName"}, schema.Properties["user"].PropertyOrder)
+}
+
+func TestSetPropertyOrder_WithDefs(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"address": {Ref: "#/$defs/Address"},
+		},
+		Defs: map[string]*jsonschema.Schema{
+			"Address": {
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"zip":    {Type: "string"},
+					"street": {Type: "string"},
+					"city":   {Type: "string"},
+				},
+			},
+		},
+	}
+
+	keyOrder := map[string][]string{
+		"properties":               {"address"},
+		"$defs.Address.properties": {"zip", "street", "city"},
+	}
+
+	SetPropertyOrder(schema, keyOrder)
+
+	assert.Equal(t, []string{"address"}, schema.PropertyOrder)
+	assert.Equal(t, []string{"zip", "street", "city"}, schema.Defs["Address"].PropertyOrder)
+}
+
+func TestSetPropertyOrder_FiltersNonExistentKeys(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"name": {Type: "string"},
+		},
+	}
+
+	keyOrder := map[string][]string{
+		"properties": {"name", "removed_field"},
+	}
+
+	SetPropertyOrder(schema, keyOrder)
+
+	assert.Equal(t, []string{"name"}, schema.PropertyOrder)
+}
