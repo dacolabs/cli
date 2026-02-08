@@ -1,6 +1,8 @@
 package opendpi
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -513,5 +515,81 @@ func TestWriterWrite(t *testing.T) {
 				t.Errorf("Writer.Write() unexpected error = %v", err)
 			}
 		})
+	}
+}
+
+func TestWritePreservesExternalSchemaRefs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Copy testdata spec and schema files
+	specData, err := os.ReadFile("testdata/with-external-schemas.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.WriteFile(filepath.Join(tmpDir, "opendpi.yaml"), specData, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	schemasDir := filepath.Join(tmpDir, "schemas")
+	err = os.MkdirAll(schemasDir, 0o750)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"user.yaml", "user-profile.yaml", "address.yaml"} {
+		data, readErr := os.ReadFile(filepath.Join("testdata/schemas", name)) //nolint:gosec // test data
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		writeErr := os.WriteFile(filepath.Join(schemasDir, name), data, 0o600)
+		if writeErr != nil {
+			t.Fatal(writeErr)
+		}
+	}
+
+	// Parse the spec (resolves $ref to inline)
+	f, err := os.Open(filepath.Join(tmpDir, "opendpi.yaml")) //nolint:gosec // test data
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec, err := YAML.Parse(f, os.DirFS(tmpDir))
+	_ = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a new port (simulates ports add)
+	newName := "events"
+	schemaRef := "schemas/" + newName + ".schema.yaml"
+	spec.Ports[newName] = Port{
+		Description: "Event data",
+		SchemaRef:   schemaRef,
+		Schema: &jsonschema.Schema{
+			Ref: schemaRef,
+		},
+	}
+
+	// Write back
+	err = YAMLWriter.Write(spec, tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tmpDir, "opendpi.yaml")) //nolint:gosec // test data
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := string(data)
+
+	// All three ports should have $ref (2 existing + 1 new)
+	refCount := strings.Count(output, "$ref")
+	if refCount != 3 {
+		t.Errorf("expected 3 $ref entries (2 existing + 1 new), got %d\nOutput:\n%s", refCount, output)
+	}
+
+	for _, path := range []string{"schemas/user.yaml", "schemas/user-profile.yaml", "schemas/events.schema.yaml"} {
+		if !strings.Contains(output, path) {
+			t.Errorf("expected %q in output YAML", path)
+		}
 	}
 }

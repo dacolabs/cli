@@ -70,7 +70,9 @@ func toRaw(spec *Spec) (*rawSpec, error) {
 			})
 		}
 
-		if p.Schema != nil {
+		if p.SchemaRef != "" {
+			rp.Schema = &jsonschema.Schema{Ref: p.SchemaRef}
+		} else if p.Schema != nil {
 			rp.Schema = p.Schema
 		}
 
