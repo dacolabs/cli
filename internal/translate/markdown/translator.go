@@ -47,7 +47,8 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 }
 
 // formatConstraints formats the constraints for a field as a human-readable string.
-func formatConstraints(c translate.Constraints) string {
+// Template functions receive values by value, so we cannot use a pointer here.
+func formatConstraints(c translate.Constraints) string { //nolint:gocritic // hugeParam: template functions receive values by value
 	var parts []string
 
 	if len(c.Enum) > 0 {
