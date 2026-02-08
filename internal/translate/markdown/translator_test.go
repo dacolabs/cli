@@ -184,8 +184,8 @@ func TestTranslate_TopologicalOrder(t *testing.T) {
 	addressIdx := strings.Index(result, "## Address")
 	customerIdx := strings.Index(result, "## Customer")
 
-	assert.Greater(t, addressIdx, 0)
-	assert.Greater(t, customerIdx, 0)
+	assert.NotEqual(t, addressIdx, -1, "Address section not found")
+	assert.NotEqual(t, customerIdx, -1, "Customer section not found")
 	assert.Less(t, addressIdx, customerIdx, "Address should come before Customer")
 }
 
