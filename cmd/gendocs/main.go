@@ -20,6 +20,7 @@ import (
 	"github.com/dacolabs/cli/internal/translate/databrickspyspark"
 	"github.com/dacolabs/cli/internal/translate/databricksscala"
 	"github.com/dacolabs/cli/internal/translate/databrickssql"
+	"github.com/dacolabs/cli/internal/translate/dqxyaml"
 	"github.com/dacolabs/cli/internal/translate/gotypes"
 	"github.com/dacolabs/cli/internal/translate/protobuf"
 	"github.com/dacolabs/cli/internal/translate/pydantic"
@@ -50,6 +51,7 @@ func main() {
 	translators["databricks-scala"] = &databricksscala.Translator{}
 	translators["protobuf"] = &protobuf.Translator{}
 	translators["spark-sql"] = &sparksql.Translator{}
+	translators["dqx-yaml"] = &dqxyaml.Translator{}
 
 	rootCmd := commands.NewRootCmd(translators)
 	rootCmd.DisableAutoGenTag = true
