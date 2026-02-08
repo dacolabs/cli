@@ -1,0 +1,23 @@
+# {{ .Root.Name }}
+{{ if .Description }}
+{{ .Description }}
+{{ end }}
+## Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+{{- range .Root.Fields }}
+| `{{ .Name }}` | {{ .Type }} | {{ if .Nullable }}No{{ else }}Yes{{ end }} | {{ .Description }}{{- if formatConstraints .Constraints }} ({{ formatConstraints .Constraints }}){{ end }} |
+{{- end }}
+{{ range .Defs }}
+
+---
+
+## {{ .Name }}
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+{{- range .Fields }}
+| `{{ .Name }}` | {{ .Type }} | {{ if .Nullable }}No{{ else }}Yes{{ end }} | {{ .Description }}{{- if formatConstraints .Constraints }} ({{ formatConstraints .Constraints }}){{ end }} |
+{{- end }}
+{{ end }}
