@@ -73,9 +73,12 @@ func TestTranslate_DateFormats(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "| `created_at` | datetime | Yes |")
-	assert.Contains(t, result, "| `birth_date` | date | Yes |")
-	assert.Contains(t, result, "| `uuid` | uuid | Yes |")
+	assert.Contains(t, result, "| `created_at` | string | Yes |")
+	assert.Contains(t, result, "format: date-time")
+	assert.Contains(t, result, "| `birth_date` | string | Yes |")
+	assert.Contains(t, result, "format: date")
+	assert.Contains(t, result, "| `uuid` | string | Yes |")
+	assert.Contains(t, result, "format: uuid")
 }
 
 func TestTranslate_ArrayType(t *testing.T) {
@@ -95,7 +98,7 @@ func TestTranslate_ArrayType(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "array of string")
+	assert.Contains(t, result, "array(string)")
 }
 
 func TestTranslate_NestedObject(t *testing.T) {
@@ -284,7 +287,7 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 	result := string(output)
 
 	assert.Contains(t, result, "## Items")
-	assert.Contains(t, result, "array of [Items](#Items)")
+	assert.Contains(t, result, "array([Items](#Items))")
 }
 
 func TestTranslate_Title(t *testing.T) {
