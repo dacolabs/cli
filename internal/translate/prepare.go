@@ -158,6 +158,18 @@ func extractDefName(ref string) string {
 
 // getOrderedKeys returns property names in their original JSON order.
 func getOrderedKeys(schema *jsonschema.Schema, keyOrder map[string][]string, path string) []string {
+	// Prefer PropertyOrder when set (populated during schema loading from raw bytes)
+	if len(schema.PropertyOrder) > 0 {
+		var result []string
+		for _, key := range schema.PropertyOrder {
+			if _, exists := schema.Properties[key]; exists {
+				result = append(result, key)
+			}
+		}
+		return result
+	}
+
+	// Fall back to keyOrder map (from ExtractKeyOrder)
 	orderPath := "properties"
 	if path != "" {
 		orderPath = path + ".properties"
@@ -173,7 +185,7 @@ func getOrderedKeys(schema *jsonschema.Schema, keyOrder map[string][]string, pat
 		return result
 	}
 
-	// Fall back to map iteration order
+	// Last resort: map iteration order (non-deterministic)
 	keys := make([]string, 0, len(schema.Properties))
 	for name := range schema.Properties {
 		keys = append(keys, name)

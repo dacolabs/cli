@@ -281,6 +281,8 @@ func parseJSON(r io.Reader) (*rawSpec, error) {
 		return nil, err
 	}
 
+	setInlineSchemaOrderJSON(data, &raw)
+
 	return &raw, nil
 }
 
@@ -299,5 +301,134 @@ func parseYAML(r io.Reader) (*rawSpec, error) {
 		return nil, err
 	}
 
+	setInlineSchemaOrderYAML(data, &raw)
+
 	return &raw, nil
+}
+
+// setInlineSchemaOrderJSON extracts property order from raw JSON spec bytes
+// and sets PropertyOrder on inline port schemas and component schemas.
+func setInlineSchemaOrderJSON(data []byte, raw *rawSpec) {
+	var docMap map[string]json.RawMessage
+	if err := json.Unmarshal(data, &docMap); err != nil {
+		return
+	}
+
+	// Extract port schemas
+	if portsRaw, ok := docMap["ports"]; ok {
+		var ports map[string]json.RawMessage
+		if err := json.Unmarshal(portsRaw, &ports); err == nil {
+			for portName, portRaw := range ports {
+				var portObj map[string]json.RawMessage
+				if err := json.Unmarshal(portRaw, &portObj); err == nil {
+					if schemaRaw, ok := portObj["schema"]; ok {
+						if rp, ok := raw.Ports[portName]; ok && rp.Schema != nil {
+							keyOrder, err := jschema.ExtractKeyOrderFromJSON(schemaRaw)
+							if err == nil {
+								jschema.SetPropertyOrder(rp.Schema, keyOrder)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Extract component schemas
+	if componentsRaw, ok := docMap["components"]; ok {
+		var components map[string]json.RawMessage
+		if err := json.Unmarshal(componentsRaw, &components); err == nil {
+			if schemasRaw, ok := components["schemas"]; ok {
+				var schemas map[string]json.RawMessage
+				if err := json.Unmarshal(schemasRaw, &schemas); err == nil {
+					for schemaName, schemaRaw := range schemas {
+						if raw.Components != nil {
+							if s, ok := raw.Components.Schemas[schemaName]; ok {
+								keyOrder, err := jschema.ExtractKeyOrderFromJSON(schemaRaw)
+								if err == nil {
+									jschema.SetPropertyOrder(s, keyOrder)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// setInlineSchemaOrderYAML extracts property order from raw YAML spec bytes
+// and sets PropertyOrder on inline port schemas and component schemas.
+func setInlineSchemaOrderYAML(data []byte, raw *rawSpec) {
+	var root yaml.Node
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return
+	}
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return
+	}
+	doc := root.Content[0]
+	if doc.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i < len(doc.Content); i += 2 {
+		keyNode := doc.Content[i]
+		valueNode := doc.Content[i+1]
+
+		switch keyNode.Value {
+		case "ports":
+			if valueNode.Kind != yaml.MappingNode {
+				continue
+			}
+			for j := 0; j < len(valueNode.Content); j += 2 {
+				portName := valueNode.Content[j].Value
+				portNode := valueNode.Content[j+1]
+				if portNode.Kind != yaml.MappingNode {
+					continue
+				}
+				schemaNode := findYAMLMappingKey(portNode, "schema")
+				if schemaNode != nil {
+					rp, ok := raw.Ports[portName]
+					if ok && rp.Schema != nil {
+						keyOrder := make(map[string][]string)
+						jschema.ExtractYAMLNodeKeyOrder(schemaNode, "", keyOrder)
+						jschema.SetPropertyOrder(rp.Schema, keyOrder)
+					}
+				}
+			}
+		case "components":
+			if valueNode.Kind != yaml.MappingNode {
+				continue
+			}
+			schemasNode := findYAMLMappingKey(valueNode, "schemas")
+			if schemasNode == nil || schemasNode.Kind != yaml.MappingNode {
+				continue
+			}
+			for j := 0; j < len(schemasNode.Content); j += 2 {
+				schemaName := schemasNode.Content[j].Value
+				schemaValNode := schemasNode.Content[j+1]
+				if raw.Components != nil {
+					if s, ok := raw.Components.Schemas[schemaName]; ok {
+						keyOrder := make(map[string][]string)
+						jschema.ExtractYAMLNodeKeyOrder(schemaValNode, "", keyOrder)
+						jschema.SetPropertyOrder(s, keyOrder)
+					}
+				}
+			}
+		}
+	}
+}
+
+// findYAMLMappingKey finds the value node for a given key in a YAML mapping node.
+func findYAMLMappingKey(node *yaml.Node, key string) *yaml.Node {
+	if node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
 }
