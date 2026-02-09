@@ -18,19 +18,12 @@ daco connections describe [CONNECTION_NAME] [flags]
 
   # Show connection details
   daco connections describe kafka_prod
-
-  # Show as JSON
-  daco connections describe kafka_prod -o json
-
-  # Show as YAML
-  daco connections describe kafka_prod -o yaml
 ```
 
 ### Options
 
 ```
-  -h, --help            help for describe
-  -o, --output string   Output format (text, json, yaml) (default "text")
+  -h, --help   help for describe
 ```
 
 ### SEE ALSO

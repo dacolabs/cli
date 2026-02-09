@@ -6,7 +6,7 @@ Translate a port schema to a target format
 
 Translate a port schema to a target format.
 
-Available formats: databricks-pyspark, pydantic, python, databricks-sql, scala, protobuf, pyspark, avro, spark-scala, databricks-scala, spark-sql, gotypes
+Available formats: spark-scala, dqx-yaml, pyspark, avro, pydantic, python, databricks-sql, protobuf, gotypes, databricks-pyspark, scala, databricks-scala, spark-sql, markdown
 
 ```
 daco ports translate [flags]
@@ -19,20 +19,26 @@ daco ports translate [flags]
   daco ports translate
 
   # Translate specific port
-  daco ports translate --name my-port --format pyspark --output schema.py
+  daco ports translate --name my-port --format pyspark
 
-  # Translate to a custom directory (also sets package name for Go/Protobuf/Scala)
-  daco ports translate --format gotypes --output-dir models
+  # Translate multiple ports
+  daco ports translate --name port-a,port-b --format pyspark
+
+  # Translate all ports
+  daco ports translate --all --format pyspark
+
+  # Translate to a custom output directory (also sets package name for Go/Protobuf/Scala)
+  daco ports translate --all --format gotypes --output models
 ```
 
 ### Options
 
 ```
-  -f, --format string       Output format (pyspark, avro, spark-scala, databricks-scala, spark-sql, gotypes, databricks-pyspark, pydantic, python, databricks-sql, scala, protobuf)
-  -h, --help                help for translate
-  -n, --name string         Port name (translates all if not specified)
-  -o, --output string       Output file path (only valid when translating a single port)
-  -d, --output-dir string   Output directory (also used as package name for Go/Protobuf/Scala) (default "schemas")
+  -a, --all             Translate all ports
+      --format string   Output format (spark-scala, dqx-yaml, pyspark, avro, pydantic, python, databricks-sql, protobuf, gotypes, databricks-pyspark, scala, databricks-scala, spark-sql, markdown)
+  -h, --help            help for translate
+  -n, --name string     Port name(s), comma-separated
+  -o, --output string   Output directory (also used as package name for Go/Protobuf/Scala) (default "schemas")
 ```
 
 ### SEE ALSO

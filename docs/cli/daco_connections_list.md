@@ -13,21 +13,14 @@ daco connections list [flags]
 ### Examples
 
 ```
-  # List connections in table format
+  # List connections
   daco connections list
-
-  # List connections as JSON
-  daco connections list -o json
-
-  # List connections as YAML
-  daco connections list -o yaml
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   Output format (table, json, yaml) (default "table")
+  -h, --help   help for list
 ```
 
 ### SEE ALSO
