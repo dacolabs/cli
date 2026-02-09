@@ -14,21 +14,14 @@ daco ports list [flags]
 ### Examples
 
 ```
-  # List ports in table format
+  # List ports
   daco ports list
-
-  # List ports as JSON
-  daco ports list -o json
-
-  # List ports as YAML
-  daco ports list -o yaml
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   Output format (table, json, yaml) (default "table")
+  -h, --help   help for list
 ```
 
 ### SEE ALSO
