@@ -1,0 +1,39 @@
+type: object
+properties:
+  name:
+    type: "string"
+  
+  # Nested Object: Metadata
+  metadata:
+    type: "object"
+    properties:
+      owner:
+        type: "string"
+      environment:
+        type: "string"
+        enum: ["prod", "staging", "dev"]
+    required:
+      - "owner"
+
+  # Nested Array of Objects: Columns/Fields
+  spec:
+    type: "object"
+    properties:
+      fields:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            name:
+              type: "string"
+            type:
+              type: "string"
+              enum: ["string", "integer", "boolean", "float"]
+          required:
+            - "name"
+            - "type"
+
+required:
+  - "name"
+  - "metadata"
+  - "spec"

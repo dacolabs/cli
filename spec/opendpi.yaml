@@ -1,0 +1,10 @@
+opendpi: 1.0.0
+info:
+  title: myproduct
+  version: 1.0.0
+connections: {}
+ports:
+  myport:
+    connections: []
+    schema:
+      $ref: schemas/myport.schema.yaml
