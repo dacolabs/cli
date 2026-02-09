@@ -16,21 +16,14 @@ daco ports describe [PORT_NAME] [flags]
   # Interactive selection
   daco ports describe
 
-  # Show port details in human-readable format
+  # Show port details
   daco ports describe user_events
-
-  # Show port details as JSON
-  daco ports describe user_events -o json
-
-  # Show port details as YAML
-  daco ports describe user_events -o yaml
 ```
 
 ### Options
 
 ```
-  -h, --help            help for describe
-  -o, --output string   Output format (text, json, yaml) (default "text")
+  -h, --help   help for describe
 ```
 
 ### SEE ALSO
