@@ -64,7 +64,7 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	case "T.DoubleType()":
 		if c.MultipleOf != nil {
 			if scale := computeDecimalScale(*c.MultipleOf); scale > 0 {
-				precision := computeDecimalPrecision(c.Maximum, scale)
+				precision := computeDecimalPrecision(c.Minimum, c.Maximum, scale)
 				f.Type = fmt.Sprintf("T.DecimalType(%d, %d)", precision, scale)
 			}
 		} else if c.Minimum != nil && c.Maximum != nil {
@@ -83,17 +83,24 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	}
 }
 
-// computeDecimalPrecision derives precision from maximum if available.
-// Returns 38 (Spark default) if maximum is nil.
-func computeDecimalPrecision(maximum *float64, scale int) int {
-	if maximum == nil {
+// computeDecimalPrecision derives precision from minimum and maximum bounds.
+// Returns 38 (Spark default) if both bounds are nil.
+func computeDecimalPrecision(minimum, maximum *float64, scale int) int {
+	var absMax float64
+	switch {
+	case minimum != nil && maximum != nil:
+		absMax = math.Max(math.Abs(*minimum), math.Abs(*maximum))
+	case maximum != nil:
+		absMax = math.Abs(*maximum)
+	case minimum != nil:
+		absMax = math.Abs(*minimum)
+	default:
 		return 38
 	}
-	max := math.Abs(*maximum)
-	if max < 1 {
+	if absMax < 1 {
 		return scale
 	}
-	intDigits := len(strconv.FormatFloat(math.Floor(max), 'f', 0, 64))
+	intDigits := len(strconv.FormatFloat(math.Floor(absMax), 'f', 0, 64))
 	return intDigits + scale
 }
 
@@ -124,10 +131,7 @@ func inferIntegerType(min, max float64) string {
 	}
 }
 
-// inferNumberType returns FloatType if min/max fit in float32 bounds.
+// inferNumberType returns the Spark type for a JSON number field.
 func inferNumberType(min, max float64) string {
-	if min >= -math.MaxFloat32 && max <= math.MaxFloat32 {
-		return "T.FloatType()"
-	}
 	return "T.DoubleType()"
 }

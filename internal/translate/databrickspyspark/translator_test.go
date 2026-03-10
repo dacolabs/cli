@@ -355,7 +355,7 @@ func TestTranslate_DecimalTypeWithMaximum(t *testing.T) {
 	assert.Contains(t, string(output), "T.DecimalType(7, 2)")
 }
 
-func TestTranslate_FloatType(t *testing.T) {
+func TestTranslate_NumberWithBoundsIsDouble(t *testing.T) {
 	min := -1000.0
 	max := 1000.0
 	schema := &jsonschema.Schema{
@@ -368,7 +368,7 @@ func TestTranslate_FloatType(t *testing.T) {
 	translator := &Translator{}
 	output, err := translator.Translate("sensor", schema, "schemas")
 	require.NoError(t, err)
-	assert.Contains(t, string(output), "T.FloatType()")
+	assert.Contains(t, string(output), "T.DoubleType()")
 }
 
 func TestTranslate_IntegerType(t *testing.T) {
