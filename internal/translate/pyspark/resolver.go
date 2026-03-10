@@ -128,6 +128,6 @@ func inferIntegerType(min, max float64) string {
 }
 
 // inferNumberType returns the Spark type for a JSON number field.
-func inferNumberType(min, max float64) string {
+func inferNumberType(_, _ float64) string {
 	return "T.DoubleType()"
 }
