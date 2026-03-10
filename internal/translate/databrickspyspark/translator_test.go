@@ -368,7 +368,7 @@ func TestTranslate_NumberWithBoundsIsDouble(t *testing.T) {
 	translator := &Translator{}
 	output, err := translator.Translate("sensor", schema, "schemas")
 	require.NoError(t, err)
-	assert.Contains(t, string(output), "T.FloatType()")
+	assert.Contains(t, string(output), "T.DoubleType()")
 }
 
 func TestTranslate_IntegerType(t *testing.T) {
