@@ -65,6 +65,11 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		if c.MultipleOf != nil {
 			if scale := computeDecimalScale(*c.MultipleOf); scale > 0 {
 				precision := computeDecimalPrecision(c.Maximum, scale)
+				if c.Minimum != nil {
+					if minPrecision := computeDecimalPrecision(c.Minimum, scale); minPrecision > precision {
+						precision = minPrecision
+					}
+				}
 				f.Type = fmt.Sprintf("T.DecimalType(%d, %d)", precision, scale)
 			}
 		} else if c.Minimum != nil && c.Maximum != nil {
