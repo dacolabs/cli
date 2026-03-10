@@ -118,13 +118,13 @@ func computeDecimalScale(multipleOf float64) int {
 }
 
 // inferIntegerType returns a narrower integer type if min/max allow it.
-func inferIntegerType(min, max float64) string {
+func inferIntegerType(lo, hi float64) string {
 	switch {
-	case min >= -128 && max <= 127:
+	case lo >= -128 && hi <= 127:
 		return "T.ByteType()"
-	case min >= -32768 && max <= 32767:
+	case lo >= -32768 && hi <= 32767:
 		return "T.ShortType()"
-	case min >= -2147483648 && max <= 2147483647:
+	case lo >= -2147483648 && hi <= 2147483647:
 		return "T.IntegerType()"
 	default:
 		return "T.LongType()"
