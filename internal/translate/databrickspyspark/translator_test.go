@@ -324,6 +324,103 @@ func TestTranslate_MetadataComment(t *testing.T) {
 	assert.NotContains(t, result, `"name", T.StringType(), nullable=True, metadata=`)
 }
 
+func TestTranslate_DecimalType(t *testing.T) {
+	multipleOf := 0.01
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.DecimalType(38, 2)")
+}
+
+func TestTranslate_DecimalTypeWithMaximum(t *testing.T) {
+	multipleOf := 0.01
+	max := 99999.99
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.DecimalType(7, 2)")
+}
+
+func TestTranslate_FloatType(t *testing.T) {
+	min := -1000.0
+	max := 1000.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"temperature": {Type: "number", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("sensor", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.FloatType()")
+}
+
+func TestTranslate_IntegerType(t *testing.T) {
+	min := 0.0
+	max := 2147483647.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"count": {Type: "integer", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.IntegerType()")
+}
+
+func TestTranslate_ByteType(t *testing.T) {
+	min := 0.0
+	max := 127.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"flags": {Type: "integer", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.ByteType()")
+}
+
+func TestTranslate_DecimalWithMetadata(t *testing.T) {
+	multipleOf := 0.01
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf, Description: "Product price"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	assert.Contains(t, result, "T.DecimalType(38, 2)")
+	assert.Contains(t, result, `metadata={"comment": "Product price"}`)
+}
+
 func TestFileExtension(t *testing.T) {
 	translator := &Translator{}
 	assert.Equal(t, ".py", translator.FileExtension())
