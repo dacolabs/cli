@@ -352,7 +352,7 @@ func TestTranslate_DecimalTypeWithMaximum(t *testing.T) {
 	translator := &Translator{}
 	output, err := translator.Translate("order", schema, "schemas")
 	require.NoError(t, err)
-	assert.Contains(t, string(output), "T.DecimalType(7, 2)")
+	assert.Contains(t, string(output), "T.DecimalType(38, 2)")
 }
 
 func TestTranslate_FloatType(t *testing.T) {
