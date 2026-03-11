@@ -18,6 +18,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return "array(" + elemType + ")"
 }
 
+func (r *resolver) MapType(keyType, valueType string) string {
+	return "map(" + keyType + ", " + valueType + ")"
+}
+
 func (r *resolver) RefType(defName string) string {
 	return "[" + translate.ToPascalCase(defName) + "](#" + translate.ToPascalCase(defName) + ")"
 }

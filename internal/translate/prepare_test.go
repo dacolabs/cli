@@ -25,6 +25,10 @@ func (s *stubResolver) ArrayType(elemType string) string {
 	return "[]" + elemType
 }
 
+func (s *stubResolver) MapType(keyType, valueType string) string {
+	return "map[" + keyType + "]" + valueType
+}
+
 func (s *stubResolver) RefType(defName string) string {
 	return defName
 }

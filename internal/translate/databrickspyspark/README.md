@@ -10,8 +10,10 @@ Translates JSON Schema to Databricks PySpark StructType definitions with metadat
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "name": { "type": "string", "description": "Full name" },
+    "age": { "type": "integer", "minimum": 0, "maximum": 150 },
+    "status": { "type": "integer", "minimum": -128, "maximum": 127 },
+    "price": { "type": "number", "multipleOf": 0.01, "minimum": 0, "maximum": 99999.99 }
   }
 }
 ```
@@ -21,11 +23,15 @@ Translates JSON Schema to Databricks PySpark StructType definitions with metadat
 ```python
 import pyspark.sql.types as T
 
-users_schema = T.StructType([
-    T.StructField("name", T.StringType(), nullable=True),
-    T.StructField("age", T.LongType(), nullable=True),
+orders_schema = T.StructType([
+    T.StructField("name", T.StringType(), nullable=True, metadata={"comment": "Full name"}),
+    T.StructField("age", T.ShortType(), nullable=True),
+    T.StructField("status", T.ByteType(), nullable=True),
+    T.StructField("price", T.DecimalType(7, 2), nullable=True),
 ])
 ```
+
+When `minimum` and `maximum` are specified, integers are narrowed to the smallest fitting type (`ByteType`, `ShortType`, `IntegerType`, or `LongType`). When `multipleOf` is a decimal fraction (e.g. `0.01`), numbers become `DecimalType` with precision derived from the bounds and scale from `multipleOf`. Descriptions are emitted as `metadata={"comment": ...}`.
 
 ## Supported JSON Schema Features
 
@@ -52,7 +58,7 @@ users_schema = T.StructType([
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -69,9 +75,9 @@ users_schema = T.StructType([
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
 - [ ] minLength / maxLength

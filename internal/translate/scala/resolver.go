@@ -42,6 +42,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return fmt.Sprintf("List[%s]", elemType)
 }
 
+func (r *resolver) MapType(keyType, valueType string) string {
+	return fmt.Sprintf("Map[%s, %s]", keyType, valueType)
+}
+
 func (r *resolver) RefType(defName string) string {
 	return translate.ToPascalCase(defName)
 }

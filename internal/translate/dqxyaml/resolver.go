@@ -18,6 +18,10 @@ func (r *resolver) ArrayType(_ string) string {
 	return "array"
 }
 
+func (r *resolver) MapType(_, _ string) string {
+	return "object"
+}
+
 func (r *resolver) RefType(defName string) string {
 	return translate.ToPascalCase(defName)
 }

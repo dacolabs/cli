@@ -350,6 +350,248 @@ func TestTranslate_RefToComponentsRewritten(t *testing.T) {
 	assert.Contains(t, result, `"user", _User`)
 }
 
+func TestTranslate_DecimalType(t *testing.T) {
+	multipleOf := 0.01
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	assert.Contains(t, result, "T.DecimalType(38, 2)")
+}
+
+func TestTranslate_DecimalTypeVaryingScale(t *testing.T) {
+	tests := []struct {
+		multipleOf float64
+		expected   string
+	}{
+		{0.1, "T.DecimalType(38, 1)"},
+		{0.01, "T.DecimalType(38, 2)"},
+		{0.001, "T.DecimalType(38, 3)"},
+		{0.0001, "T.DecimalType(38, 4)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			multipleOf := tt.multipleOf
+			schema := &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"value": {Type: "number", MultipleOf: &multipleOf},
+				},
+			}
+
+			translator := &Translator{}
+			output, err := translator.Translate("data", schema, "schemas")
+			require.NoError(t, err)
+			assert.Contains(t, string(output), tt.expected)
+		})
+	}
+}
+
+func TestTranslate_DecimalTypeRequired(t *testing.T) {
+	multipleOf := 0.01
+	schema := &jsonschema.Schema{
+		Type:     "object",
+		Required: []string{"price"},
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	assert.Contains(t, result, `"price", T.DecimalType(38, 2), nullable=False`)
+}
+
+func TestTranslate_NumberWithoutConstraints_DoubleType(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"value": {Type: "number"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.DoubleType()")
+}
+
+func TestTranslate_NumberWithBoundsIsDouble(t *testing.T) {
+	min := -1000.0
+	max := 1000.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"temperature": {Type: "number", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("sensor", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.DoubleType()")
+}
+
+func TestTranslate_IntegerType(t *testing.T) {
+	min := 0.0
+	max := 2147483647.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"count": {Type: "integer", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.IntegerType()")
+}
+
+func TestTranslate_ShortType(t *testing.T) {
+	min := -32768.0
+	max := 32767.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"small": {Type: "integer", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.ShortType()")
+}
+
+func TestTranslate_ByteType(t *testing.T) {
+	min := 0.0
+	max := 127.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"flags": {Type: "integer", Minimum: &min, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.ByteType()")
+}
+
+func TestTranslate_IntegerWithoutConstraints_LongType(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"big": {Type: "integer"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.LongType()")
+}
+
+func TestTranslate_DecimalTypeWithMaximum(t *testing.T) {
+	multipleOf := 0.01
+	max := 99999.99
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"price": {Type: "number", MultipleOf: &multipleOf, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("order", schema, "schemas")
+	require.NoError(t, err)
+
+	// 99999 = 5 integer digits + 2 scale = precision 7
+	assert.Contains(t, string(output), "T.DecimalType(7, 2)")
+}
+
+func TestTranslate_DecimalTypeWithSmallMaximum(t *testing.T) {
+	multipleOf := 0.001
+	max := 0.999
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"ratio": {Type: "number", MultipleOf: &multipleOf, Maximum: &max},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+
+	// max < 1, so precision = scale = 3
+	assert.Contains(t, string(output), "T.DecimalType(3, 3)")
+}
+
+func TestTranslate_MultipleOfWholeNumber_NoDecimal(t *testing.T) {
+	multipleOf := 1.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"qty": {Type: "number", MultipleOf: &multipleOf},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	// multipleOf >= 1 should not trigger DecimalType
+	assert.Contains(t, string(output), "T.DoubleType()")
+}
+
+func TestTranslate_MapType(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"tags": {
+				Type:                 "object",
+				AdditionalProperties: &jsonschema.Schema{Type: "string"},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.MapType(T.StringType(), T.StringType())")
+}
+
+func TestTranslate_MapTypeWithIntegerValues(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"counts": {
+				Type:                 "object",
+				AdditionalProperties: &jsonschema.Schema{Type: "integer"},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.MapType(T.StringType(), T.LongType())")
+}
+
 func TestFileExtension(t *testing.T) {
 	translator := &Translator{}
 	assert.Equal(t, ".py", translator.FileExtension())

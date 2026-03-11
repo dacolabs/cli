@@ -38,6 +38,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return "list[" + elemType + "]"
 }
 
+func (r *resolver) MapType(keyType, valueType string) string {
+	return "dict[" + keyType + ", " + valueType + "]"
+}
+
 func (r *resolver) RefType(defName string) string {
 	return translate.ToPascalCase(defName)
 }
