@@ -116,7 +116,8 @@ func (c *prepareContext) resolveType(schema *jsonschema.Schema, fieldName, path 
 
 	// Handle map types — object with additionalProperties but no properties
 	if (schema.Type == "object" || schema.Type == "") && schema.AdditionalProperties != nil && len(schema.Properties) == 0 {
-		valueType := c.resolveType(schema.AdditionalProperties, fieldName, path)
+		apPath := path + ".additionalProperties"
+		valueType := c.resolveType(schema.AdditionalProperties, fieldName, apPath)
 		keyType := c.resolver.PrimitiveType("string", "")
 		return c.resolver.MapType(keyType, valueType)
 	}
