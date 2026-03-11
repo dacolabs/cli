@@ -40,6 +40,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return "array:" + elemType
 }
 
+func (r *resolver) MapType(_, valueType string) string {
+	return "map:" + valueType
+}
+
 func (r *resolver) RefType(defName string) string {
 	return "ref:" + defName
 }

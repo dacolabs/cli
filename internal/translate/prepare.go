@@ -114,6 +114,13 @@ func (c *prepareContext) resolveType(schema *jsonschema.Schema, fieldName, path 
 		return c.resolver.ArrayType(c.resolver.PrimitiveType("string", ""))
 	}
 
+	// Handle map types — object with additionalProperties but no properties
+	if (schema.Type == "object" || schema.Type == "") && schema.AdditionalProperties != nil && len(schema.Properties) == 0 {
+		valueType := c.resolveType(schema.AdditionalProperties, fieldName, path)
+		keyType := c.resolver.PrimitiveType("string", "")
+		return c.resolver.MapType(keyType, valueType)
+	}
+
 	// Handle inline objects — extract as a named type definition
 	if schema.Type == "object" || (schema.Type == "" && len(schema.Properties) > 0) {
 		defName := ToPascalCase(fieldName)

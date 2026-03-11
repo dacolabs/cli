@@ -40,6 +40,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return "[]" + elemType
 }
 
+func (r *resolver) MapType(keyType, valueType string) string {
+	return "map[" + keyType + "]" + valueType
+}
+
 func (r *resolver) RefType(defName string) string {
 	return toPascalCase(defName)
 }

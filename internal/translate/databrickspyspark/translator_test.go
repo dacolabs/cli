@@ -421,6 +421,40 @@ func TestTranslate_DecimalWithMetadata(t *testing.T) {
 	assert.Contains(t, result, `metadata={"comment": "Product price"}`)
 }
 
+func TestTranslate_MapType(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"tags": {
+				Type:                 "object",
+				AdditionalProperties: &jsonschema.Schema{Type: "string"},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.MapType(T.StringType(), T.StringType())")
+}
+
+func TestTranslate_MapTypeWithIntegerValues(t *testing.T) {
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"counts": {
+				Type:                 "object",
+				AdditionalProperties: &jsonschema.Schema{Type: "integer"},
+			},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("data", schema, "schemas")
+	require.NoError(t, err)
+	assert.Contains(t, string(output), "T.MapType(T.StringType(), T.LongType())")
+}
+
 func TestFileExtension(t *testing.T) {
 	translator := &Translator{}
 	assert.Equal(t, ".py", translator.FileExtension())

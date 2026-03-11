@@ -13,6 +13,9 @@ type TypeResolver interface {
 	// ArrayType wraps an element type string in an array type.
 	ArrayType(elemType string) string
 
+	// MapType wraps key and value type strings in a map type.
+	MapType(keyType, valueType string) string
+
 	// RefType returns the type string for a $ref reference.
 	RefType(defName string) string
 

@@ -45,6 +45,10 @@ func (r *resolver) ArrayType(elemType string) string {
 	return fmt.Sprintf("T.ArrayType(%s)", elemType)
 }
 
+func (r *resolver) MapType(keyType, valueType string) string {
+	return fmt.Sprintf("T.MapType(%s, %s)", keyType, valueType)
+}
+
 func (r *resolver) RefType(defName string) string {
 	return "_" + defName
 }
