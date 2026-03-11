@@ -49,11 +49,11 @@ func (r *resolver) MapType(keyType, valueType string) string {
 }
 
 func (r *resolver) RefType(defName string) string {
-	return "_" + defName
+	return "_" + translate.ToSnakeCase(defName)
 }
 
 func (r *resolver) FormatDefName(defName string) string {
-	return "_" + defName
+	return "_" + translate.ToSnakeCase(defName)
 }
 
 func (r *resolver) FormatRootName(portName string) string {
@@ -66,7 +66,7 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	switch f.Type {
 	case "T.DoubleType()":
 		if c.MultipleOf != nil {
-			if scale := computeDecimalScale(*c.MultipleOf); scale > 0 {
+			if scale := computeDecimalScale(*c.MultipleOf); scale > 0 || (scale == 0 && (c.Minimum != nil || c.Maximum != nil)) {
 				precision := computeDecimalPrecision(c.Minimum, c.Maximum, scale)
 				f.Type = fmt.Sprintf("T.DecimalType(%d, %d)", precision, scale)
 				return
@@ -107,7 +107,13 @@ func computeDecimalPrecision(minimum, maximum *float64, scale int) int {
 // computeDecimalScale returns the number of decimal places in multipleOf.
 // Returns -1 if multipleOf is >= 1 (not a decimal fraction).
 func computeDecimalScale(multipleOf float64) int {
-	if multipleOf >= 1 || multipleOf <= 0 {
+	if multipleOf <= 0 {
+		return -1
+	}
+	if multipleOf >= 1 {
+		if multipleOf == math.Floor(multipleOf) {
+			return 0
+		}
 		return -1
 	}
 	s := strconv.FormatFloat(multipleOf, 'f', -1, 64)

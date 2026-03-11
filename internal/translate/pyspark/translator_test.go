@@ -124,8 +124,8 @@ func TestTranslate_NestedObject(t *testing.T) {
 	result := string(output)
 
 	// Inline object should be extracted as a separate variable
-	assert.Contains(t, result, "_Address = T.StructType")
-	assert.Contains(t, result, `"address", _Address`)
+	assert.Contains(t, result, "_address = T.StructType")
+	assert.Contains(t, result, `"address", _address`)
 }
 
 func TestTranslate_WithDefs_VariableReference(t *testing.T) {
@@ -151,9 +151,9 @@ func TestTranslate_WithDefs_VariableReference(t *testing.T) {
 	result := string(output)
 
 	// Should have Address as a separate variable (prefixed with _)
-	assert.Contains(t, result, "_Address = T.StructType")
+	assert.Contains(t, result, "_address = T.StructType")
 	// Main schema should reference the variable, not inline the schema
-	assert.Contains(t, result, `"address", _Address`)
+	assert.Contains(t, result, `"address", _address`)
 }
 
 func TestTranslate_TopologicalOrder(t *testing.T) {
@@ -187,8 +187,8 @@ func TestTranslate_TopologicalOrder(t *testing.T) {
 	result := string(output)
 
 	// Address should appear before Customer in the output
-	addressIdx := strings.Index(result, "_Address = T.StructType")
-	customerIdx := strings.Index(result, "_Customer = T.StructType")
+	addressIdx := strings.Index(result, "_address = T.StructType")
+	customerIdx := strings.Index(result, "_customer = T.StructType")
 
 	assert.Greater(t, addressIdx, 0, "Address definition should exist")
 	assert.Greater(t, customerIdx, 0, "Customer definition should exist")
@@ -255,9 +255,9 @@ func TestTranslate_ChainedDeps(t *testing.T) {
 	result := string(output)
 
 	// Order should be A, B, C
-	aIdx := strings.Index(result, "_A = T.StructType")
-	bIdx := strings.Index(result, "_B = T.StructType")
-	cIdx := strings.Index(result, "_C = T.StructType")
+	aIdx := strings.Index(result, "_a = T.StructType")
+	bIdx := strings.Index(result, "_b = T.StructType")
+	cIdx := strings.Index(result, "_c = T.StructType")
 
 	assert.Greater(t, aIdx, 0)
 	assert.Greater(t, bIdx, 0)
@@ -317,8 +317,8 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 	result := string(output)
 
 	// Array element object should be extracted as a separate variable
-	assert.Contains(t, result, "_Items = T.StructType")
-	assert.Contains(t, result, "T.ArrayType(_Items)")
+	assert.Contains(t, result, "_items = T.StructType")
+	assert.Contains(t, result, "T.ArrayType(_items)")
 }
 
 func TestTranslate_RefToComponentsRewritten(t *testing.T) {
@@ -346,8 +346,8 @@ func TestTranslate_RefToComponentsRewritten(t *testing.T) {
 	result := string(output)
 
 	// Should reference User variable
-	assert.Contains(t, result, "_User = T.StructType")
-	assert.Contains(t, result, `"user", _User`)
+	assert.Contains(t, result, "_user = T.StructType")
+	assert.Contains(t, result, `"user", _user`)
 }
 
 func TestTranslate_DecimalType(t *testing.T) {

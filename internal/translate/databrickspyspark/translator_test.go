@@ -117,8 +117,8 @@ func TestTranslate_NestedObject(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "_Address = T.StructType")
-	assert.Contains(t, result, `"address", _Address`)
+	assert.Contains(t, result, "_address = T.StructType")
+	assert.Contains(t, result, `"address", _address`)
 }
 
 func TestTranslate_WithDefs(t *testing.T) {
@@ -143,8 +143,8 @@ func TestTranslate_WithDefs(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "_Address = T.StructType")
-	assert.Contains(t, result, `"address", _Address`)
+	assert.Contains(t, result, "_address = T.StructType")
+	assert.Contains(t, result, `"address", _address`)
 }
 
 func TestTranslate_TopologicalOrder(t *testing.T) {
@@ -176,8 +176,8 @@ func TestTranslate_TopologicalOrder(t *testing.T) {
 
 	result := string(output)
 
-	addressIdx := strings.Index(result, "_Address = T.StructType")
-	customerIdx := strings.Index(result, "_Customer = T.StructType")
+	addressIdx := strings.Index(result, "_address = T.StructType")
+	customerIdx := strings.Index(result, "_customer = T.StructType")
 
 	assert.Greater(t, addressIdx, 0)
 	assert.Greater(t, customerIdx, 0)
@@ -240,9 +240,9 @@ func TestTranslate_ChainedDeps(t *testing.T) {
 
 	result := string(output)
 
-	aIdx := strings.Index(result, "_A = T.StructType")
-	bIdx := strings.Index(result, "_B = T.StructType")
-	cIdx := strings.Index(result, "_C = T.StructType")
+	aIdx := strings.Index(result, "_a = T.StructType")
+	bIdx := strings.Index(result, "_b = T.StructType")
+	cIdx := strings.Index(result, "_c = T.StructType")
 
 	assert.Greater(t, aIdx, 0)
 	assert.Greater(t, bIdx, 0)
@@ -299,8 +299,8 @@ func TestTranslate_ArrayOfObjects(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, "_Items = T.StructType")
-	assert.Contains(t, result, "T.ArrayType(_Items)")
+	assert.Contains(t, result, "_items = T.StructType")
+	assert.Contains(t, result, "T.ArrayType(_items)")
 }
 
 func TestTranslate_MetadataComment(t *testing.T) {
