@@ -155,13 +155,6 @@ func collectChecks(colName string, c *translate.Constraints, checks *[]dqxCheck)
 		))
 	}
 
-	// MultipleOf
-	if c.MultipleOf != nil {
-		*checks = append(*checks, newSQLCheck(
-			fmt.Sprintf("%s %% %v = 0", quoteSQL(colName), *c.MultipleOf),
-			fmt.Sprintf("%s must be a multiple of %v", colName, *c.MultipleOf),
-		))
-	}
 
 	// Array constraints
 	if c.MinItems != nil {

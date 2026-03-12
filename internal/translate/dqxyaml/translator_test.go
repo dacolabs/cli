@@ -403,27 +403,6 @@ func TestTranslate_ArrayConstraints(t *testing.T) {
 	assert.Equal(t, "size(`tags`) <= 10", checks[2].Check.Arguments["expression"])
 }
 
-func TestTranslate_MultipleOf(t *testing.T) {
-	multipleOf := 5.0
-	schema := &jsonschema.Schema{
-		Type:     "object",
-		Required: []string{"quantity"},
-		Properties: map[string]*jsonschema.Schema{
-			"quantity": {
-				Type:       "integer",
-				MultipleOf: &multipleOf,
-			},
-		},
-	}
-
-	checks := translateSchema(t, schema)
-
-	require.Len(t, checks, 2)
-	assertCheck(t, checks[0], "is_not_null", "quantity")
-	assertCheck(t, checks[1], "sql_expression", "")
-	assert.Equal(t, "`quantity` % 5 = 0", checks[1].Check.Arguments["expression"])
-}
-
 func TestTranslate_MultipleConstraints(t *testing.T) {
 	min := 0.0
 	max := 150.0
