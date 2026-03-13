@@ -155,7 +155,6 @@ func collectChecks(colName string, c *translate.Constraints, checks *[]dqxCheck)
 		))
 	}
 
-
 	// Array constraints
 	if c.MinItems != nil {
 		*checks = append(*checks, newSQLCheck(
