@@ -91,7 +91,7 @@ A new translator is therefore: a `Translator` struct with `Translate` + `FileExt
 
 ## Conventions
 
-- **Conventional Commits required** (`feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `ci`, `build`, `perf`, `style`). The pre-commit hook installed by `make setup` enforces this.
+- **Conventional Commits required** (`feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `ci`, `build`, `perf`, `style`). The commit-msg hook installed by `make setup` enforces this.
 - **License header** on every Go file:
   ```go
   // SPDX-License-Identifier: Apache-2.0
