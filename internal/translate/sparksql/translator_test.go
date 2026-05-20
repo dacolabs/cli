@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
+	"github.com/dacolabs/daco/internal/translate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

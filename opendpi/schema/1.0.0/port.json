@@ -1,0 +1,63 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://opendpi.org/schema/1.0.0/port",
+    "title": "OpenDPI Port",
+    "description": "A data output interface exposed by the data product.",
+    "type": "object",
+    "required": [
+        "connections",
+        "schema"
+    ],
+    "properties": {
+        "description": {
+            "type": "string",
+            "description": "A human-readable description of what data this port provides."
+        },
+        "connections": {
+            "type": "array",
+            "description": "An array of connection-location pairs where this port's data can be accessed.",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "connection",
+                    "location"
+                ],
+                "properties": {
+                    "connection": {
+                        "type": "string",
+                        "description": "Reference to a connection defined in the connections registry (e.g., #/connections/my_db).",
+                        "pattern": "^#/connections/.+"
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "The specific pointer within the connection. This could be a table name, topic name, file path, or any type-specific location identifier."
+                    }
+                }
+            }
+        },
+        "schema": {
+            "description": "The shape of the data at this port. Can be an inline JSON Schema or a $ref to a schema in components.",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "description": "A reference to a schema defined in components.",
+                    "required": [
+                        "$ref"
+                    ],
+                    "properties": {
+                        "$ref": {
+                            "type": "string",
+                            "description": "JSON Pointer reference to a schema (e.g., #/components/schemas/User)."
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "description": "An inline JSON Schema definition."
+                }
+            ]
+        }
+    }
+}

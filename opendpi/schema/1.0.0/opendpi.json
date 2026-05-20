@@ -1,0 +1,47 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://opendpi.org/schema/1.0.0",
+    "title": "OpenDPI Specification",
+    "description": "The open standard for defining Data Product Interfaces.",
+    "type": "object",
+    "required": [
+        "opendpi",
+        "info",
+        "connections",
+        "ports"
+    ],
+    "properties": {
+        "opendpi": {
+            "type": "string",
+            "const": "1.0.0",
+            "description": "The version of the OpenDPI specification."
+        },
+        "info": {
+            "$ref": "https://opendpi.org/schema/1.0.0/info"
+        },
+        "tags": {
+            "type": "array",
+            "description": "An array of tags for categorizing ports.",
+            "items": {
+                "$ref": "https://opendpi.org/schema/1.0.0/tag"
+            }
+        },
+        "connections": {
+            "type": "object",
+            "description": "A registry of named connections. Each key is a unique identifier for the connection.",
+            "additionalProperties": {
+                "$ref": "https://opendpi.org/schema/1.0.0/connection"
+            }
+        },
+        "ports": {
+            "type": "object",
+            "description": "A registry of named ports. Each key is a unique identifier for the port.",
+            "additionalProperties": {
+                "$ref": "https://opendpi.org/schema/1.0.0/port"
+            }
+        },
+        "components": {
+            "$ref": "https://opendpi.org/schema/1.0.0/component"
+        }
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://opendpi.org/schema/1.0.0/component",
+    "title": "OpenDPI Component",
+    "description": "Reusable components for the OpenDPI document.",
+    "type": "object",
+    "properties": {
+        "schemas": {
+            "type": "object",
+            "description": "A registry of reusable JSON Schema definitions.",
+            "additionalProperties": {
+                "$comment": "Standard JSON Schema definitions that can be referenced via $ref.",
+                "type": [
+                    "object",
+                    "boolean"
+                ]
+            }
+        }
+    }
+}

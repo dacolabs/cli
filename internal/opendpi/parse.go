@@ -12,8 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
+	"github.com/dacolabs/daco/internal/jschema"
 	"gopkg.in/yaml.v3"
 )
 

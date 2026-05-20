@@ -7,7 +7,7 @@ package scala
 import (
 	"fmt"
 
-	"github.com/dacolabs/cli/internal/translate"
+	"github.com/dacolabs/daco/internal/translate"
 )
 
 type resolver struct{}

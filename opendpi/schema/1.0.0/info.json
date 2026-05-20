@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://opendpi.org/schema/1.0.0/info",
+    "title": "OpenDPI Info Object",
+    "description": "Metadata about the data product.",
+    "type": "object",
+    "required": [
+        "title",
+        "version"
+    ],
+    "properties": {
+        "title": {
+            "type": "string",
+            "description": "The name of the data product."
+        },
+        "version": {
+            "type": "string",
+            "description": "The version of the data product (not the OpenDPI spec version)."
+        },
+        "description": {
+            "type": "string",
+            "description": "A brief description of what this data product provides."
+        }
+    }
+}

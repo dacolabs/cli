@@ -12,8 +12,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/dacolabs/cli/internal/translate"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
+	"github.com/dacolabs/daco/internal/translate"
 )
 
 //go:embed gotypes.go.tmpl

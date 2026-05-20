@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dacolabs/cli/internal/jschema"
 	"github.com/dacolabs/jsonschema-go/jsonschema"
+	"github.com/dacolabs/daco/internal/jschema"
 )
 
 // prepareContext holds mutable state during schema preparation.
