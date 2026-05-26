@@ -1,42 +1,70 @@
+const painPoints = [
+  {
+    label: 'Deploy to verify',
+    body: 'You push a schema change just to find out it breaks downstream. Every check needs a live warehouse.',
+  },
+  {
+    label: 'No local test loop',
+    body: 'There\'s no way to run pipeline logic on your laptop. You\'re testing in staging, if at all.',
+  },
+  {
+    label: 'Fragmented definitions',
+    body: 'The same table is described in dbt, a Notion doc, and a Slack thread. None of them match.',
+  },
+]
+
 export default function Problem() {
   return (
     <section
       id="problem"
       style={{
-        background: 'var(--ink)',
-        color: '#fff',
+        background: 'var(--paper-2)',
         padding: '96px 0',
-        position: 'relative',
-        overflow: 'hidden',
+        borderTop: '1px solid var(--line)',
+        borderBottom: '1px solid var(--line)',
       }}
     >
-      {/* subtle grid — same as hero */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-        backgroundSize: '64px 64px',
-        maskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, #000 50%, transparent 100%)',
-        pointerEvents: 'none',
-      }} />
+      <div className="container">
+        <div className="problem-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'start' }}>
+          <div>
+            <div className="eyebrow">
+              <span className="dot" />The problem
+            </div>
+            <h2 className="section-title" style={{ maxWidth: '16ch' }}>
+              Your pipelines should run on your laptop.
+            </h2>
+            <p className="section-lede" style={{ marginBottom: 0 }}>
+              Daco brings your data products into a single OpenDPI spec you can develop, test, and version locally.
+              No deploy to verify a schema change. No warehouse connection required to run a test.
+            </p>
+          </div>
 
-      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="eyebrow" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          <span className="dot" />The problem
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '8px' }}>
+            {painPoints.map((p) => (
+              <div
+                key={p.label}
+                style={{
+                  background: 'var(--paper)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 'var(--radius)',
+                  padding: '20px 24px',
+                }}
+              >
+                <div style={{
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  marginBottom: '6px',
+                  color: 'var(--ink)',
+                }}>
+                  {p.label}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+                  {p.body}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <h2
-          className="section-title"
-          style={{ color: '#fff', maxWidth: '16ch' }}
-        >
-          Your pipelines should run on your laptop.
-        </h2>
-        <p
-          className="section-lede"
-          style={{ color: 'rgba(255,255,255,0.55)', marginBottom: 0 }}
-        >
-          Daco brings your data products into a single OpenDPI spec you can develop, test, and version locally.
-          No deploy to verify a schema change. No warehouse connection required to run a test.
-        </p>
       </div>
     </section>
   )

@@ -321,6 +321,16 @@ h2.section-title {
   margin: 0 0 56px;
 }
 
+/* ── PROBLEM ───────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .problem-cols { grid-template-columns: 1fr !important; gap: 40px !important; }
+}
+
+/* ── DOCS ────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .docs-sidebar { display: none !important; }
+}
+
 /* ── LOGOS STRIP ───────────────────────────────────────────── */
 .logos {
   border-top: 1px solid var(--line);
