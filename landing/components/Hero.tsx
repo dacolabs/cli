@@ -155,8 +155,8 @@ export default function Hero() {
             Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.
           </p>
           <div className="hero-cta-row">
-            <a href="/studio" className="btn-primary">
-              Try Daco Studio
+            <a href="#demo" className="btn-primary">
+              Get early access
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
