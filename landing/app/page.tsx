@@ -1,6 +1,5 @@
 import Nav from '@/components/Nav'
 import Hero from '@/components/Hero'
-import LogosStrip from '@/components/LogosStrip'
 import Problem from '@/components/Problem'
 import ValueProps from '@/components/ValueProps'
 import Ecosystem from '@/components/Ecosystem'
@@ -14,7 +13,6 @@ export default function Home() {
     <>
       <Nav />
       <Hero />
-      <LogosStrip />
       <Problem />
       <ValueProps />
       <Ecosystem />
