@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Logo from './Logo'
 
 export default function Footer() {
   return (
@@ -7,13 +8,7 @@ export default function Footer() {
         <div className="foot-grid">
           <div className="foot-brand">
             <Link href="/" className="logo" style={{ color: 'var(--ink)' }}>
-              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-                <rect width="26" height="26" rx="5" fill="#f4cf4a"/>
-                <rect x="7" y="7" width="5" height="5" rx="1" fill="#0c0c0c"/>
-                <rect x="14" y="7" width="5" height="5" rx="1" fill="#0c0c0c"/>
-                <rect x="7" y="14" width="5" height="5" rx="1" fill="#0c0c0c"/>
-                <rect x="14" y="14" width="5" height="5" rx="1" fill="#0c0c0c" opacity="0.3"/>
-              </svg>
+              <Logo size={26} />
               daco
             </Link>
             <p>The standard way to define and manage your data products. Built in Amsterdam.</p>
