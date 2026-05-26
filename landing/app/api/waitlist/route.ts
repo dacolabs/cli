@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
@@ -7,11 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
 
-  // TODO: forward to your email service, e.g.:
-  //   Resend:     await resend.emails.send({ to: 'daco@dacolabs.com', subject: 'New waitlist signup', text: email })
-  //   Loops:      await fetch('https://app.loops.so/api/v1/contacts/create', { ... })
-  //   Mailchimp:  POST to your list endpoint
-  console.log('[waitlist]', email)
+  await resend.emails.send({
+    from: 'Daco <daco@dacolabs.com>',
+    to: 'daco@dacolabs.com',
+    subject: `New early access request: ${email}`,
+    text: `${email} requested early access from the landing page.`,
+  })
 
   return NextResponse.json({ ok: true })
 }
