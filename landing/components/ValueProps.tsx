@@ -18,7 +18,7 @@ const props = [
 
 export default function ValueProps() {
   return (
-    <section style={{ paddingTop: 0 }}>
+    <section>
       <div className="container">
         <div className="eyebrow"><span className="dot" />Core advantages</div>
         <h2 className="section-title">What changes with Daco.</h2>
