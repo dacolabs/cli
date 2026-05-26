@@ -16,26 +16,26 @@ export default function Footer() {
           <div>
             <h4>Product</h4>
             <ul>
-              <li><a href="#">OpenDPI</a></li>
-              <li><a href="#">CLI</a></li>
-              <li><a href="#">Translators</a></li>
-              <li><a href="#">Roadmap</a></li>
+              <li><a href="/studio">Daco Studio</a></li>
+              <li><a href="/docs">CLI</a></li>
+              <li><a href="/pricing">Pricing</a></li>
+              <li><a href="https://github.com/dacolabs/daco" target="_blank" rel="noopener noreferrer">Roadmap</a></li>
             </ul>
           </div>
           <div>
             <h4>Resources</h4>
             <ul>
-              <li><a href="#">Docs</a></li>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">Changelog</a></li>
-              <li><a href="#">GitHub</a></li>
+              <li><a href="/docs">Docs</a></li>
+              <li><a href="/blog">Blog</a></li>
+              <li><a href="/blog/daco-cli-v0.2.1">Changelog</a></li>
+              <li><a href="https://github.com/dacolabs/daco" target="_blank" rel="noopener noreferrer">GitHub</a></li>
             </ul>
           </div>
           <div>
             <h4>Community</h4>
             <ul>
-              <li><a href="#">Discord</a></li>
-              <li><a href="#">Twitter</a></li>
+              <li><a href="https://discord.gg/dacolabs" target="_blank" rel="noopener noreferrer">Discord</a></li>
+              <li><a href="mailto:daco@dacolabs.com">daco@dacolabs.com</a></li>
               <li><a href="mailto:community@dacolabs.com">community@dacolabs.com</a></li>
               <li>Keizersgracht 555<br/>1017DB Amsterdam</li>
             </ul>

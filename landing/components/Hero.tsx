@@ -144,24 +144,30 @@ export default function Hero() {
         <div>
           <span className="hero-eyebrow">
             <span className="pill">NEW</span>
-            OpenDPI 1.0 is now stable
+            Daco CLI v0.2.1 is out
             <span className="arrow">→</span>
           </span>
           <h1 className="hero-title">
-            Build data pipelines <span className="accent">locally</span>.
+            A code-first data <span className="accent">catalog</span>.
           </h1>
           <p className="hero-sub">
-            Daco gives data engineers the local development experience software engineers already have.
-            Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.
+            Data products defined in code, stored in your repo, and synced to your catalog on every push.
           </p>
           <div className="hero-cta-row">
-            <a href="#demo" className="btn-primary">
-              Book a demo
+            <a href="/studio" className="btn-primary">
+              Try Daco Studio
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </a>
-            <div className="hero-install">
+            <a href="/docs" style={{ fontSize: '15px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              Read the docs
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6h8m0 0L6 2m4 4L6 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
+          </div>
+          <div className="hero-install" style={{ marginTop: '20px' }}>
               <span className="prompt">$</span>
               <span>brew install dacolabs/tap/daco</span>
               <button className="copy" onClick={handleCopy} title="Copy">
@@ -175,7 +181,6 @@ export default function Hero() {
                 )}
               </button>
             </div>
-          </div>
         </div>
 
         <div className="morph-panel" ref={morphRef}>
