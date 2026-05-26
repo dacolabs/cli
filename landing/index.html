@@ -1,0 +1,1539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Daco · Build data pipelines from your code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Brand */
+    --yellow: #f4cf4a;
+    --yellow-soft: #fbf1c4;
+    --ink: #0c0c0c;
+    --ink-2: #1a1a1a;
+    --paper: #ffffff;
+    --paper-2: #faf9f5;
+    --paper-3: #f1efe8;
+    --line: #e7e4d8;
+    --line-strong: #d6d2c2;
+    --muted: #6b6859;
+    --muted-2: #8b8775;
+
+    /* Type */
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+    /* Sizing */
+    --maxw: 1200px;
+    --gutter: 32px;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    line-height: 1.5;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: 0; background: none; }
+
+  .container {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+
+  /* ── NAV ─────────────────────────────────────────────────────── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(12, 12, 12, 0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    color: #fff;
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .logo img { width: 26px; height: 26px; display: block; }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 500;
+  }
+  .nav-links a:hover { color: #fff; }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--yellow);
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(244,207,74,0.3); }
+
+  /* ── HERO (dark) ────────────────────────────────────────────── */
+  .hero {
+    background: var(--ink);
+    color: #fff;
+    padding: 96px 0 120px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    /* subtle grid */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 50%, transparent 100%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 5px 5px 14px;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.03);
+  }
+  .hero-eyebrow .pill {
+    display: inline-block;
+    background: var(--yellow);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  .hero-eyebrow .arrow { color: rgba(255,255,255,0.5); margin-right: 6px; }
+
+  h1.hero-title {
+    font-size: clamp(48px, 6.4vw, 84px);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    margin: 24px 0 22px;
+    max-width: 12ch;
+  }
+  h1.hero-title .accent {
+    color: var(--yellow);
+    font-style: italic;
+    font-weight: 700;
+  }
+  .hero-sub {
+    font-size: 19px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.65);
+    max-width: 540px;
+    margin: 0 0 32px;
+    font-weight: 400;
+  }
+  .hero-cta-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--yellow);
+    color: var(--ink);
+    padding: 13px 22px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(244,207,74,0.35); }
+  .btn-primary svg { transition: transform 0.2s ease; }
+  .btn-primary:hover svg { transform: translateX(3px); }
+
+  .hero-install {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-install .prompt { color: var(--yellow); }
+  .hero-install .copy {
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .hero-install .copy:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+  /* ── HERO MORPH PANEL ──────────────────────────────────────── */
+  .morph-panel {
+    margin-top: 56px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+    overflow: hidden;
+  }
+  .morph-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #141414;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .morph-tabs { display: flex; gap: 2px; }
+  .morph-tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    padding: 6px 11px;
+    border-radius: 5px;
+    transition: color 0.2s, background 0.2s;
+  }
+  .morph-tab.is-active {
+    color: var(--yellow);
+    background: rgba(244,207,74,0.08);
+  }
+  .morph-cli {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+  .morph-cli .yellow { color: var(--yellow); }
+  .morph-body {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    min-height: 380px;
+  }
+  .morph-col {
+    padding: 22px 24px;
+    overflow: hidden;
+  }
+  .morph-col + .morph-col { border-left: 1px solid rgba(255,255,255,0.06); }
+  .morph-col-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .morph-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    background: rgba(244,207,74,0.04);
+  }
+  .morph-arrow svg { color: var(--yellow); }
+  pre.code {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.82);
+    margin: 0;
+    white-space: pre;
+  }
+  .code .k { color: #c5c4ad; }            /* key */
+  .code .s { color: #f4cf4a; }            /* string/value */
+  .code .n { color: #b9d8ff; }            /* number/type */
+  .code .c { color: rgba(255,255,255,0.35); font-style: italic; }
+  .code .a { color: #f4cf4a; font-weight: 600; }   /* accent / port name */
+  .code .pun { color: rgba(255,255,255,0.5); }
+  .code .hl {
+    background: rgba(244,207,74,0.13);
+    border-radius: 3px;
+    padding: 0 2px;
+    transition: background 0.4s ease;
+  }
+
+  /* ── SECTION SHELL (light) ─────────────────────────────────── */
+  section { padding: 96px 0; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin-bottom: 20px;
+  }
+  .eyebrow .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--yellow);
+    border-radius: 50%;
+    margin-right: 9px;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+  h2.section-title {
+    font-size: clamp(36px, 4.6vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 0 0 20px;
+    max-width: 18ch;
+  }
+  .section-lede {
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 580px;
+    margin: 0 0 56px;
+  }
+
+  /* ── LOGOS STRIP ───────────────────────────────────────────── */
+  .logos {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-2);
+    padding: 36px 0;
+  }
+  .logos-inner {
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .logos-label {
+    font-size: 13px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .logos-row {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .logo-mock {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: -0.01em;
+    opacity: 0.85;
+  }
+  .logo-mock-shape {
+    width: 18px; height: 18px;
+    background: var(--muted);
+    opacity: 0.7;
+  }
+  .logo-mock-shape.circle { border-radius: 50%; }
+  .logo-mock-shape.square { border-radius: 3px; }
+  .logo-mock-shape.tri {
+    width: 0; height: 0;
+    background: transparent;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-bottom: 16px solid var(--muted);
+    opacity: 0.7;
+  }
+  .logo-mock-shape.dia {
+    transform: rotate(45deg);
+    width: 14px; height: 14px;
+  }
+
+  /* ── VALUE PROPS ────────────────────────────────────────────── */
+  .value-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+  .value-card {
+    padding: 36px 36px 36px 0;
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .value-card:last-child { border-right: 0; padding-right: 0; }
+  .value-card:not(:first-child) { padding-left: 36px; }
+  .value-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--yellow);
+    background: var(--ink);
+    padding: 3px 7px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 24px;
+    font-weight: 600;
+  }
+  .value-card h3 {
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.018em;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .value-card p {
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ── SPEC SHOWCASE ─────────────────────────────────────────── */
+  .spec {
+    background: var(--paper-2);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .spec-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 80px;
+    align-items: center;
+  }
+  .spec-points {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0 0;
+  }
+  .spec-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+    font-size: 15.5px;
+    color: var(--ink);
+  }
+  .spec-points li:last-child { border-bottom: 1px solid var(--line); }
+  .spec-points .check {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    background: var(--yellow);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+  .spec-points .check svg { width: 10px; height: 10px; color: var(--ink); }
+  .spec-points strong { font-weight: 600; }
+  .spec-points span { color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+  .code-card {
+    background: var(--ink);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(12,12,12,0.16);
+    overflow: hidden;
+  }
+  .code-card-header {
+    padding: 11px 16px;
+    background: #141414;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .code-card-header .yellow { color: var(--yellow); }
+  .code-card pre { padding: 22px 24px; }
+
+  /* ── TRANSLATE STRIP ──────────────────────────────────────── */
+  .translate-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .translate-tab {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--paper);
+    transition: all 0.15s ease;
+    font-weight: 500;
+  }
+  .translate-tab:hover { border-color: var(--ink); color: var(--ink); }
+  .translate-tab.is-active {
+    background: var(--ink);
+    color: var(--yellow);
+    border-color: var(--ink);
+  }
+  .translate-grid {
+    display: grid;
+    grid-template-columns: 1fr 64px 1fr;
+    gap: 0;
+    align-items: stretch;
+  }
+  .translate-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+
+  /* ── ECOSYSTEM ─────────────────────────────────────────────── */
+  .ecosystem {
+    background: var(--paper-2);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .eco-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .eco-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .eco-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--ink);
+    box-shadow: 0 18px 40px rgba(12,12,12,0.08);
+  }
+  .eco-card.highlighted {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .eco-card.highlighted .eco-feats li { color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.08); }
+  .eco-card.highlighted .eco-feats li:last-child { border-bottom-color: rgba(255,255,255,0.08); }
+  .eco-card.highlighted .eco-feats li::before { background: var(--yellow); }
+  .eco-card.highlighted p { color: rgba(255,255,255,0.65); }
+
+  .eco-card-glyph {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper-3);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .eco-card-glyph.dark {
+    background: var(--ink);
+    color: var(--yellow);
+    border-bottom-color: transparent;
+  }
+  .eco-card-glyph.yellow {
+    background: var(--yellow);
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  .eco-mono {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .eco-mono::after {
+    content: '▍';
+    color: var(--yellow);
+    margin-left: 2px;
+    animation: blink-cursor 1s steps(1) infinite;
+  }
+  @keyframes blink-cursor { 50% { opacity: 0; } }
+
+  .eco-card-body { padding: 26px 26px 28px; display: flex; flex-direction: column; flex-grow: 1; }
+  .eco-tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    background: var(--paper-3);
+    padding: 4px 9px;
+    border-radius: 999px;
+    align-self: flex-start;
+    margin-bottom: 14px;
+  }
+  .eco-card.highlighted .eco-tag.premium {
+    background: var(--yellow);
+    color: var(--ink);
+  }
+  .eco-card h3 {
+    font-size: 24px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .eco-card p {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0 0 22px;
+    flex-grow: 1;
+  }
+  .eco-feats {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .eco-feats li {
+    font-size: 13.5px;
+    color: var(--ink);
+    padding: 11px 0 11px 22px;
+    border-top: 1px solid var(--line);
+    position: relative;
+  }
+  .eco-feats li:last-child { border-bottom: 1px solid var(--line); }
+  .eco-feats li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 10px;
+    height: 2px;
+    background: var(--ink);
+    transform: translateY(-50%);
+  }
+
+  /* ── QUOTE ─────────────────────────────────────────────────── */
+  .quote-section {
+    background: var(--paper-2);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  blockquote.quote {
+    font-size: clamp(28px, 3.4vw, 42px);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+    margin: 0;
+    max-width: 22ch;
+    color: var(--ink);
+  }
+  blockquote.quote .quotemark {
+    color: var(--yellow);
+    font-weight: 700;
+    margin-right: -0.05em;
+  }
+  .quote-attr {
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+  }
+  .quote-avatar {
+    width: 44px; height: 44px;
+    background: var(--ink);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .quote-attr-name { font-weight: 600; }
+  .quote-attr-title { color: var(--muted); }
+
+  /* ── BLOG ──────────────────────────────────────────────────── */
+  .blog-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 32px;
+    margin-bottom: 48px;
+  }
+  .blog-head-text { max-width: 540px; }
+  .blog-head .section-lede { margin-bottom: 0; }
+  .blog-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--ink);
+    flex-shrink: 0;
+  }
+  .blog-all:hover { color: var(--muted); border-bottom-color: var(--muted); }
+
+  .blog-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .blog-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .blog-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--ink);
+    box-shadow: 0 18px 40px rgba(12,12,12,0.08);
+  }
+  .blog-card-cover {
+    aspect-ratio: 16 / 9;
+    background: var(--paper-3);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .blog-card-cover.c1 { background: var(--ink); }
+  .blog-card-cover.c1::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(244,207,74,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,207,74,0.18) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 75%);
+  }
+  .blog-card-cover.c1 .glyph {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--yellow);
+    font-family: var(--mono);
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    z-index: 1;
+  }
+  .blog-card-cover.c2 { background: var(--yellow); }
+  .blog-card-cover.c2 .glyph {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+    padding: 24px;
+    white-space: pre;
+  }
+  .blog-card-cover.c3 { background: var(--paper-3); }
+  .blog-card-cover.c3 .glyph {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+  .blog-card-cover.c3 .glyph::after {
+    content: '';
+    position: absolute;
+    bottom: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 64px;
+    height: 6px;
+    background: var(--yellow);
+  }
+  .blog-card-body {
+    padding: 22px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  .blog-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+  .blog-meta .tag {
+    background: var(--paper-3);
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .blog-card h3 {
+    font-size: 19px;
+    line-height: 1.25;
+    letter-spacing: -0.018em;
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  .blog-card p {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 20px;
+    flex-grow: 1;
+  }
+  .blog-card-read {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .blog-card-read svg { transition: transform 0.2s ease; }
+  .blog-card:hover .blog-card-read svg { transform: translateX(3px); }
+
+  @media (max-width: 900px) {
+    .blog-grid { grid-template-columns: 1fr; }
+    .blog-head { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ── FINAL CTA ─────────────────────────────────────────────── */
+  .final-cta {
+    background: var(--ink);
+    color: #fff;
+    text-align: center;
+    padding: 120px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .final-cta::before {
+    content: '';
+    position: absolute;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(244,207,74,0.18) 0%, transparent 60%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .final-cta-inner { position: relative; z-index: 1; }
+  .final-cta h2 {
+    font-size: clamp(44px, 5.6vw, 76px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    margin: 0 0 20px;
+  }
+  .final-cta h2 em {
+    font-style: italic;
+    color: var(--yellow);
+    font-weight: 700;
+  }
+  .final-cta p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.65);
+    max-width: 480px;
+    margin: 0 auto 36px;
+  }
+
+  /* ── FOOTER ────────────────────────────────────────────────── */
+  footer.foot {
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    padding: 64px 0 36px;
+  }
+  .foot-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 56px;
+  }
+  .foot h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 16px;
+  }
+  .foot ul { list-style: none; padding: 0; margin: 0; }
+  .foot li { margin-bottom: 9px; font-size: 14px; color: var(--muted); }
+  .foot li a:hover { color: var(--ink); }
+  .foot-brand p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 12px 0 0;
+    line-height: 1.5;
+    max-width: 280px;
+  }
+  .foot-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .foot-social { display: flex; gap: 14px; }
+  .foot-social a {
+    width: 32px; height: 32px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: all 0.15s ease;
+  }
+  .foot-social a:hover { border-color: var(--ink); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .hero { padding: 64px 0 80px; }
+    .morph-body { grid-template-columns: 1fr; }
+    .morph-arrow { width: 100%; height: 48px; border-left: 0; border-right: 0; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .morph-arrow svg { transform: rotate(90deg); }
+    .value-grid { grid-template-columns: 1fr; }
+    .value-card { border-right: 0; border-bottom: 1px solid var(--line); padding: 32px 0 !important; }
+    .value-card:last-child { border-bottom: 0; }
+    .spec-grid { grid-template-columns: 1fr; gap: 40px; }
+    .translate-grid { grid-template-columns: 1fr; }
+    .translate-arrow { padding: 16px 0; }
+    .translate-arrow svg { transform: rotate(90deg); }
+    .eco-grid { grid-template-columns: 1fr; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────────── NAV ─────────────── -->
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="#" class="logo">
+      <img src="assets/logo.png" alt="Daco" />
+      daco
+    </a>
+    <div class="nav-links">
+      <a href="#ecosystem">Product</a>
+      <a href="#opendpi">OpenDPI</a>
+      <a href="#docs">Docs</a>
+      <a href="#blog">Blog</a>
+      <a href="#community">Community</a>
+    </div>
+    <div class="nav-right">
+      <a href="#github" style="font-size:14px; color: rgba(255,255,255,0.7); font-weight:500;">GitHub ↗</a>
+      <a href="#demo" class="nav-cta">Book a demo
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5h7m0 0L5.5 2M9 5.5L5.5 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─────────────── HERO ─────────────── -->
+<header class="hero">
+  <div class="container hero-inner">
+    <div>
+      <span class="hero-eyebrow">
+        <span class="pill">NEW</span>
+        OpenDPI 1.0 is now stable
+        <span class="arrow">→</span>
+      </span>
+      <h1 class="hero-title">Build data pipelines <span class="accent">locally</span>.</h1>
+      <p class="hero-sub">Daco gives data engineers the local development experience software engineers already have. Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.</p>
+      <div class="hero-cta-row">
+        <a href="#demo" class="btn-primary">Book a demo
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="hero-install">
+          <span class="prompt">$</span>
+          <span>brew install dacolabs/tap/daco</span>
+          <span class="copy" id="copy-btn" title="Copy">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M3 1.5h5.5A1.5 1.5 0 0 1 10 3v5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── MORPH PANEL ─────────────── -->
+    <div class="morph-panel" id="morph">
+      <div class="morph-header">
+        <div class="morph-tabs" id="morph-tabs">
+          <button class="morph-tab is-active" data-target="pyspark">pyspark</button>
+          <button class="morph-tab" data-target="dbt">dbt</button>
+          <button class="morph-tab" data-target="pydantic">pydantic</button>
+          <button class="morph-tab" data-target="go">go</button>
+          <button class="morph-tab" data-target="typescript">typescript</button>
+        </div>
+      </div>
+      <div class="morph-body">
+        <div class="morph-col">
+          <div class="morph-col-label">dataproduct.yaml</div>
+<pre class="code"><span class="k">opendpi</span><span class="pun">:</span> <span class="s">"1.0.0"</span>
+
+<span class="k">info</span><span class="pun">:</span>
+  <span class="k">title</span><span class="pun">:</span> <span class="s">"Customer Analytics"</span>
+  <span class="k">version</span><span class="pun">:</span> <span class="s">"2.1.0"</span>
+
+<span class="k">connections</span><span class="pun">:</span>
+  <span class="k">analytics_db</span><span class="pun">:</span>
+    <span class="k">type</span><span class="pun">:</span> postgresql
+    <span class="k">host</span><span class="pun">:</span> analytics.db
+
+<span class="k">ports</span><span class="pun">:</span>
+  <span class="a">daily_metrics</span><span class="pun">:</span>
+    <span class="k">schema</span><span class="pun">:</span>
+      <span class="k">type</span><span class="pun">:</span> <span class="hl">object</span>
+      <span class="k">properties</span><span class="pun">:</span>
+        <span class="k">customer_id</span><span class="pun">:</span> <span class="hl">{ type: string }</span>
+        <span class="k">date</span><span class="pun">:</span> <span class="hl">{ type: string, format: date }</span>
+        <span class="k">revenue</span><span class="pun">:</span> <span class="hl">{ type: number }</span></pre>
+        </div>
+        <div class="morph-arrow">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 11h16m0 0L13 5m6 6l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="morph-col">
+          <div class="morph-col-label" id="output-label">schema.py</div>
+          <pre class="code" id="output-code"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─────────────── LOGOS ─────────────── -->
+<div class="logos">
+  <div class="container logos-inner">
+    <div class="logos-label">Works with the stack you already run</div>
+    <div class="logos-row">
+      <span class="logo-mock"><span class="logo-mock-shape square"></span>Snowflake</span>
+      <span class="logo-mock"><span class="logo-mock-shape circle"></span>Databricks</span>
+      <span class="logo-mock"><span class="logo-mock-shape tri"></span>BigQuery</span>
+      <span class="logo-mock"><span class="logo-mock-shape dia"></span>dbt</span>
+      <span class="logo-mock"><span class="logo-mock-shape circle"></span>Postgres</span>
+      <span class="logo-mock"><span class="logo-mock-shape square"></span>Kafka</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── PROBLEM ─────────────── -->
+<section id="problem">
+  <div class="container">
+    <div class="eyebrow"><span class="dot"></span>The problem</div>
+    <h2 class="section-title">Your pipelines should run on your laptop.</h2>
+    <p class="section-lede">Daco brings your data products into a single OpenDPI spec you can develop, test, and version locally. No deploy to verify a schema change. No warehouse connection required to run a test.</p>
+  </div>
+</section>
+
+<!-- ─────────────── VALUE PROPS / CORE ADVANTAGES ─────────────── -->
+<section style="padding-top: 0;">
+  <div class="container">
+    <div class="eyebrow"><span class="dot"></span>Core advantages</div>
+    <h2 class="section-title">What changes with Daco.</h2>
+    <p class="section-lede">Define your data products once. Develop locally. Let AI agents work with metadata instead of data.</p>
+
+    <div class="value-grid">
+      <div class="value-card">
+        <span class="value-num">01</span>
+        <h3>True local development</h3>
+        <p>Build pipelines directly from your codebase, decoupled from data warehouses. Generate mock data, run tests, and translate to PySpark, dbt, or SQL on your laptop. No live connection required.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-num">02</span>
+        <h3>Agent-direct AI integration</h3>
+        <p>Claude Code and other agents use Daco to navigate live databases and metadata with your existing credentials. They pull directly from the systems you already trust, so pipelines build faster.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-num">03</span>
+        <h3>Metadata-driven security</h3>
+        <p>Engineers and agents pull schemas and metadata. They never pull rows. Sensitive data stays in your warehouse, and you skip the access management layer a normal catalog would need.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── ECOSYSTEM / 3 PRODUCTS ─────────────── -->
+<section id="ecosystem" class="ecosystem">
+  <div class="container">
+    <div class="eyebrow"><span class="dot"></span>The Daco ecosystem</div>
+    <h2 class="section-title">Three layers. One standard.</h2>
+    <p class="section-lede">A toolchain built around OpenDPI, from the engineer's terminal to the business control room.</p>
+
+    <div class="eco-grid">
+      <article class="eco-card">
+        <div class="eco-card-glyph">
+          <span class="eco-mono">$ daco</span>
+        </div>
+        <div class="eco-card-body">
+          <div class="eco-tag">Open source</div>
+          <h3>Daco CLI</h3>
+          <p>The engineer's tool. Import schemas and metadata from any database into OpenDPI. Generate mock data, run tests, and translate to PySpark, dbt, or SQL. All on your machine.</p>
+          <ul class="eco-feats">
+            <li>Platform-agnostic schema import</li>
+            <li>Mock data + local test runners</li>
+            <li>Translate to PySpark, dbt, SQL, Pydantic</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="eco-card">
+        <div class="eco-card-glyph dark">
+          <svg viewBox="0 0 80 80" width="72" height="72" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="6" y="10" width="68" height="14" rx="3"/>
+            <rect x="6" y="33" width="68" height="14" rx="3"/>
+            <rect x="6" y="56" width="68" height="14" rx="3"/>
+            <circle cx="14" cy="17" r="2" fill="currentColor"/>
+            <circle cx="14" cy="40" r="2" fill="currentColor"/>
+            <circle cx="14" cy="63" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="eco-card-body">
+          <div class="eco-tag">Open source</div>
+          <h3>Daco Service &amp; SDKs</h3>
+          <p>A version-controlled registry for OpenDPI specs. Push and pull data product definitions through native SDKs in Python, TypeScript, or Go.</p>
+          <ul class="eco-feats">
+            <li>Git-style versioning for specs</li>
+            <li>Multi-language SDKs</li>
+            <li>Self-host or run managed</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="eco-card highlighted">
+        <div class="eco-card-glyph yellow">
+          <svg viewBox="0 0 80 80" width="72" height="72" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="6" y="6" width="32" height="32" rx="3"/>
+            <rect x="42" y="6" width="32" height="32" rx="3"/>
+            <rect x="6" y="42" width="32" height="32" rx="3"/>
+            <rect x="42" y="42" width="32" height="32" rx="3" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="eco-card-body">
+          <div class="eco-tag premium">Premium</div>
+          <h3>Daco Studio</h3>
+          <p>The control room for the business. Search the data product marketplace, verify compliance, monitor quality rules, and find the owner of every dataset.</p>
+          <ul class="eco-feats">
+            <li>Data product marketplace</li>
+            <li>Compliance &amp; quality monitoring</li>
+            <li>Ownership &amp; lineage at a glance</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── SPEC SHOWCASE ─────────────── -->
+<section class="spec" id="opendpi">
+  <div class="container">
+    <div class="spec-grid">
+      <div>
+        <div class="eyebrow"><span class="dot"></span>The OpenDPI standard</div>
+        <h2 class="section-title">One spec. Open source. Yours to extend.</h2>
+        <p class="section-lede">OpenDPI is a public, MIT-licensed format for describing data products: ports, connections, schemas, SLAs. The format powers everything Daco does. Use it with or without us.</p>
+        <ul class="spec-points">
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><strong>Ports &amp; connections.</strong><span>Typed, with explicit dependencies.</span></div>
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><strong>JSON Schema.</strong><span>Validate at every boundary.</span></div>
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><strong>SLAs &amp; quality rules.</strong><span>Enforced contracts, not docs.</span></div>
+          </li>
+          <li>
+            <span class="check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><strong>Versioned in git.</strong><span>Review schemas like code.</span></div>
+          </li>
+        </ul>
+      </div>
+      <div class="code-card">
+        <div class="code-card-header">
+          <span><span class="yellow">●</span> dataproduct.yaml</span>
+          <span>OpenDPI 1.0</span>
+        </div>
+<pre class="code"><span class="k">opendpi</span><span class="pun">:</span> <span class="s">"1.0.0"</span>
+
+<span class="k">info</span><span class="pun">:</span>
+  <span class="k">title</span><span class="pun">:</span> <span class="s">"Customer Analytics"</span>
+  <span class="k">version</span><span class="pun">:</span> <span class="s">"2.1.0"</span>
+  <span class="k">owner</span><span class="pun">:</span> <span class="s">"data-platform@acme.io"</span>
+
+<span class="k">connections</span><span class="pun">:</span>
+  <span class="k">analytics_db</span><span class="pun">:</span>
+    <span class="k">type</span><span class="pun">:</span> postgresql
+    <span class="k">host</span><span class="pun">:</span> analytics.db.acme.io
+    <span class="k">database</span><span class="pun">:</span> analytics
+
+<span class="k">ports</span><span class="pun">:</span>
+  <span class="a">daily_metrics</span><span class="pun">:</span>
+    <span class="k">description</span><span class="pun">:</span> <span class="s">"Daily customer metrics"</span>
+    <span class="k">connection</span><span class="pun">:</span> analytics_db
+    <span class="k">location</span><span class="pun">:</span> public.customer_daily
+    <span class="k">schema</span><span class="pun">:</span>
+      <span class="k">type</span><span class="pun">:</span> object
+      <span class="k">required</span><span class="pun">:</span> [customer_id, date]
+      <span class="k">properties</span><span class="pun">:</span>
+        <span class="k">customer_id</span><span class="pun">:</span> { type: string }
+        <span class="k">date</span><span class="pun">:</span> { type: string, format: date }
+        <span class="k">total_orders</span><span class="pun">:</span> { type: integer }
+        <span class="k">revenue</span><span class="pun">:</span> { type: number }</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── QUOTE ─────────────── -->
+<section class="quote-section">
+  <div class="container">
+    <blockquote class="quote">
+      <span class="quotemark">"</span>We were tired of our development being tied to a platform or database technology. Having to leave your local development environment to test your pipelines.<span class="quotemark">"</span>
+    </blockquote>
+    <div class="quote-attr">
+      <div class="quote-avatar"></div>
+      <div>
+        <div class="quote-attr-name">Orri Pálsson &amp; Giuseppe Grieco</div>
+        <div class="quote-attr-title">Founders, Daco</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── BLOG ─────────────── -->
+<section id="blog">
+  <div class="container">
+    <div class="blog-head">
+      <div class="blog-head-text">
+        <div class="eyebrow"><span class="dot"></span>From the blog</div>
+        <h2 class="section-title">Notes from the team.</h2>
+        <p class="section-lede">Releases, deep dives on the OpenDPI standard, and lessons from teams shipping data products with Daco.</p>
+      </div>
+      <a href="/blog" class="blog-all">All posts
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5h7m0 0L5.5 2M9 5.5L5.5 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+
+    <div class="blog-grid">
+      <a href="/blog/daco-cli-v0.2.0" class="blog-card">
+        <div class="blog-card-cover c1">
+          <span class="glyph">v0.2</span>
+        </div>
+        <div class="blog-card-body">
+          <div class="blog-meta">
+            <span class="tag">Changelog</span>
+            <span>Feb 3, 2026</span>
+          </div>
+          <h3>Daco CLI Changelog: v0.2.0</h3>
+          <p>The first public release brings schema translation to 12+ formats, connection management, and project scaffolding.</p>
+          <span class="blog-card-read">Read post
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5h7m0 0L5.5 2M9 5.5L5.5 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="/blog/opendpi" class="blog-card">
+        <div class="blog-card-cover c2">
+          <span class="glyph">opendpi:&#10;  ports:&#10;    metrics:&#10;      schema:&#10;        ...</span>
+        </div>
+        <div class="blog-card-body">
+          <div class="blog-meta">
+            <span class="tag">Standard</span>
+            <span>Feb 3, 2026</span>
+          </div>
+          <h3>OpenDPI: A Standard for Data Product Interfaces</h3>
+          <p>An open standard for describing and documenting data product interfaces, and why your team needs one.</p>
+          <span class="blog-card-read">Read post
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5h7m0 0L5.5 2M9 5.5L5.5 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="/blog/introducing-daco" class="blog-card">
+        <div class="blog-card-cover c3">
+          <span class="glyph">daco</span>
+        </div>
+        <div class="blog-card-body">
+          <div class="blog-meta">
+            <span class="tag">Announcement</span>
+            <span>Jan 30, 2026</span>
+          </div>
+          <h3>Welcome to Daco</h3>
+          <p>A new standard for data teams to align on definitions and ship data products faster, without rewriting their stack.</p>
+          <span class="blog-card-read">Read post
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5h7m0 0L5.5 2M9 5.5L5.5 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── FINAL CTA ─────────────── -->
+<section class="final-cta" id="demo">
+  <div class="container final-cta-inner">
+    <h2>See Daco on <em>your</em> stack.</h2>
+    <p>30 minute demo. Bring one of your data products. We'll spec it in OpenDPI live and show you what local development looks like.</p>
+    <a href="#" class="btn-primary">Book a demo
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ─────────────── FOOTER ─────────────── -->
+<footer class="foot">
+  <div class="container">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="#" class="logo" style="color: var(--ink);">
+          <img src="assets/logo.png" alt="Daco" />
+          daco
+        </a>
+        <p>The standard way to define and manage your data products. Built in Amsterdam.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#">OpenDPI</a></li>
+          <li><a href="#">CLI</a></li>
+          <li><a href="#">Translators</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="#">Docs</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a href="#">Discord</a></li>
+          <li><a href="#">Twitter</a></li>
+          <li><a href="mailto:community@dacolabs.com">community@dacolabs.com</a></li>
+          <li>Keizersgracht 555<br/>1017DB Amsterdam</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2026 Daco. All rights reserved.</div>
+      <div class="foot-social">
+        <a href="#" aria-label="GitHub"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.33c-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.88 2.34.67.07-.52.28-.88.51-1.08-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.13 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.11.16 1.93.08 2.13.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+        <a href="#" aria-label="Discord"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.55 2.95A12.7 12.7 0 0 0 10.4 2c-.14.25-.3.59-.42.86a11.7 11.7 0 0 0-3.95 0A8.5 8.5 0 0 0 5.6 2a12.6 12.6 0 0 0-3.16.95C.43 5.96-.12 8.9.16 11.79a12.8 12.8 0 0 0 3.87 1.96c.31-.43.59-.88.83-1.36-.46-.17-.9-.39-1.32-.64.11-.08.22-.17.32-.25a9.13 9.13 0 0 0 7.88 0c.1.09.21.17.32.25-.42.25-.86.47-1.32.64.24.48.52.93.83 1.36a12.8 12.8 0 0 0 3.87-1.96c.34-3.36-.55-6.27-2.4-8.84zM5.34 9.96c-.76 0-1.39-.7-1.39-1.56s.62-1.56 1.39-1.56 1.4.7 1.39 1.56c0 .86-.62 1.56-1.39 1.56zm5.32 0c-.76 0-1.39-.7-1.39-1.56s.62-1.56 1.39-1.56 1.4.7 1.39 1.56c0 .86-.62 1.56-1.39 1.56z"/></svg></a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ─────────── Auto-cycling YAML → target morph ──────────────
+const TARGETS = {
+  pyspark: {
+    label: 'schema.py',
+    code:
+`<span class="c"># generated by daco</span>
+<span class="k">from</span> pyspark.sql.types <span class="k">import</span> *
+
+daily_metrics_schema = <span class="a">StructType</span>([
+  <span class="a">StructField</span>(<span class="s">"customer_id"</span>, <span class="hl">StringType</span>()),
+  <span class="a">StructField</span>(<span class="s">"date"</span>, <span class="hl">DateType</span>()),
+  <span class="a">StructField</span>(<span class="s">"total_orders"</span>, <span class="hl">IntegerType</span>()),
+  <span class="a">StructField</span>(<span class="s">"revenue"</span>, <span class="hl">DoubleType</span>()),
+])`
+  },
+  dbt: {
+    label: 'models/daily_metrics.yml',
+    code:
+`<span class="c"># generated by daco</span>
+<span class="k">version</span><span class="pun">:</span> <span class="n">2</span>
+
+<span class="k">models</span><span class="pun">:</span>
+  - <span class="k">name</span><span class="pun">:</span> <span class="a">daily_metrics</span>
+    <span class="k">description</span><span class="pun">:</span> <span class="s">"Daily customer metrics"</span>
+    <span class="k">columns</span><span class="pun">:</span>
+      - <span class="k">name</span><span class="pun">:</span> <span class="hl">customer_id</span>
+        <span class="k">tests</span><span class="pun">:</span> [not_null]
+      - <span class="k">name</span><span class="pun">:</span> <span class="hl">date</span>
+        <span class="k">tests</span><span class="pun">:</span> [not_null]
+      - <span class="k">name</span><span class="pun">:</span> <span class="hl">total_orders</span>
+      - <span class="k">name</span><span class="pun">:</span> <span class="hl">revenue</span>`
+  },
+  pydantic: {
+    label: 'models.py',
+    code:
+`<span class="c"># generated by daco</span>
+<span class="k">from</span> datetime <span class="k">import</span> date
+<span class="k">from</span> pydantic <span class="k">import</span> <span class="a">BaseModel</span>
+
+<span class="k">class</span> <span class="a">DailyMetrics</span>(<span class="n">BaseModel</span>):
+    <span class="hl">customer_id</span>: <span class="n">str</span>
+    <span class="hl">date</span>: <span class="n">date</span>
+    <span class="hl">total_orders</span>: <span class="n">int</span>
+    <span class="hl">revenue</span>: <span class="n">float</span>`
+  },
+  go: {
+    label: 'types.go',
+    code:
+`<span class="c">// generated by daco</span>
+<span class="k">package</span> analytics
+
+<span class="k">import</span> <span class="s">"time"</span>
+
+<span class="k">type</span> <span class="a">DailyMetrics</span> <span class="k">struct</span> {
+    <span class="hl">CustomerID</span>   <span class="n">string</span>    <span class="s">\`json:"customer_id"\`</span>
+    <span class="hl">Date</span>         <span class="n">time.Time</span> <span class="s">\`json:"date"\`</span>
+    <span class="hl">TotalOrders</span>  <span class="n">int</span>       <span class="s">\`json:"total_orders"\`</span>
+    <span class="hl">Revenue</span>      <span class="n">float64</span>   <span class="s">\`json:"revenue"\`</span>
+}`
+  },
+  typescript: {
+    label: 'types.ts',
+    code:
+`<span class="c">// generated by daco</span>
+<span class="k">export interface</span> <span class="a">DailyMetrics</span> {
+  <span class="hl">customer_id</span>: <span class="n">string</span>;
+  <span class="hl">date</span>: <span class="n">string</span>;  <span class="c">// ISO 8601</span>
+  <span class="hl">total_orders</span>: <span class="n">number</span>;
+  <span class="hl">revenue</span>: <span class="n">number</span>;
+}
+
+<span class="k">export const</span> <span class="a">dailyMetricsSchema</span> = z.<span class="a">object</span>({
+  customer_id: z.<span class="n">string</span>(),
+  date: z.<span class="n">string</span>().date(),
+  total_orders: z.<span class="n">number</span>().int(),
+  revenue: z.<span class="n">number</span>(),
+});`
+  },
+};
+
+const order = ['pyspark', 'dbt', 'pydantic', 'go', 'typescript'];
+let idx = 0;
+let timer = null;
+let userInteracted = false;
+
+const tabs = document.querySelectorAll('#morph-tabs .morph-tab');
+const outLabel = document.getElementById('output-label');
+const outCode = document.getElementById('output-code');
+
+function render(key) {
+  const t = TARGETS[key];
+  if (!t) return;
+  // animate fade
+  outCode.style.opacity = '0';
+  outCode.style.transform = 'translateY(4px)';
+  setTimeout(() => {
+    outLabel.textContent = t.label;
+    outCode.innerHTML = t.code;
+    outCode.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+    outCode.style.opacity = '1';
+    outCode.style.transform = 'translateY(0)';
+  }, 180);
+  tabs.forEach(b => b.classList.toggle('is-active', b.dataset.target === key));
+}
+
+function startCycle() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => {
+    if (userInteracted) return;
+    idx = (idx + 1) % order.length;
+    render(order[idx]);
+  }, 2800);
+}
+
+tabs.forEach(b => {
+  b.addEventListener('click', () => {
+    userInteracted = true;
+    idx = order.indexOf(b.dataset.target);
+    render(b.dataset.target);
+  });
+});
+
+render(order[0]);
+startCycle();
+
+// Pause cycling when not visible
+const morph = document.getElementById('morph');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !userInteracted) startCycle();
+    else clearInterval(timer);
+  });
+}, { threshold: 0.2 });
+io.observe(morph);
+
+// Copy install command
+document.getElementById('copy-btn').addEventListener('click', () => {
+  navigator.clipboard?.writeText('brew install dacolabs/tap/daco');
+  const el = document.getElementById('copy-btn');
+  const orig = el.innerHTML;
+  el.innerHTML = '<span style="color: var(--yellow); font-size: 11px;">copied</span>';
+  setTimeout(() => { el.innerHTML = orig; }, 1400);
+});
+</script>
+
+</body>
+</html>
