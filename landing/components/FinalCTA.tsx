@@ -1,20 +1,81 @@
+'use client'
+
+import { useState } from 'react'
+
 export default function FinalCTA() {
+  const [email, setEmail] = useState('')
+  const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) return
+    setState('loading')
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) throw new Error()
+      setState('success')
+      setEmail('')
+    } catch {
+      setState('error')
+    }
+  }
+
   return (
     <section className="final-cta" id="demo">
       <div className="container final-cta-inner">
-        <h2>Start with <em>your</em> repo.</h2>
-        <p>Connect Daco Studio to your repository and get a live catalog of your data products in minutes.</p>
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href="/studio" className="btn-primary">
-            Try Daco Studio
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <h2>Get <em>early</em> access.</h2>
+        <p>We&apos;re onboarding teams one by one. Drop your email and we&apos;ll reach out.</p>
+
+        {state === 'success' ? (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(244,207,74,0.1)', border: '1px solid rgba(244,207,74,0.3)', borderRadius: 'var(--radius-sm)', padding: '14px 24px', fontSize: '15px', color: 'var(--yellow)', fontWeight: 500 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </a>
-          <a href="/docs" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', padding: '13px 22px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 'var(--radius-sm)', transition: 'color 0.15s, border-color 0.15s' }}>
-            Read the docs
-          </a>
-        </div>
+            You&apos;re on the list. We&apos;ll be in touch.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '480px', margin: '0 auto' }}>
+            <input
+              type="email"
+              required
+              placeholder="you@company.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              disabled={state === 'loading'}
+              style={{
+                flex: 1,
+                minWidth: '220px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '13px 16px',
+                fontSize: '15px',
+                color: '#fff',
+                fontFamily: 'var(--sans)',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="submit"
+              disabled={state === 'loading'}
+              className="btn-primary"
+              style={{ opacity: state === 'loading' ? 0.7 : 1 }}
+            >
+              {state === 'loading' ? 'Sending…' : 'Get early access'}
+            </button>
+          </form>
+        )}
+
+        {state === 'error' && (
+          <p style={{ marginTop: '12px', fontSize: '14px', color: 'rgba(255,100,100,0.9)' }}>
+            Something went wrong. Email us directly at{' '}
+            <a href="mailto:daco@dacolabs.com" style={{ color: 'var(--yellow)' }}>daco@dacolabs.com</a>.
+          </p>
+        )}
       </div>
     </section>
   )
