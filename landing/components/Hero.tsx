@@ -144,14 +144,15 @@ export default function Hero() {
         <div>
           <span className="hero-eyebrow">
             <span className="pill">NEW</span>
-            Daco CLI v0.2.1 is out
+            OpenDPI 1.0 is now stable
             <span className="arrow">→</span>
           </span>
           <h1 className="hero-title">
-            A code-first data <span className="accent">catalog</span>.
+            Build data pipelines <span className="accent">locally</span>.
           </h1>
           <p className="hero-sub">
-            Data products defined in code, stored in your repo, and synced to your catalog on every push.
+            Daco gives data engineers the local development experience software engineers already have.
+            Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.
           </p>
           <div className="hero-cta-row">
             <a href="/studio" className="btn-primary">

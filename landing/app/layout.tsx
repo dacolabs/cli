@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Daco · A code-first data catalog',
-  description: 'Data products defined in code, stored in your repo, and synced to your catalog on every push. Built on OpenDPI, the open standard for data product interfaces.',
+  title: 'Daco · Build data pipelines locally',
+  description: 'Daco gives data engineers the local development experience software engineers already have. Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.',
 }
 
 export default function RootLayout({

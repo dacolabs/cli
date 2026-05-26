@@ -11,7 +11,6 @@ export default function Nav() {
         </Link>
         <div className="nav-links">
           <a href="/docs">Docs</a>
-          <a href="/pricing">Pricing</a>
           <a href="/studio">Studio</a>
           <a href="/blog">Blog</a>
         </div>
