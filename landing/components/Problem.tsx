@@ -1,15 +1,15 @@
 const painPoints = [
   {
-    label: 'Deploy to verify',
-    body: 'You push a schema change just to find out it breaks downstream. Every check needs a live warehouse.',
+    label: 'Deploy to find out',
+    body: 'A one-line schema change ships to staging before you know it broke three downstream models.',
   },
   {
-    label: 'No local test loop',
-    body: 'There\'s no way to run pipeline logic on your laptop. You\'re testing in staging, if at all.',
+    label: 'Slow feedback',
+    body: 'Re-run the warehouse, wait for CI, watch a job queue. A test that should be a second takes ten minutes.',
   },
   {
-    label: 'Fragmented definitions',
-    body: 'The same table is described in dbt, a Notion doc, and a Slack thread. None of them match.',
+    label: 'No fixtures, no tests',
+    body: 'No mock data means no unit tests means no refactors. Pipeline logic stays untested by default.',
   },
 ]
 

@@ -609,6 +609,69 @@ h2.section-title {
   transform: translateY(-50%);
 }
 
+/* ── STUDIO BANNER ─────────────────────────────────────────── */
+.studio-banner-section { padding: 64px 0; }
+.studio-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+}
+.studio-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(12,12,12,0.18);
+}
+.studio-banner-glyph {
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--yellow);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.studio-banner-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  margin-bottom: 8px;
+}
+.studio-banner-body h3 {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.studio-banner-body p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.65);
+  margin: 0;
+  max-width: 60ch;
+}
+.studio-banner-arrow {
+  color: var(--yellow);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.studio-banner:hover .studio-banner-arrow { transform: translateX(4px); }
+@media (max-width: 720px) {
+  .studio-banner { grid-template-columns: 1fr; text-align: left; padding: 28px; gap: 20px; }
+  .studio-banner-arrow { justify-self: flex-end; }
+}
+
 /* ── QUOTE ─────────────────────────────────────────────────── */
 .quote-section {
   background: var(--paper-2);
@@ -840,8 +903,108 @@ blockquote.quote .quotemark {
 .final-cta p {
   font-size: 18px;
   color: rgba(255,255,255,0.65);
-  max-width: 480px;
-  margin: 0 auto 36px;
+  max-width: 540px;
+  margin: 0 auto 48px;
+}
+.final-cta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: left;
+}
+.final-cta-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+.final-cta-card.highlighted {
+  background: rgba(244,207,74,0.08);
+  border-color: rgba(244,207,74,0.3);
+}
+.final-cta-card-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  margin-bottom: 10px;
+}
+.final-cta-card-title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.final-cta-card-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 18px;
+  flex-grow: 1;
+}
+.final-cta-card-body code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--yellow);
+}
+.final-cta-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--yellow);
+  align-self: flex-start;
+}
+.final-cta-card-link svg { transition: transform 0.2s ease; }
+.final-cta-card-link:hover svg { transform: translateX(3px); }
+.final-cta-form {
+  display: flex;
+  gap: 8px;
+}
+.final-cta-form input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: #fff;
+  font-family: var(--sans);
+  outline: none;
+}
+.final-cta-form .btn-primary {
+  padding: 10px 16px;
+  font-size: 13.5px;
+}
+.final-cta-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--yellow);
+  font-size: 14px;
+  font-weight: 500;
+}
+.final-cta-error {
+  margin-top: 10px !important;
+  font-size: 13px !important;
+  color: rgba(255,100,100,0.9) !important;
+  max-width: none !important;
+}
+.final-cta-error a { color: var(--yellow); }
+@media (max-width: 860px) {
+  .final-cta-grid { grid-template-columns: 1fr; }
 }
 
 /* ── FOOTER ────────────────────────────────────────────────── */

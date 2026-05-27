@@ -18,7 +18,6 @@ export default function Footer() {
             <ul>
               <li><a href="/studio">Daco Studio</a></li>
               <li><a href="/docs">CLI</a></li>
-              <li><a href="/pricing">Pricing</a></li>
               <li><a href="https://github.com/dacolabs/daco" target="_blank" rel="noopener noreferrer">Roadmap</a></li>
             </ul>
           </div>
@@ -36,7 +35,6 @@ export default function Footer() {
             <ul>
               <li><a href="https://discord.gg/dacolabs" target="_blank" rel="noopener noreferrer">Discord</a></li>
               <li><a href="mailto:daco@dacolabs.com">daco@dacolabs.com</a></li>
-              <li><a href="mailto:community@dacolabs.com">community@dacolabs.com</a></li>
               <li>Keizersgracht 555<br/>1017DB Amsterdam</li>
             </ul>
           </div>

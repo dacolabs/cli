@@ -18,10 +18,10 @@ export default function SpecShowcase() {
         <div className="spec-grid">
           <div>
             <div className="eyebrow"><span className="dot" />The OpenDPI standard</div>
-            <h2 className="section-title">One spec. Open source. Yours to extend.</h2>
+            <h2 className="section-title">Open format. Yours to keep.</h2>
             <p className="section-lede">
-              OpenDPI is a public, MIT-licensed format for describing data products: ports, connections, schemas, SLAs.
-              The format powers everything Daco does. Use it with or without us.
+              OpenDPI is a public, MIT-licensed format for describing data products — ports, connections, schemas, SLAs.
+              Daco runs on it. So can any tool you build. <strong style={{ color: 'var(--ink)' }}>Use it with us, or without us.</strong>
             </p>
             <ul className="spec-points">
               {points.map((p) => (

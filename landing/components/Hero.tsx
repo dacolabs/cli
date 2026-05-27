@@ -142,21 +142,21 @@ export default function Hero() {
     <header className="hero">
       <div className="container hero-inner">
         <div>
-          <span className="hero-eyebrow">
+          <a href="/blog/standardize-your-data-definitions" className="hero-eyebrow" style={{ textDecoration: 'none' }}>
             <span className="pill">NEW</span>
             OpenDPI 1.0 is now stable
             <span className="arrow">→</span>
-          </span>
+          </a>
           <h1 className="hero-title">
-            Build data pipelines <span className="accent">locally</span>.
+            A <span className="accent">real</span> dev loop for data engineers.
           </h1>
           <p className="hero-sub">
-            Daco gives data engineers the local development experience software engineers already have.
-            Define your data products with OpenDPI, then build, test, and translate them without leaving your editor.
+            Software engineers have local dev environments. Data engineers don&apos;t.
+            Daco changes that — define your data products once with OpenDPI, then build, test, and translate them on your laptop.
           </p>
           <div className="hero-cta-row">
             <a href="#demo" className="btn-primary">
-              Get early access
+              Get platform access
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -182,6 +182,9 @@ export default function Hero() {
                 )}
               </button>
             </div>
+          <p style={{ marginTop: '12px', fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>
+            CLI is free and open source. Daco Studio is in early access.
+          </p>
         </div>
 
         <div className="morph-panel" ref={morphRef}>

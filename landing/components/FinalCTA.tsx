@@ -27,55 +27,73 @@ export default function FinalCTA() {
   return (
     <section className="final-cta" id="demo">
       <div className="container final-cta-inner">
-        <h2>Get <em>early</em> access.</h2>
-        <p>We&apos;re onboarding teams one by one. Drop your email and we&apos;ll reach out.</p>
+        <h2>Pick your <em>on-ramp</em>.</h2>
+        <p>The CLI is a one-liner away. The platform is in early access. Either way, the community is in Discord.</p>
 
-        {state === 'success' ? (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(244,207,74,0.1)', border: '1px solid rgba(244,207,74,0.3)', borderRadius: 'var(--radius-sm)', padding: '14px 24px', fontSize: '15px', color: 'var(--yellow)', fontWeight: 500 }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            You&apos;re on the list. We&apos;ll be in touch.
+        <div className="final-cta-grid">
+          <div className="final-cta-card">
+            <div className="final-cta-card-eyebrow">Install</div>
+            <div className="final-cta-card-title">Start with the CLI</div>
+            <div className="final-cta-card-body">Free and open source. Brew, then <code>daco init</code>.</div>
+            <a href="/docs" className="final-cta-card-link">
+              Read the docs
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6h8m0 0L6 2m4 4L6 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '480px', margin: '0 auto' }}>
-            <input
-              type="email"
-              required
-              placeholder="you@company.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={state === 'loading'}
-              style={{
-                flex: 1,
-                minWidth: '220px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '13px 16px',
-                fontSize: '15px',
-                color: '#fff',
-                fontFamily: 'var(--sans)',
-                outline: 'none',
-              }}
-            />
-            <button
-              type="submit"
-              disabled={state === 'loading'}
-              className="btn-primary"
-              style={{ opacity: state === 'loading' ? 0.7 : 1 }}
-            >
-              {state === 'loading' ? 'Sending…' : 'Get early access'}
-            </button>
-          </form>
-        )}
 
-        {state === 'error' && (
-          <p style={{ marginTop: '12px', fontSize: '14px', color: 'rgba(255,100,100,0.9)' }}>
-            Something went wrong. Email us directly at{' '}
-            <a href="mailto:daco@dacolabs.com" style={{ color: 'var(--yellow)' }}>daco@dacolabs.com</a>.
-          </p>
-        )}
+          <div className="final-cta-card highlighted">
+            <div className="final-cta-card-eyebrow">Platform</div>
+            <div className="final-cta-card-title">Get Studio access</div>
+            <div className="final-cta-card-body">We onboard teams one by one. Drop your email — we&apos;ll reach out.</div>
+            {state === 'success' ? (
+              <div className="final-cta-success">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                You&apos;re on the list.
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="final-cta-form">
+                <input
+                  type="email"
+                  required
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  disabled={state === 'loading'}
+                />
+                <button
+                  type="submit"
+                  disabled={state === 'loading'}
+                  className="btn-primary"
+                  style={{ opacity: state === 'loading' ? 0.7 : 1 }}
+                >
+                  {state === 'loading' ? '…' : 'Request'}
+                </button>
+              </form>
+            )}
+            {state === 'error' && (
+              <p className="final-cta-error">
+                Something went wrong. Email{' '}
+                <a href="mailto:daco@dacolabs.com">daco@dacolabs.com</a>.
+              </p>
+            )}
+          </div>
+
+          <div className="final-cta-card">
+            <div className="final-cta-card-eyebrow">Community</div>
+            <div className="final-cta-card-title">Join us in Discord</div>
+            <div className="final-cta-card-body">Talk to the team and other early users. Office hours every Thursday.</div>
+            <a href="https://discord.gg/dacolabs" target="_blank" rel="noopener noreferrer" className="final-cta-card-link">
+              Open Discord
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6h8m0 0L6 2m4 4L6 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   )
