@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/dacolabs/daco/internal/cli/commands"
 	"github.com/dacolabs/daco/internal/cli/session"
+	"github.com/dacolabs/daco/internal/cli/tui"
 	"github.com/dacolabs/daco/internal/translate"
 	"github.com/dacolabs/daco/internal/version"
 	"github.com/spf13/cobra"
@@ -15,6 +16,16 @@ func NewRootCmd(translators translate.Register) *cobra.Command {
 		Short:         "daco is the command-line interface for the daco platform",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := session.PreRunLoad(cmd, nil); err != nil {
+				return err
+			}
+			sctx, err := session.RequireFromCommand(cmd)
+			if err != nil {
+				return err
+			}
+			return tui.Run(sctx, translators)
+		},
 	}
 	rootCmd.SetVersionTemplate(version.Info() + "\n")
 

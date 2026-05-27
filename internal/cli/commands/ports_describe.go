@@ -66,7 +66,7 @@ func runPortsDescribe(ctx *session.Context, args []string) error {
 		w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
 		_, _ = fmt.Fprintln(w, "\nNAME\tHOST\tLOCATION")
 		for _, pc := range port.Connections {
-			connName := findConnectionName(pc.Connection, ctx.Spec.Connections)
+			connName := ctx.Spec.ConnectionName(pc.Connection)
 			host := "-"
 			if pc.Connection != nil {
 				host = fmt.Sprintf("%s://%s", pc.Connection.Type, pc.Connection.Host)

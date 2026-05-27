@@ -52,3 +52,17 @@ type PortConnection struct {
 	Connection *Connection
 	Location   string
 }
+
+// ConnectionName returns the name under which c is registered in s.Connections,
+// matched by Type and Host. Returns "unknown" if c is nil or no match is found.
+func (s *Spec) ConnectionName(c *Connection) string {
+	if c == nil {
+		return "unknown"
+	}
+	for name, candidate := range s.Connections {
+		if candidate.Type == c.Type && candidate.Host == c.Host {
+			return name
+		}
+	}
+	return "unknown"
+}

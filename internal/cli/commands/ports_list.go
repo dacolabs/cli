@@ -63,7 +63,7 @@ func runPortsList(ctx *session.Context) error {
 
 		connStrs := make([]string, 0, len(port.Connections))
 		for _, pc := range port.Connections {
-			connName := findConnectionName(pc.Connection, ctx.Spec.Connections)
+			connName := ctx.Spec.ConnectionName(pc.Connection)
 			connStrs = append(connStrs, fmt.Sprintf("%s:%s", connName, pc.Location))
 		}
 		connsDisplay := "-"
