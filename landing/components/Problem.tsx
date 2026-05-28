@@ -1,15 +1,15 @@
 const painPoints = [
   {
-    label: 'Deploy to find out',
-    body: 'A one-line schema change ships to staging before you know it broke three downstream models.',
+    label: 'Catch breaks before deploy',
+    body: 'See the impact of a schema change across every downstream model on your laptop, before anything ships.',
   },
   {
-    label: 'Slow feedback',
-    body: 'Re-run the warehouse, wait for CI, watch a job queue. A test that should be a second takes ten minutes.',
+    label: 'Instant feedback',
+    body: 'Tests run in milliseconds against local data. No warehouse round-trip, no CI queue, no waiting.',
   },
   {
-    label: 'No fixtures, no tests',
-    body: 'No mock data means no unit tests means no refactors. Pipeline logic stays untested by default.',
+    label: 'Real fixtures, real tests',
+    body: 'Local fixtures and mock data unlock unit tests for your pipeline logic — and the confidence to refactor it.',
   },
 ]
 
@@ -28,7 +28,7 @@ export default function Problem() {
         <div className="problem-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'start' }}>
           <div>
             <div className="eyebrow">
-              <span className="dot" />The problem
+              <span className="dot" />What Daco solves
             </div>
             <h2 className="section-title" style={{ maxWidth: '16ch' }}>
               Your pipelines should run on your laptop.
