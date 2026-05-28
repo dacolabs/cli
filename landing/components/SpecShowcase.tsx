@@ -1,6 +1,6 @@
 const CHECK_ICON = (
   <svg viewBox="0 0 10 10" fill="none">
-    <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
@@ -20,7 +20,7 @@ export default function SpecShowcase() {
             <div className="eyebrow"><span className="dot" />The OpenDPI standard</div>
             <h2 className="section-title">Open format. Yours to keep.</h2>
             <p className="section-lede">
-              OpenDPI is a public, MIT-licensed format for describing data products — ports, connections, schemas, SLAs.
+              OpenDPI is a public Apache licensed format for describing data products — ports, connections, schemas, SLAs.
               Daco runs on it. So can any tool you build. <strong style={{ color: 'var(--ink)' }}>Use it with us, or without us.</strong>
             </p>
             <ul className="spec-points">
@@ -37,7 +37,8 @@ export default function SpecShowcase() {
               <span><span className="yellow">●</span> dataproduct.yaml</span>
               <span>OpenDPI 1.0</span>
             </div>
-            <pre className="code" dangerouslySetInnerHTML={{ __html: `<span class="k">opendpi</span><span class="pun">:</span> <span class="s">"1.0.0"</span>
+            <pre className="code" dangerouslySetInnerHTML={{
+              __html: `<span class="k">opendpi</span><span class="pun">:</span> <span class="s">"1.0.0"</span>
 
 <span class="k">info</span><span class="pun">:</span>
   <span class="k">title</span><span class="pun">:</span> <span class="s">"Customer Analytics"</span>
