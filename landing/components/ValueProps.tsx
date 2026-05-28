@@ -1,13 +1,13 @@
 const props = [
   {
     num: '01',
-    title: 'Edit, run, repeat — offline.',
+    title: 'Edit, run, repeat. Offline.',
     body: 'Validate schemas, generate fixtures, run pipeline tests against mock data. No warehouse connection required to know your change is correct.',
   },
   {
     num: '02',
     title: 'One spec, every target.',
-    body: 'Write your data product once in OpenDPI. Translate to PySpark, dbt, SQL, Pydantic, Go, or TypeScript types — regenerated on every change.',
+    body: 'Write your data product once in OpenDPI. Translate to PySpark, dbt, SQL, Pydantic, Go, or TypeScript types, regenerated on every change.',
   },
   {
     num: '03',

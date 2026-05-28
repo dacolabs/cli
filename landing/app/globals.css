@@ -908,9 +908,9 @@ blockquote.quote .quotemark {
 }
 .final-cta-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  max-width: 980px;
+  max-width: 680px;
   margin: 0 auto;
   text-align: left;
 }

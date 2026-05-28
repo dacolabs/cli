@@ -1,6 +1,5 @@
 import Nav from '@/components/Nav'
 import Hero from '@/components/Hero'
-import LogosStrip from '@/components/LogosStrip'
 import Problem from '@/components/Problem'
 import SpecShowcase from '@/components/SpecShowcase'
 import ValueProps from '@/components/ValueProps'
@@ -15,12 +14,11 @@ export default function Home() {
     <>
       <Nav />
       <Hero />
-      <LogosStrip />
       <Problem />
-      <SpecShowcase />
       <ValueProps />
-      <Quote />
+      <SpecShowcase />
       <Ecosystem />
+      <Quote />
       <Blog />
       <FinalCTA />
       <Footer />

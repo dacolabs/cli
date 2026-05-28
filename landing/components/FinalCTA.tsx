@@ -28,7 +28,7 @@ export default function FinalCTA() {
     <section className="final-cta" id="demo">
       <div className="container final-cta-inner">
         <h2>Pick your <em>on-ramp</em>.</h2>
-        <p>The CLI is a one-liner away. The platform is in early access. Either way, the community is in Discord.</p>
+        <p>The CLI is a one-liner away. The platform is in early access.</p>
 
         <div className="final-cta-grid">
           <div className="final-cta-card">
@@ -46,7 +46,7 @@ export default function FinalCTA() {
           <div className="final-cta-card highlighted">
             <div className="final-cta-card-eyebrow">Platform</div>
             <div className="final-cta-card-title">Get Studio access</div>
-            <div className="final-cta-card-body">We onboard teams one by one. Drop your email — we&apos;ll reach out.</div>
+            <div className="final-cta-card-body">We onboard teams one by one. Drop your email and we&apos;ll reach out.</div>
             {state === 'success' ? (
               <div className="final-cta-success">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -70,7 +70,7 @@ export default function FinalCTA() {
                   className="btn-primary"
                   style={{ opacity: state === 'loading' ? 0.7 : 1 }}
                 >
-                  {state === 'loading' ? '…' : 'Request'}
+                  {state === 'loading' ? '…' : 'Request Access'}
                 </button>
               </form>
             )}
@@ -82,17 +82,6 @@ export default function FinalCTA() {
             )}
           </div>
 
-          <div className="final-cta-card">
-            <div className="final-cta-card-eyebrow">Community</div>
-            <div className="final-cta-card-title">Join us in Discord</div>
-            <div className="final-cta-card-body">Talk to the team and other early users. Office hours every Thursday.</div>
-            <a href="https://discord.gg/dacolabs" target="_blank" rel="noopener noreferrer" className="final-cta-card-link">
-              Open Discord
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6h8m0 0L6 2m4 4L6 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </a>
-          </div>
         </div>
       </div>
     </section>

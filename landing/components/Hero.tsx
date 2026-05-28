@@ -84,7 +84,6 @@ export default function Hero() {
   const [outputCode, setOutputCode] = useState(TARGETS.pyspark.code)
   const [codeVisible, setCodeVisible] = useState(true)
   const [copied, setCopied] = useState(false)
-  const userInteracted = useRef(false)
   const idxRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const morphRef = useRef<HTMLDivElement>(null)
@@ -102,7 +101,6 @@ export default function Hero() {
   function startCycle() {
     if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = setInterval(() => {
-      if (userInteracted.current) return
       idxRef.current = (idxRef.current + 1) % ORDER.length
       switchTo(ORDER[idxRef.current])
     }, 2800)
@@ -114,7 +112,7 @@ export default function Hero() {
     if (!el) return
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
-        if (e.isIntersecting && !userInteracted.current) startCycle()
+        if (e.isIntersecting) startCycle()
         else if (timerRef.current) clearInterval(timerRef.current)
       })
     }, { threshold: 0.2 })
@@ -126,13 +124,7 @@ export default function Hero() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleTabClick(key: string) {
-    userInteracted.current = true
-    idxRef.current = ORDER.indexOf(key)
-    switchTo(key)
-  }
-
-  function handleCopy() {
+function handleCopy() {
     navigator.clipboard?.writeText('brew install dacolabs/tap/daco')
     setCopied(true)
     setTimeout(() => setCopied(false), 1400)
@@ -148,15 +140,28 @@ export default function Hero() {
             <span className="arrow">→</span>
           </a>
           <h1 className="hero-title">
-            A <span className="accent">real</span> dev loop for data engineers.
+            Your data pipelines should run <span className="accent">locally.</span>
           </h1>
           <p className="hero-sub">
-            Software engineers have local dev environments. Data engineers don&apos;t.
-            Daco changes that — define your data products once with OpenDPI, then build, test, and translate them on your laptop.
+            Define your data products once. Develop, test, and generate code for any framework, all without leaving your editor.
           </p>
+          <div className="hero-install" style={{ marginBottom: '20px' }}>
+            <span className="prompt">$</span>
+            <span>brew install dacolabs/tap/daco</span>
+            <button className="copy" onClick={handleCopy} title="Copy">
+              {copied ? (
+                <span style={{ color: 'var(--yellow)', fontSize: '11px' }}>copied</span>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M3 1.5h5.5A1.5 1.5 0 0 1 10 3v5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              )}
+            </button>
+          </div>
           <div className="hero-cta-row">
             <a href="#demo" className="btn-primary">
-              Get platform access
+              Get started
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M2 7h10m0 0L7 2m5 5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -168,37 +173,22 @@ export default function Hero() {
               </svg>
             </a>
           </div>
-          <div className="hero-install" style={{ marginTop: '20px' }}>
-              <span className="prompt">$</span>
-              <span>brew install dacolabs/tap/daco</span>
-              <button className="copy" onClick={handleCopy} title="Copy">
-                {copied ? (
-                  <span style={{ color: 'var(--yellow)', fontSize: '11px' }}>copied</span>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <rect x="3.5" y="3.5" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-                    <path d="M3 1.5h5.5A1.5 1.5 0 0 1 10 3v5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-          <p style={{ marginTop: '12px', fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>
-            CLI is free and open source. Daco Studio is in early access.
+          <p style={{ marginTop: '16px', fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>
+            Open source.{' '}
+            <a href="https://github.com/dacolabs/cli" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.15)', textUnderlineOffset: '3px' }}>
+              Star us on GitHub
+            </a>
+            {' '}·{' '}
+            <a href="#demo" style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.15)', textUnderlineOffset: '3px' }}>
+              Join the early access waitlist
+            </a>
           </p>
         </div>
 
         <div className="morph-panel" ref={morphRef}>
           <div className="morph-header">
-            <div className="morph-tabs">
-              {ORDER.map((key) => (
-                <button
-                  key={key}
-                  className={`morph-tab${activeTab === key ? ' is-active' : ''}`}
-                  onClick={() => handleTabClick(key)}
-                >
-                  {key}
-                </button>
-              ))}
+            <div className="morph-cli">
+              <span className="yellow">daco</span> ports translate --format <span className="yellow">{activeTab}</span>
             </div>
           </div>
           <div className="morph-body">
