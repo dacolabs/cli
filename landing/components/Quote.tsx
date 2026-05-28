@@ -4,7 +4,7 @@ export default function Quote() {
       <div className="container">
         <blockquote className="quote">
           <span className="quotemark">&ldquo;</span>
-          We were tired of having to leave our local development to test our pipelines.
+          We were tired of having to leave our local development environment to test our pipelines.
           <span className="quotemark">&rdquo;</span>
         </blockquote>
         <div className="quote-attr">
