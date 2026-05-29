@@ -1,6 +1,6 @@
 # Scala
 
-Translates JSON Schema to Scala case class definitions (.scala).
+Translates JSON Schema to Scala case class definitions (`.scala`). Integer bounds narrow to `Byte` / `Short` / `Int` / `Long`; `multipleOf` on numbers promotes to `BigDecimal`.
 
 ## Example
 
@@ -10,8 +10,10 @@ Translates JSON Schema to Scala case class definitions (.scala).
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "name":  { "type": "string" },
+    "byte":  { "type": "integer", "minimum": 0,    "maximum": 127 },
+    "short": { "type": "integer", "minimum": -32768, "maximum": 32767 },
+    "price": { "type": "number",  "multipleOf": 0.01 }
   }
 }
 ```
@@ -20,8 +22,10 @@ Translates JSON Schema to Scala case class definitions (.scala).
 
 ```scala
 case class UsersSchema(
-  name: Option[String] = None,
-  age: Option[Long] = None
+  name:  Option[String]     = None,
+  byte:  Option[Byte]       = None,
+  short: Option[Short]      = None,
+  price: Option[BigDecimal] = None
 )
 ```
 
@@ -50,7 +54,7 @@ case class UsersSchema(
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -67,9 +71,9 @@ case class UsersSchema(
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
 - [ ] minLength / maxLength

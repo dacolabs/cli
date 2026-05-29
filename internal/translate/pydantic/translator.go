@@ -35,19 +35,28 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 		return nil, fmt.Errorf("failed to prepare schema data: %w", err)
 	}
 
-	// checks if any field type contains datetime.
+	// checks if any field type contains datetime, Literal, or any tag uses Field(...).
 	data.Extra["NeedsDatetimeImport"] = false
+	data.Extra["NeedsFieldImport"] = false
+	data.Extra["NeedsLiteralImport"] = false
+	scan := func(f translate.Field) {
+		if strings.Contains(f.Type, "datetime.") {
+			data.Extra["NeedsDatetimeImport"] = true
+		}
+		if strings.Contains(f.Tag, "Field(") {
+			data.Extra["NeedsFieldImport"] = true
+		}
+		if strings.Contains(f.Type, "Literal[") {
+			data.Extra["NeedsLiteralImport"] = true
+		}
+	}
 	for _, def := range data.Defs {
 		for i := range def.Fields {
-			if strings.Contains(def.Fields[i].Type, "datetime.") {
-				data.Extra["NeedsDatetimeImport"] = true
-			}
+			scan(def.Fields[i])
 		}
 	}
 	for i := range data.Root.Fields {
-		if strings.Contains(data.Root.Fields[i].Type, "datetime.") {
-			data.Extra["NeedsDatetimeImport"] = true
-		}
+		scan(data.Root.Fields[i])
 	}
 
 	// sorts fields so required fields come before optional fields.

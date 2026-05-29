@@ -59,7 +59,32 @@ func (r *resolver) FormatRootName(portName string) string {
 }
 
 func (r *resolver) EnrichField(f *translate.Field) {
+	switch f.Type {
+	case "BIGINT":
+		f.Type = sparkSQLIntType(translate.NarrowInteger(f.Constraints))
+	case "DOUBLE":
+		if kind, shape := translate.NarrowNumber(f.Constraints); kind == translate.NumberDecimal {
+			f.Type = fmt.Sprintf("DECIMAL(%d, %d)", shape.Precision, shape.Scale)
+		}
+	case "STRING":
+		if n, ok := translate.MaxStringLength(f.Constraints); ok {
+			f.Type = fmt.Sprintf("VARCHAR(%d)", n)
+		}
+	}
 	if !f.Nullable {
 		f.Tag = " NOT NULL"
+	}
+}
+
+func sparkSQLIntType(k translate.IntKind) string {
+	switch k {
+	case translate.Int8:
+		return "TINYINT"
+	case translate.Int16:
+		return "SMALLINT"
+	case translate.Int32:
+		return "INT"
+	default:
+		return "BIGINT"
 	}
 }

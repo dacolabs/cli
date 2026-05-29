@@ -1,6 +1,8 @@
 # Databricks Scala
 
-Translates JSON Schema to Databricks Scala StructType definitions with metadata (.scala).
+Translates JSON Schema to Databricks Scala `StructType` definitions with column comments (`.scala`).
+
+Identical to [`spark-scala`](../sparkscala/README.md) plus `withComment(...)` on every field carrying a `description`.
 
 ## Example
 
@@ -10,8 +12,9 @@ Translates JSON Schema to Databricks Scala StructType definitions with metadata 
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "name":  { "type": "string",  "description": "Full name" },
+    "age":   { "type": "integer", "minimum": 0,    "maximum": 150 },
+    "price": { "type": "number",  "multipleOf": 0.01, "maximum": 99999.99, "description": "Order total" }
   }
 }
 ```
@@ -23,11 +26,14 @@ import org.apache.spark.sql.types._
 
 object Users extends Serializable {
   val users_schema = StructType(Seq(
-    StructField("name", StringType, nullable = true),
-    StructField("age", LongType, nullable = true),
+    StructField("name",  StringType,        nullable = true).withComment("Full name"),
+    StructField("age",   ByteType,          nullable = true),
+    StructField("price", DecimalType(7, 2), nullable = true).withComment("Order total")
   ))
 }
 ```
+
+Integer narrowing and decimal narrowing behave the same as [`spark-scala`](../sparkscala/README.md).
 
 ## Supported JSON Schema Features
 
@@ -54,7 +60,7 @@ object Users extends Serializable {
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -71,9 +77,9 @@ object Users extends Serializable {
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
 - [ ] minLength / maxLength

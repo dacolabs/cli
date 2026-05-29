@@ -58,4 +58,26 @@ func (r *resolver) FormatRootName(portName string) string {
 	return portName + "_schema"
 }
 
-func (r *resolver) EnrichField(_ *translate.Field) {}
+func (r *resolver) EnrichField(f *translate.Field) {
+	switch f.Type {
+	case "LongType":
+		f.Type = scalaSparkIntType(translate.NarrowInteger(f.Constraints))
+	case "DoubleType":
+		if kind, shape := translate.NarrowNumber(f.Constraints); kind == translate.NumberDecimal {
+			f.Type = fmt.Sprintf("DecimalType(%d, %d)", shape.Precision, shape.Scale)
+		}
+	}
+}
+
+func scalaSparkIntType(k translate.IntKind) string {
+	switch k {
+	case translate.Int8:
+		return "ByteType"
+	case translate.Int16:
+		return "ShortType"
+	case translate.Int32:
+		return "IntegerType"
+	default:
+		return "LongType"
+	}
+}

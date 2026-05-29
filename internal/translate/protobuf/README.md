@@ -1,6 +1,6 @@
 # Protocol Buffers
 
-Translates JSON Schema to Protocol Buffers (proto3) message definitions (.proto).
+Translates JSON Schema to Protocol Buffers (proto3) message definitions (`.proto`). Integer bounds narrow `int64 → int32`/`uint32`/`uint64`. String-only `enum` constraints become top-level proto enums.
 
 ## Example
 
@@ -10,29 +10,43 @@ Translates JSON Schema to Protocol Buffers (proto3) message definitions (.proto)
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "name":   { "type": "string" },
+    "status": { "type": "string",  "enum": ["ACTIVE", "INACTIVE", "PENDING"] },
+    "count":  { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+    "id":     { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 }
   }
 }
 ```
 
-**Output** (Proto3):
+**Output** (proto3):
 
 ```protobuf
 syntax = "proto3";
-package schemas;
 
-message UsersSchema {
+package proto;
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  ACTIVE = 1;
+  INACTIVE = 2;
+  PENDING = 3;
+}
+
+message OrdersSchema {
   string name = 1;
-  int64 age = 2;
+  Status status = 2;
+  uint32 count = 3;
+  int32 id = 4;
 }
 ```
+
+Each enum field becomes a top-level `enum` declaration (named after the field, PascalCased), with the conventional `*_UNSPECIFIED = 0;` zero value. Identical `(name, symbols)` pairs are deduplicated across fields. Enums with non-string values or symbols that violate proto identifier rules fall back to `string`. Protobuf has no native decimal type; `multipleOf` doesn't narrow `double`. Protobuf has no 8/16-bit scalars, so `Int8`/`Int16` bounds widen to `int32` (or `uint32` when non-negative).
 
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
+- [x] enum
 - [ ] const
 
 ### Type Values
@@ -53,7 +67,7 @@ message UsersSchema {
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -70,7 +84,7 @@ message UsersSchema {
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
 - [ ] multipleOf
 
@@ -86,11 +100,11 @@ message UsersSchema {
 - [ ] $dynamicRef / $dynamicAnchor
 
 ### String Formats
-- [x] date
-- [x] date-time
+- [ ] date
+- [ ] date-time
 - [ ] time
 - [ ] duration
-- [x] uuid
+- [ ] uuid
 - [ ] uri / uri-reference / uri-template
 - [ ] iri / iri-reference
 - [ ] email / idn-email

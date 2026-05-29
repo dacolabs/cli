@@ -1,6 +1,6 @@
 # Avro
 
-Translates JSON Schema to Apache Avro schema (.avsc).
+Translates JSON Schema to Apache Avro schema documents (`.avsc`). Integer bounds narrow `long → int`. `multipleOf` on a number promotes to the `decimal` logical type. String-only `enum` constraints become native Avro `enum` records.
 
 ## Example
 
@@ -9,32 +9,39 @@ Translates JSON Schema to Apache Avro schema (.avsc).
 ```json
 {
   "type": "object",
+  "required": ["id", "status", "count", "price"],
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "id":     { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "PENDING"] },
+    "count":  { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+    "price":  { "type": "number",  "multipleOf": 0.01, "maximum": 99999.99 }
   }
 }
 ```
 
-**Output** (Avro Schema):
+**Output** (Avro `.avsc`):
 
 ```json
 {
   "type": "record",
-  "name": "UsersSchema",
+  "name": "OrdersSchema",
   "namespace": "schemas",
   "fields": [
-    { "name": "name", "type": "string" },
-    { "name": "age", "type": "long" }
+    { "name": "id",     "type": { "type": "string", "logicalType": "uuid" } },
+    { "name": "status", "type": { "type": "enum", "name": "Status", "symbols": ["ACTIVE", "INACTIVE", "PENDING"] } },
+    { "name": "count",  "type": "int" },
+    { "name": "price",  "type": { "type": "bytes", "logicalType": "decimal", "precision": 7, "scale": 2 } }
   ]
 }
 ```
+
+Enum names default to the PascalCased field name. Enums with non-string values or symbols that violate Avro's identifier rules (`[A-Za-z_][A-Za-z0-9_]*`) fall back to `string`.
 
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
+- [x] enum
 - [ ] const
 
 ### Type Values
@@ -55,7 +62,7 @@ Translates JSON Schema to Apache Avro schema (.avsc).
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -72,9 +79,9 @@ Translates JSON Schema to Apache Avro schema (.avsc).
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
 - [ ] minLength / maxLength

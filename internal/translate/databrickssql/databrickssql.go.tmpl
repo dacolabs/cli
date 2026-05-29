@@ -2,7 +2,10 @@
 
 CREATE TABLE {{ .Root.Name }} (
 {{- range $i, $f := .Root.Fields }}
-    {{ $f.Name }} {{ $f.Type }}{{ $f.Tag }}{{ if not (last $i $.Root.Fields) }},{{ end }}
+    {{ $f.Name }} {{ $f.Type }}{{ $f.Tag }}{{ if or (not (last $i $.Root.Fields)) $.Extra.Constraints }},{{ end }}
+{{- end }}
+{{- range $i, $c := .Extra.Constraints }}
+    CONSTRAINT {{ $c.Name }} CHECK ({{ $c.Expr }}){{ if not (lastConstraint $i $.Extra.Constraints) }},{{ end }}
 {{- end }}
 )
 {{ if .Description }}COMMENT '{{ sqlEscape .Description }}'

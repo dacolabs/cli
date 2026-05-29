@@ -1,6 +1,6 @@
 # Databricks SQL
 
-Translates JSON Schema to Databricks SQL CREATE TABLE statements with DELTA (.sql).
+Translates JSON Schema to Databricks SQL `CREATE TABLE … USING DELTA` statements (`.sql`). Adds everything `spark-sql` does plus column-level `COMMENT` and table-level Delta `CONSTRAINT … CHECK (…)` clauses derived from `enum`, `const`, `pattern`, and `minLength`.
 
 ## Example
 
@@ -9,9 +9,14 @@ Translates JSON Schema to Databricks SQL CREATE TABLE statements with DELTA (.sq
 ```json
 {
   "type": "object",
+  "required": ["id", "status", "schema_version", "code", "price", "email"],
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "id":             { "type": "string", "format": "uuid",       "description": "Order ID" },
+    "status":         { "type": "string", "enum": ["ACTIVE","INACTIVE","PENDING"] },
+    "schema_version": { "type": "string", "const": "v1" },
+    "code":           { "type": "string", "maxLength": 32 },
+    "email":          { "type": "string", "minLength": 3, "maxLength": 254, "pattern": "^.+@.+$" },
+    "price":          { "type": "number", "multipleOf": 0.01, "maximum": 99999.99 }
   }
 }
 ```
@@ -19,19 +24,29 @@ Translates JSON Schema to Databricks SQL CREATE TABLE statements with DELTA (.sq
 **Output** (Databricks SQL):
 
 ```sql
-CREATE TABLE users_schema (
-  name STRING,
-  age BIGINT
+CREATE TABLE orders_schema (
+    id             STRING NOT NULL COMMENT 'Order ID',
+    status         STRING NOT NULL,
+    schema_version STRING NOT NULL,
+    code           VARCHAR(32) NOT NULL,
+    email          VARCHAR(254) NOT NULL,
+    price          DECIMAL(7, 2) NOT NULL,
+    CONSTRAINT status_enum            CHECK (`status` IN ('ACTIVE', 'INACTIVE', 'PENDING')),
+    CONSTRAINT schema_version_const   CHECK (`schema_version` = 'v1'),
+    CONSTRAINT email_pattern          CHECK (`email` RLIKE '^.+@.+$'),
+    CONSTRAINT email_minlen           CHECK (length(`email`) >= 3)
 )
 USING DELTA;
 ```
+
+CHECK clauses are appended after the column list. Delta enforces them on insert/update.
 
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
-- [ ] const
+- [x] enum
+- [x] const
 
 ### Type Values
 - [x] string
@@ -51,7 +66,7 @@ USING DELTA;
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -68,13 +83,13 @@ USING DELTA;
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
-- [ ] pattern
+- [x] minLength / maxLength
+- [x] pattern
 
 ### References & Definitions
 - [x] $ref

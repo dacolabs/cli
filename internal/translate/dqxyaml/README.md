@@ -53,6 +53,29 @@ Translates JSON Schema constraints to [DQX YAML quality checks](https://databric
       msg: age must be between 0 and 150
 ```
 
+DQX is the only translator whose output is _purely_ validation. Where other targets translate JSON Schema's type system to a target type system, DQX translates JSON Schema's _constraints_ to PySpark-evaluated row-level checks. Use it alongside any of the other formats to catch bad rows at load time.
+
+Constraint translation map:
+
+| JSON Schema                  | DQX check                    |
+|------------------------------|------------------------------|
+| `required`                   | `is_not_null`                |
+| `enum`                       | `is_in_list`                 |
+| `const`                      | `is_equal_to`                |
+| `minimum` + `maximum`        | `is_in_range`                |
+| `minimum` only               | `is_not_less_than`           |
+| `maximum` only               | `is_not_greater_than`        |
+| `exclusiveMinimum`/`Maximum` | `sql_expression` (`> / <`)   |
+| `minLength` / `maxLength`    | `sql_expression` (`length()`)|
+| `pattern`                    | `regex_match`                |
+| `minItems` / `maxItems`      | `sql_expression` (`size()`)  |
+| `format: date`               | `is_valid_date`              |
+| `format: date-time`          | `is_valid_timestamp`         |
+| `format: ipv4` / `ipv6`      | `is_valid_ipv4_address` / `is_valid_ipv6_address` |
+| `format: uuid` / `email`     | `regex_match`                |
+
+For nullable fields, every check is wrapped as `col IS NULL OR (…)` so optional columns don't fail when absent.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

@@ -1,6 +1,6 @@
 # Spark SQL
 
-Translates JSON Schema to Spark DDL CREATE TABLE statements (.sql).
+Translates JSON Schema to Spark DDL `CREATE TABLE` statements (`.sql`). Integer bounds narrow to `TINYINT` / `SMALLINT` / `INT` / `BIGINT`; `multipleOf` promotes numbers to `DECIMAL(p, s)`; `maxLength` promotes strings to `VARCHAR(n)`.
 
 ## Example
 
@@ -9,9 +9,13 @@ Translates JSON Schema to Spark DDL CREATE TABLE statements (.sql).
 ```json
 {
   "type": "object",
+  "required": ["id", "code", "price"],
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "id":     { "type": "string",  "format": "uuid" },
+    "code":   { "type": "string",  "maxLength": 32 },
+    "byte":   { "type": "integer", "minimum": 0,    "maximum": 127 },
+    "short":  { "type": "integer", "minimum": -32768, "maximum": 32767 },
+    "price":  { "type": "number",  "multipleOf": 0.01, "maximum": 99999.99 }
   }
 }
 ```
@@ -20,10 +24,15 @@ Translates JSON Schema to Spark DDL CREATE TABLE statements (.sql).
 
 ```sql
 CREATE TABLE users_schema (
-  name STRING,
-  age BIGINT
+    id    STRING NOT NULL,
+    code  VARCHAR(32) NOT NULL,
+    byte  TINYINT,
+    short SMALLINT,
+    price DECIMAL(7, 2) NOT NULL
 );
 ```
+
+For Delta-Lake CHECK constraints on `enum`/`const`/`pattern`/`minLength`, use [`databricks-sql`](../databrickssql/README.md).
 
 ## Supported JSON Schema Features
 
@@ -50,7 +59,7 @@ CREATE TABLE users_schema (
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -67,12 +76,12 @@ CREATE TABLE users_schema (
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
+- [x] minLength / maxLength
 - [ ] pattern
 
 ### References & Definitions

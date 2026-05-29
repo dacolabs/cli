@@ -107,5 +107,28 @@ func formatConstraints(c translate.Constraints) string { //nolint:gocritic // hu
 		parts = append(parts, fmt.Sprintf("maxItems: %d", *c.MaxItems))
 	}
 
+	if narrowed := narrowedHint(c); narrowed != "" {
+		parts = append(parts, narrowed)
+	}
+
 	return strings.Join(parts, ", ")
+}
+
+// narrowedHint reports the narrowed physical kind a typical translator would pick
+// given these constraints — purely informational, surfaced as "narrows to: X".
+func narrowedHint(c translate.Constraints) string {
+	if c.Minimum != nil && c.Maximum != nil {
+		switch translate.NarrowInteger(c) {
+		case translate.Int8:
+			return "narrows to: int8"
+		case translate.Int16:
+			return "narrows to: int16"
+		case translate.Int32:
+			return "narrows to: int32"
+		}
+	}
+	if kind, shape := translate.NarrowNumber(c); kind == translate.NumberDecimal {
+		return fmt.Sprintf("narrows to: decimal(%d,%d)", shape.Precision, shape.Scale)
+	}
+	return ""
 }

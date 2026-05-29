@@ -59,8 +59,30 @@ func (r *resolver) FormatRootName(portName string) string {
 }
 
 func (r *resolver) EnrichField(f *translate.Field) {
+	switch f.Type {
+	case "Long":
+		f.Type = scalaIntType(translate.NarrowInteger(f.Constraints))
+	case "Double":
+		if kind, _ := translate.NarrowNumber(f.Constraints); kind == translate.NumberDecimal {
+			f.Type = "BigDecimal"
+		}
+	}
+
 	if f.Nullable {
 		f.Type = fmt.Sprintf("Option[%s]", f.Type)
 		f.Tag = " = None"
+	}
+}
+
+func scalaIntType(k translate.IntKind) string {
+	switch k {
+	case translate.Int8:
+		return "Byte"
+	case translate.Int16:
+		return "Short"
+	case translate.Int32:
+		return "Int"
+	default:
+		return "Long"
 	}
 }

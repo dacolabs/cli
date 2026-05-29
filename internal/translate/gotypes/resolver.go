@@ -57,6 +57,10 @@ func (r *resolver) FormatRootName(portName string) string {
 }
 
 func (r *resolver) EnrichField(f *translate.Field) {
+	if f.Type == "int64" {
+		f.Type = goIntType(translate.NarrowInteger(f.Constraints), translate.IsNonNegative(f.Constraints))
+	}
+
 	tag := f.Name
 	if f.Nullable {
 		tag += ",omitempty"
@@ -64,6 +68,33 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	}
 	f.Tag = "`json:\"" + tag + "\"`"
 	f.Name = toPascalCase(f.Name)
+}
+
+// goIntType picks the narrowest Go integer type for the constraint kind.
+// nonNegative promotes signed kinds to their unsigned counterparts.
+func goIntType(k translate.IntKind, nonNegative bool) string {
+	if nonNegative {
+		switch k {
+		case translate.Int8:
+			return "uint8"
+		case translate.Int16:
+			return "uint16"
+		case translate.Int32:
+			return "uint32"
+		default:
+			return "uint64"
+		}
+	}
+	switch k {
+	case translate.Int8:
+		return "int8"
+	case translate.Int16:
+		return "int16"
+	case translate.Int32:
+		return "int32"
+	default:
+		return "int64"
+	}
 }
 
 // toPascalCase converts a snake_case or camelCase string to PascalCase.

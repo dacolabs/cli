@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 {{ if .Extra.NeedsDatetimeImport }}import datetime
-{{ end }}from typing import Optional
+{{ end }}from typing import Optional{{ if .Extra.NeedsLiteralImport }}, Literal{{ end }}
 {{ range .Defs }}
 
 @dataclasses.dataclass

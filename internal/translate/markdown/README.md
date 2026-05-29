@@ -1,6 +1,6 @@
 # Markdown
 
-Translates JSON Schema to human-readable Markdown documentation (.md).
+Translates JSON Schema to human-readable Markdown documentation (`.md`). Every constraint appears as a parenthetical in the Description column, and constraint combinations that would narrow to a specific physical type also surface a `narrows to:` hint.
 
 ## Example
 
@@ -10,11 +10,13 @@ Translates JSON Schema to human-readable Markdown documentation (.md).
 {
   "type": "object",
   "description": "User information",
+  "required": ["name", "status", "byte"],
   "properties": {
-    "name": { "type": "string", "description": "Full name" },
-    "age": { "type": "integer" }
-  },
-  "required": ["name"]
+    "name":   { "type": "string",  "description": "Full name", "minLength": 1, "maxLength": 64 },
+    "status": { "type": "string",  "enum": ["ACTIVE", "INACTIVE"] },
+    "byte":   { "type": "integer", "minimum": 0, "maximum": 127 },
+    "price":  { "type": "number",  "multipleOf": 0.01, "maximum": 99999.99 }
+  }
 }
 ```
 
@@ -27,10 +29,12 @@ User information
 
 ## Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Full name |
-| `age` | integer | No |  |
+| Field    | Type    | Required | Description |
+|----------|---------|----------|-------------|
+| `name`   | string  | Yes      | Full name (minLength: 1, maxLength: 64) |
+| `status` | string  | Yes      | (enum: `ACTIVE`, `INACTIVE`) |
+| `byte`   | integer | Yes      | (minimum: 0, maximum: 127, narrows to: int8) |
+| `price`  | number  | No       | (maximum: 99999.99, multipleOf: 0.01, narrows to: decimal(7,2)) |
 ```
 
 ## Supported JSON Schema Features
@@ -58,7 +62,7 @@ User information
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties

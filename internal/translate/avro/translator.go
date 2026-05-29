@@ -6,6 +6,7 @@ package avro
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/dacolabs/jsonschema-go/jsonschema"
@@ -44,6 +45,21 @@ type avroArray struct {
 type avroLogicalType struct {
 	Type        string `json:"type"`
 	LogicalType string `json:"logicalType"`
+}
+
+// avroDecimal represents an Avro decimal logical type with precision and scale.
+type avroDecimal struct {
+	Type        string `json:"type"`
+	LogicalType string `json:"logicalType"`
+	Precision   int    `json:"precision"`
+	Scale       int    `json:"scale"`
+}
+
+// avroEnum represents an Avro enum type with a named symbol set.
+type avroEnum struct {
+	Type    string   `json:"type"`
+	Name    string   `json:"name"`
+	Symbols []string `json:"symbols"`
 }
 
 // Translate converts a JSON schema to an Avro schema JSON document.
@@ -113,6 +129,26 @@ func buildAvroType(typeStr string, defs map[string]*translate.TypeDef, inlined m
 		return avroArray{
 			Type:  "array",
 			Items: buildAvroType(elemStr, defs, inlined),
+		}
+	}
+
+	// Handle enum markers (name and comma-separated symbols carried in the marker string)
+	if rest, ok := strings.CutPrefix(typeStr, "enum:"); ok {
+		parts := strings.SplitN(rest, ":", 2)
+		if len(parts) == 2 {
+			return avroEnum{Type: "enum", Name: parts[0], Symbols: strings.Split(parts[1], ",")}
+		}
+	}
+
+	// Handle decimal markers (precision/scale carried in the marker string)
+	if rest, ok := strings.CutPrefix(typeStr, "decimal:"); ok {
+		parts := strings.SplitN(rest, ":", 2)
+		if len(parts) == 2 {
+			p, errP := strconv.Atoi(parts[0])
+			s, errS := strconv.Atoi(parts[1])
+			if errP == nil && errS == nil {
+				return avroDecimal{Type: "bytes", LogicalType: "decimal", Precision: p, Scale: s}
+			}
 		}
 	}
 

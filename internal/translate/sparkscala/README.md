@@ -1,6 +1,6 @@
 # Spark Scala
 
-Translates JSON Schema to Spark Scala StructType definitions (.scala).
+Translates JSON Schema to Spark Scala `StructType` definitions (`.scala`).
 
 ## Example
 
@@ -10,8 +10,10 @@ Translates JSON Schema to Spark Scala StructType definitions (.scala).
 {
   "type": "object",
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "name":  { "type": "string" },
+    "age":   { "type": "integer", "minimum": 0,    "maximum": 150 },
+    "short": { "type": "integer", "minimum": -32768, "maximum": 32767 },
+    "price": { "type": "number",  "multipleOf": 0.01, "maximum": 99999.99 }
   }
 }
 ```
@@ -23,11 +25,15 @@ import org.apache.spark.sql.types._
 
 object Users extends Serializable {
   lazy val users_schema: StructType = StructType(Array(
-    StructField("name", StringType, nullable = true),
-    StructField("age", LongType, nullable = true),
+    StructField("name",  StringType,         nullable = true),
+    StructField("age",   ByteType,           nullable = true),
+    StructField("short", ShortType,          nullable = true),
+    StructField("price", DecimalType(7, 2),  nullable = true)
   ))
 }
 ```
+
+Integer bounds narrow to `ByteType` / `ShortType` / `IntegerType` / `LongType`. `multipleOf` paired with bounds promotes numbers to `DecimalType(precision, scale)`.
 
 ## Supported JSON Schema Features
 
@@ -54,7 +60,7 @@ object Users extends Serializable {
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -71,9 +77,9 @@ object Users extends Serializable {
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
+- [x] minimum / maximum
 - [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] multipleOf
 
 ### String Validation
 - [ ] minLength / maxLength

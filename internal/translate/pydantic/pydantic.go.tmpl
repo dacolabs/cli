@@ -4,9 +4,9 @@ from __future__ import annotations
 {{ if .Extra.NeedsDatetimeImport }}
 import datetime
 {{- end }}
-from typing import Optional
+from typing import Optional{{ if .Extra.NeedsLiteralImport }}, Literal{{ end }}
 
-from pydantic import BaseModel
+from pydantic import BaseModel{{ if .Extra.NeedsFieldImport }}, Field{{ end }}
 {{ range .Defs }}
 
 class {{ .Name }}(BaseModel):

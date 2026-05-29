@@ -1,6 +1,6 @@
 # Python
 
-Translates JSON Schema to Python dataclass definitions (.py).
+Translates JSON Schema to plain Python `dataclasses` (`.py`). Plain dataclasses don't validate at runtime — for runtime checks, use [`pydantic`](../pydantic/README.md). The dataclass output still benefits from `Literal[...]` typing for `enum` and `const`, which static type checkers (`mypy`, `pyright`) enforce.
 
 ## Example
 
@@ -9,9 +9,12 @@ Translates JSON Schema to Python dataclass definitions (.py).
 ```json
 {
   "type": "object",
+  "required": ["id", "status"],
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "id":             { "type": "string", "format": "uuid" },
+    "status":         { "type": "string", "enum": ["ACTIVE", "INACTIVE", "PENDING"] },
+    "schema_version": { "type": "string", "const": "v1" },
+    "tags":           { "type": "array",  "items": { "type": "string" } }
   }
 }
 ```
@@ -19,21 +22,27 @@ Translates JSON Schema to Python dataclass definitions (.py).
 **Output** (Python):
 
 ```python
+from __future__ import annotations
+
 import dataclasses
-from typing import Optional
+from typing import Optional, Literal
 
 @dataclasses.dataclass
-class UsersSchema:
-    name: Optional[str] = None
-    age: Optional[int] = None
+class OrdersSchema:
+    id: str
+    status: Literal["ACTIVE", "INACTIVE", "PENDING"]
+    schema_version: Optional[Literal["v1"]] = None
+    tags: Optional[list[str]] = None
 ```
+
+Numeric ranges, lengths, patterns, and other constraints aren't enforceable in plain dataclass output; switch to `pydantic` if you need them.
 
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
-- [ ] const
+- [x] enum
+- [x] const
 
 ### Type Values
 - [x] string
@@ -53,7 +62,7 @@ class UsersSchema:
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties

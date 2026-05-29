@@ -1,6 +1,6 @@
 # Pydantic
 
-Translates JSON Schema to Pydantic BaseModel definitions (.py).
+Translates JSON Schema to Pydantic v2 `BaseModel` definitions (`.py`). Constraints flow through as runtime-enforced `Field(...)` arguments and `Literal[...]` types — bad data raises at model construction.
 
 ## Example
 
@@ -9,29 +9,57 @@ Translates JSON Schema to Pydantic BaseModel definitions (.py).
 ```json
 {
   "type": "object",
+  "required": ["id", "status", "schema_version", "price", "email"],
   "properties": {
-    "name": { "type": "string" },
-    "age": { "type": "integer" }
+    "id":             { "type": "string", "format": "uuid" },
+    "status":         { "type": "string", "enum": ["ACTIVE", "INACTIVE", "PENDING"] },
+    "schema_version": { "type": "string", "const": "v1" },
+    "price":          { "type": "number", "multipleOf": 0.01, "minimum": 0, "maximum": 99999.99 },
+    "email":          { "type": "string", "minLength": 3, "maxLength": 254, "pattern": "^.+@.+$" },
+    "tags":           { "type": "array",  "items": { "type": "string" }, "minItems": 1, "maxItems": 10 },
+    "notes":          { "type": "string", "description": "Optional notes" }
   }
 }
 ```
 
-**Output** (Python):
+**Output** (Pydantic):
 
 ```python
-from pydantic import BaseModel
+from __future__ import annotations
 
-class UsersSchema(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
+from typing import Optional, Literal
+from pydantic import BaseModel, Field
+
+class OrdersSchema(BaseModel):
+    id: str
+    status: Literal["ACTIVE", "INACTIVE", "PENDING"]
+    schema_version: Literal["v1"]
+    price: float = Field(ge=0, le=99999.99, multiple_of=0.01)
+    email: str = Field(min_length=3, max_length=254, pattern="^.+@.+$")
+    tags: list[str] = Field(min_length=1, max_length=10)
+    notes: Optional[str] = Field(default=None, description="Optional notes")
 ```
+
+Constraint translation map:
+
+| JSON Schema             | Pydantic                           |
+|-------------------------|------------------------------------|
+| `enum`                  | `Literal[a, b, c]`                 |
+| `const`                 | `Literal[x]`                       |
+| `minimum` / `maximum`   | `Field(ge=..., le=...)`            |
+| `exclusiveMin/Max`      | `Field(gt=..., lt=...)`            |
+| `multipleOf`            | `Field(multiple_of=...)`           |
+| `minLength` / `maxLength` | `Field(min_length=, max_length=)` |
+| `pattern`               | `Field(pattern=...)`               |
+| `minItems` / `maxItems` | `Field(min_length=, max_length=)`  |
+| `description`           | `Field(description=...)`           |
 
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
-- [ ] const
+- [x] enum
+- [x] const
 
 ### Type Values
 - [x] string
@@ -51,7 +79,7 @@ class UsersSchema(BaseModel):
 ### Object Keywords
 - [x] properties
 - [x] required
-- [ ] additionalProperties
+- [x] additionalProperties
 - [ ] patternProperties
 - [ ] propertyNames
 - [ ] minProperties / maxProperties
@@ -62,19 +90,19 @@ class UsersSchema(BaseModel):
 - [x] items
 - [ ] prefixItems
 - [ ] contains
-- [ ] minItems / maxItems
+- [x] minItems / maxItems
 - [ ] uniqueItems
 - [ ] unevaluatedItems
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] minimum / maximum
+- [x] exclusiveMinimum / exclusiveMaximum
+- [x] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
-- [ ] pattern
+- [x] minLength / maxLength
+- [x] pattern
 
 ### References & Definitions
 - [x] $ref
@@ -98,7 +126,7 @@ class UsersSchema(BaseModel):
 - [ ] regex
 
 ### Annotations
-- [ ] description
+- [x] description
 - [ ] title
 - [ ] default
 - [ ] deprecated
