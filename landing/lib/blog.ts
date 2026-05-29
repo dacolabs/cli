@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 import { remark } from 'remark'
+import remarkGfm from 'remark-gfm'
 import remarkHtml from 'remark-html'
 
 const POSTS_DIR = path.join(process.cwd(), 'content/blog')
@@ -45,7 +46,10 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   if (!fs.existsSync(filePath)) return null
   const raw = fs.readFileSync(filePath, 'utf8')
   const { data, content: markdown } = matter(raw)
-  const processed = await remark().use(remarkHtml, { sanitize: false }).process(markdown)
+  const processed = await remark()
+    .use(remarkGfm)
+    .use(remarkHtml, { sanitize: false })
+    .process(markdown)
   return {
     slug,
     title: data.title ?? '',
