@@ -1,22 +1,45 @@
-# OS
-.DS_Store
-Thumbs.db
+# Binaries
+bin/
+gendocs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Editors
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+coverage.out
+
+# Air hot reload
+tmp/
+
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# Node
-node_modules/
-npm-debug.log*
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Debug
+__debug_bin*
+
+# GoReleaser
+dist/
 
 # Build
-dist/
 build/
-bin/
 
 # Temp
 *.tmp

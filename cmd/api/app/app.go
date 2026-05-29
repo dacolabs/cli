@@ -11,6 +11,7 @@ import (
 
 	"github.com/dacolabs/daco/internal/api"
 	"github.com/dacolabs/daco/internal/telemetry"
+	"github.com/dacolabs/daco/internal/version"
 	"github.com/lmittmann/tint"
 )
 
@@ -44,7 +45,8 @@ func Run(ctx context.Context, getenv func(string) string) error {
 	}
 
 	slog.Info("starting daco api",
-		"version", "0.1.0",
+		"version", version.Version,
+		"commit", version.Commit,
 		"port", cfg.Server.Port,
 	)
 
