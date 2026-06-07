@@ -1,6 +1,6 @@
 # Contributing to Daco
 
-Thank you for your interest in contributing to Daco! This document covers everything you need to know to work on the **`daco` CLI** and the **`daco-api` server**, which live in the same repository.
+Thank you for your interest in contributing to Daco! This document covers everything you need to know to work on the **`daco` CLI**.
 
 ## FAQ
 
@@ -28,9 +28,7 @@ Thank you for your interest in contributing to Daco! This document covers everyt
 2. **Idiomatic Patterns** — Follow established conventions of Go and the surrounding ecosystem
 3. **Minimal Dependencies** — Prefer the standard library; add dependencies deliberately
 4. **Defensive Programming** — Validate inputs, handle errors explicitly, fail gracefully
-5. **Shared core, thin entrypoints** — Business logic lives in `internal/`; the binaries in `cmd/` are wiring
-
-The CLI and the API are different surfaces over the same domain model. When you add functionality, prefer putting the logic in a shared `internal/` package and exposing it from both surfaces where it makes sense.
+5. **Thin drivers, shared engine** — Business logic lives in `internal/cli/engine`; the cobra commands and the TUI are pure drivers over the same operations
 
 ## Prerequisites
 
@@ -48,75 +46,73 @@ The CLI and the API are different surfaces over the same domain model. When you 
 git clone git@github.com:dacolabs/cli.git
 cd cli
 
-# Set up development environment (configures git hooks)
-make setup
-
-# Build both binaries
+# Build the CLI
 make build
 
 # Run tests
 make test
 ```
 
-After `make build`, the binaries land in `bin/`:
+After `make build`, the binary lands in `bin/`:
 
 - `bin/daco` — the CLI
-- `bin/daco-api` — the HTTP API server
 
 ## Project Structure
 
 ```
 .
 ├── cmd/
-│   ├── cli/              # `daco` CLI entrypoint
-│   │   ├── app/          # Bootstrap (command registration, run loop)
-│   │   └── main.go
-│   └── api/              # `daco-api` HTTP server entrypoint
-│       ├── app/          # Server bootstrap (config, lifecycle)
+│   └── daco/             # CLI entrypoint
+│       ├── app/          # Bootstrap (registers commands + TUI runner)
 │       └── main.go
 ├── internal/
-│   ├── api/              # HTTP handlers and middleware (used by daco-api)
-│   ├── cli/              # CLI commands, config, prompts, session, TUI
-│   ├── env/              # Environment variable parsing helpers
-│   ├── jschema/          # JSON Schema utilities
-│   ├── opendpi/          # OpenDPI parsing
-│   ├── services/         # Shared application services
-│   ├── storage/          # Data access
-│   ├── telemetry/        # OpenTelemetry + slog setup
-│   ├── translate/        # Schema translators (avro, pyspark, scala, …)
-│   └── version/          # Build-time version information
-├── db/
-│   ├── migrations/       # SQL migrations
-│   └── queries/          # sqlc query definitions
+│   ├── cli/              # CLI drivers and shared state
+│   │   ├── commands/     # cobra commands (one file per noun)
+│   │   ├── engine/       # Business logic (Input/Valid/Output pattern)
+│   │   ├── settings/     # User (~/.daco/settings.yaml) and project (daco.yaml)
+│   │   └── tui/          # rivo/tview interactive driver
+│   ├── opendpi/          # OpenDPI document/schema parsing with $ref preservation
+│   ├── translate/        # Schema translation pipeline
+│   │   ├── registry/     # Default() map of format name → translator
+│   │   └── <target>/     # One package per format (avro, pyspark, gotypes, …)
+│   └── version/          # Build-time version information (ldflag-injected)
+├── opendpi/              # Vendored OpenDPI specification
 ├── docs/                 # User-facing documentation
 ├── landing/              # Marketing site (Next.js — not part of the Go build)
-├── opendpi/              # OpenDPI assets / fixtures
 ├── .github/workflows/    # CI and release pipelines
-├── .githooks/            # Git hooks installed by `make setup`
 ├── Makefile              # Build automation
 ├── .goreleaser.yaml      # Release configuration
 └── .golangci.yml         # Linter configuration
 ```
+
+See [CLAUDE.md](CLAUDE.md) for a deeper architectural tour.
 
 ## Development Workflow
 
 ### Building
 
 ```bash
-make build                          # Build both binaries
-make build-cli                      # CLI only
-make build-api                      # API server only
+make build                          # Build the CLI (alias for build-cli)
+make build-cli                      # Build the CLI explicitly
 
 make run-cli ARGS="init --help"     # Run the CLI without building
-make run-api                        # Run the API server (defaults: port 8080)
 
-make install                        # Install both to $GOPATH/bin
+make install                        # Install to $GOPATH/bin (alias for install-cli)
+make install-cli                    # Install the CLI explicitly
 ```
 
 ### Testing
 
 ```bash
-make test     # Run all tests with race detection
+make test            # Run all tests with race detection + per-package coverage
+make test-coverage   # Run tests and emit an HTML coverage report (coverage.html)
+```
+
+Run a single test or package:
+
+```bash
+go test -race -run TestPortsTranslate ./internal/cli/engine
+go test -race -run TestTranslate       ./internal/translate/pyspark
 ```
 
 ### Code Quality
@@ -133,11 +129,11 @@ make release-snapshot   # Build release artifacts without publishing
 ls -la dist/            # Inspect generated binaries and archives
 ```
 
-Each archive in `dist/` contains **both** `daco` and `daco-api` for that platform.
+Each archive in `dist/` contains the `daco` binary for that platform.
 
 ## Commit Convention
 
-We use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages. A pre-commit hook validates this automatically after running `make setup`.
+We use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages. The release pipeline uses commit types to generate the changelog automatically.
 
 ### Format
 
@@ -168,7 +164,6 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for all comm
 
 ```bash
 git commit -m "feat(cli): add ports translate command"
-git commit -m "feat(api): add /health/ready endpoint"
 git commit -m "fix(translate/pydantic): handle empty schema gracefully"
 git commit -m "feat!: rename config file to daco.yaml"   # Breaking change
 ```
@@ -188,7 +183,7 @@ Before submitting a pull request, ensure:
 - [ ] An issue was opened and discussed (for non-trivial changes)
 - [ ] Tests pass (`make test`)
 - [ ] Linter passes (`make lint`)
-- [ ] Both binaries still build (`make build`)
+- [ ] The binary still builds (`make build`)
 - [ ] Documentation is updated if applicable
 - [ ] Commit messages follow Conventional Commits
 - [ ] The PR description clearly summarizes the changes
@@ -226,13 +221,13 @@ On every push to `main` and on pull requests targeting `main`, CI runs:
 
 1. **Lint** — `golangci-lint` with the project configuration
 2. **Test** — `go test -v -race ./...`
-3. **Build** — Cross-platform build verification for **both** `daco` and `daco-api` (linux, darwin, windows × amd64, arm64; windows/arm64 excluded)
+3. **Build** — Cross-platform build verification (linux, darwin, windows × amd64, arm64; windows/arm64 excluded)
 
 All checks must pass before merging.
 
 ### Release Process
 
-Releases are triggered manually via GitHub Actions and publish `daco` and `daco-api` together under a single version tag.
+Releases are triggered manually via GitHub Actions.
 
 1. Go to **Actions → Release** on GitHub
 2. Click **Run workflow**
@@ -244,14 +239,12 @@ The release workflow:
 1. Validates the version format (semver, with optional `-alpha.N` / `-beta.N` / `-rc.N` suffix)
 2. Runs the test suite
 3. Creates and pushes a git tag
-4. Builds **both** binaries for every supported platform via GoReleaser
+4. Builds `daco` for every supported platform via GoReleaser
 5. Generates a changelog from conventional commits
-6. Creates a GitHub release with archives — each archive bundles `daco` and `daco-api`
-7. Opens PRs against the Homebrew tap and Scoop bucket (stable releases only)
+6. Creates a GitHub release with archives
+7. Opens PRs against the Homebrew tap and Scoop bucket (stable releases only — prereleases are skipped automatically)
 
 ### Versioning Strategy
-
-`daco` and `daco-api` share a single version. One tag → one release → both binaries at the same version.
 
 | Release Type | Version Format | Example | Published to Homebrew/Scoop |
 |--------------|----------------|---------|------------------------------|
@@ -268,16 +261,13 @@ Run `make help` to see all available targets:
 
 | Target | Description |
 |--------|-------------|
-| `setup` | Set up development environment (git hooks) |
-| `build` | Build both binaries |
-| `build-cli` | Build the CLI only |
-| `build-api` | Build the API server only |
+| `build` | Build the CLI (alias for `build-cli`) |
+| `build-cli` | Build the CLI binary |
 | `run-cli` | Run the CLI (use `ARGS="..."` for arguments) |
-| `run-api` | Run the API server |
-| `install` | Install both binaries to `$GOPATH/bin` |
-| `install-cli` | Install the CLI only |
-| `install-api` | Install the API server only |
-| `test` | Run tests with race detection |
+| `install` | Install to `$GOPATH/bin` (alias for `install-cli`) |
+| `install-cli` | Install the CLI to `$GOPATH/bin` |
+| `test` | Run tests with race detection and coverage |
+| `test-coverage` | Run tests and emit an HTML coverage report |
 | `lint` | Run golangci-lint |
 | `format` | Format code (gofmt + goimports) |
 | `release-snapshot` | Build release artifacts locally (no publish) |
