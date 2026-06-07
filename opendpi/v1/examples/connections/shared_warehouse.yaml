@@ -1,0 +1,9 @@
+# Standalone connection file referenced by ../with-ref-connection.yaml
+# Same shape as an inline connection.
+
+type: postgresql
+host: warehouse.db.example.com:5432
+description: Shared analytics warehouse
+variables:
+  database: analytics
+  schema: public

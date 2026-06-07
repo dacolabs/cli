@@ -13,6 +13,7 @@ gendocs
 # Output of go coverage
 *.out
 coverage.out
+coverage.html
 
 # Air hot reload
 tmp/

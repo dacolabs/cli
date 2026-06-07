@@ -10,20 +10,6 @@
       "url": "https://wiki.example.com/analytics"
     }
   },
-  "tags": [
-    {
-      "name": "orders",
-      "description": "Order-related data"
-    },
-    {
-      "name": "users",
-      "description": "User-related data"
-    },
-    {
-      "name": "real-time",
-      "description": "Streaming data"
-    }
-  ],
   "connections": {
     "warehouse": {
       "type": "postgresql",

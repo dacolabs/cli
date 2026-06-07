@@ -1,4 +1,0 @@
-type: object
-properties:
-  parent:
-    $ref: "../external.yaml"

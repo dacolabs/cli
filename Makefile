@@ -1,4 +1,4 @@
-.PHONY: help setup build build-cli build-api run-cli run-api test lint format install install-cli install-api clean release-snapshot
+.PHONY: help build build-cli run-cli test test-coverage lint format install install-cli clean release-snapshot
 
 VERSION ?= dev
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -12,39 +12,30 @@ help: ## Show this help
 	@echo "\033[93mDaco\033[0m"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-##@ Setup
-setup: ## Set up development environment (git hooks)
-	@git config core.hooksPath .githooks
-	@echo "Git hooks configured"
-
 ##@ Build
-build: build-cli build-api ## Build both binaries (daco + daco-api)
+build: build-cli ## Build all binaries
 
 build-cli: ## Build the CLI binary (daco)
-	@go build -ldflags="$(LDFLAGS)" -o bin/daco ./cmd/cli
-
-build-api: ## Build the API server binary (daco-api)
-	@go build -ldflags="$(LDFLAGS)" -o bin/daco-api ./cmd/api
+	@go build -ldflags="$(LDFLAGS)" -o bin/daco ./cmd/daco
 
 run-cli: ## Run the CLI (e.g. make run-cli ARGS="--help")
-	@go run -ldflags="$(LDFLAGS)" ./cmd/cli $(ARGS)
+	@go run -ldflags="$(LDFLAGS)" ./cmd/daco $(ARGS)
 
-run-api: ## Run the API server
-	@go run -ldflags="$(LDFLAGS)" ./cmd/api
-
-install: install-cli install-api ## Install both binaries to $GOPATH/bin
+install: install-cli ## Install all binaries to $GOPATH/bin
 
 install-cli: ## Install the CLI to $GOPATH/bin
-	@go install -ldflags="$(LDFLAGS)" ./cmd/cli
+	@go install -ldflags="$(LDFLAGS)" ./cmd/daco
 	@echo "installed: $$(go env GOPATH)/bin/daco"
 
-install-api: ## Install the API server to $GOPATH/bin
-	@go install -ldflags="$(LDFLAGS)" ./cmd/api
-	@echo "installed: $$(go env GOPATH)/bin/daco-api"
-
 ##@ Test & Quality
-test: ## Run tests with race detection
-	@go test -v -race ./...
+test: ## Run tests with race detection + per-package coverage
+	@go test -race -cover ./...
+
+test-coverage: ## Run tests and emit an HTML coverage report (opens coverage.html)
+	@go test -race -coverprofile=coverage.out ./...
+	@go tool cover -func=coverage.out | tail -1
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "coverage report: coverage.html"
 
 lint: ## Run linter (requires: golangci-lint)
 	@golangci-lint run ./...
@@ -59,4 +50,4 @@ release-snapshot: ## Build release artifacts locally (for testing; requires: gor
 
 ##@ Cleanup
 clean: ## Remove build artifacts
-	@rm -rf bin/ tmp/ dist/
+	@rm -rf bin/ tmp/ dist/ coverage.out coverage.html

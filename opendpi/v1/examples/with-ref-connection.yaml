@@ -1,0 +1,36 @@
+# Example using a $ref connection
+# Demonstrates referencing an external connection file from the product document.
+# Companion file: connections/shared_warehouse.yaml (sibling, same directory).
+
+opendpi: "1.0.0"
+
+info:
+  title: Orders
+  version: "1.0.0"
+  description: Order data sourced from the shared analytics warehouse
+
+connections:
+  warehouse:
+    $ref: connections/shared_warehouse.yaml
+
+ports:
+  orders:
+    description: Order rows from the warehouse
+    connections:
+      - connection: "#/connections/warehouse"
+        location: orders
+    schema:
+      type: object
+      required:
+        - order_id
+        - created_at
+      properties:
+        order_id:
+          type: string
+        customer_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        total:
+          type: number

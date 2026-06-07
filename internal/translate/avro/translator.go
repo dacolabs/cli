@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"github.com/dacolabs/daco/internal/translate"
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 // Translator translates JSON schemas to Apache Avro schema definitions.

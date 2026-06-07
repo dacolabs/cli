@@ -4,11 +4,11 @@
 package translate
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/dacolabs/jsonschema-go/jsonschema"
-	"github.com/dacolabs/daco/internal/jschema"
+	"github.com/google/jsonschema-go/jsonschema"
+
+	"github.com/dacolabs/daco/internal/opendpi"
 )
 
 // prepareContext holds mutable state during schema preparation.
@@ -23,14 +23,9 @@ type prepareContext struct {
 // and returns the data in topological order.
 // Inline nested objects are automatically extracted as named type definitions.
 func Prepare(portName string, schema *jsonschema.Schema, resolver TypeResolver) (*SchemaData, error) {
-	keyOrder, err := jschema.ExtractKeyOrder(schema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract key order: %w", err)
-	}
-
 	ctx := &prepareContext{
 		resolver: resolver,
-		keyOrder: keyOrder,
+		keyOrder: map[string][]string{},
 	}
 
 	data := &SchemaData{
@@ -39,7 +34,9 @@ func Prepare(portName string, schema *jsonschema.Schema, resolver TypeResolver) 
 	}
 
 	// Process $defs in topological order
-	for defName, defSchema := range jschema.TraverseDefs(schema) {
+	for _, entry := range opendpi.TraverseDefs(schema) {
+		defName := entry.Name
+		defSchema := entry.Schema
 		defPath := "$defs." + defName
 		fields := ctx.resolveFields(defSchema, defPath)
 		data.Defs = append(data.Defs, TypeDef{

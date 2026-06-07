@@ -2,40 +2,60 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://opendpi.org/schema/1.0.0/connection",
     "title": "OpenDPI Connection",
-    "description": "A connection to an infrastructure endpoint where data resides.",
-    "type": "object",
-    "required": [
-        "type",
-        "host"
-    ],
-    "properties": {
-        "type": {
-            "type": "string",
-            "description": "The type identifier. This is a user-defined string that identifies the type of infrastructure (e.g., kafka, s3, postgresql, http, grpc).",
-            "examples": [
-                "kafka",
-                "s3",
-                "postgresql"
-            ]
-        },
-        "host": {
-            "type": "string",
-            "description": "The addressable host, broker list, or base URL."
-        },
-        "description": {
-            "type": "string",
-            "description": "A human-readable description of this connection."
-        },
-        "variables": {
+    "description": "A connection to an infrastructure endpoint where data resides. May be defined inline or as a $ref to an external connection file.",
+    "oneOf": [
+        {
+            "title": "Inline connection",
             "type": "object",
-            "description": "Type-specific configuration as key-value pairs. The keys and values depend on the type.",
-            "additionalProperties": {
-                "type": [
-                    "string",
-                    "number",
-                    "boolean"
-                ]
+            "required": [
+                "type",
+                "host"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "The type identifier. This is a user-defined string that identifies the type of infrastructure (e.g., kafka, s3, postgresql, http, grpc).",
+                    "examples": [
+                        "kafka",
+                        "s3",
+                        "postgresql"
+                    ]
+                },
+                "host": {
+                    "type": "string",
+                    "description": "The addressable host, broker list, or base URL."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "A human-readable description of this connection."
+                },
+                "variables": {
+                    "type": "object",
+                    "description": "Type-specific configuration as key-value pairs. The keys and values depend on the type.",
+                    "additionalProperties": {
+                        "type": [
+                            "string",
+                            "number",
+                            "boolean"
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "Connection reference",
+            "type": "object",
+            "required": [
+                "$ref"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "$ref": {
+                    "type": "string",
+                    "description": "Relative or absolute file path to an external connection definition (YAML or JSON). The referenced file must itself match the inline connection shape."
+                }
             }
         }
-    }
+    ]
 }

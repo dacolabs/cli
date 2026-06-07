@@ -6,8 +6,8 @@ package pydantic
 import (
 	"testing"
 
-	"github.com/dacolabs/jsonschema-go/jsonschema"
 	"github.com/dacolabs/daco/internal/translate/testcases"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

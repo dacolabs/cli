@@ -4,115 +4,44 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/dacolabs/daco/internal/cli/config"
-	"github.com/dacolabs/daco/internal/opendpi"
-	"github.com/dacolabs/daco/internal/cli/prompts"
 	"github.com/spf13/cobra"
+
+	"github.com/dacolabs/daco/internal/cli"
+	"github.com/dacolabs/daco/internal/cli/engine"
 )
 
-type initOptions struct {
-	name        string
-	version     string
-	description string
-}
-
-func NewInitCmd() *cobra.Command {
-	opts := &initOptions{}
+func Init() *cobra.Command {
+	var in engine.InitInput
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize a new daco project",
-		Long:  `Initialize a new daco project with a daco.yaml configuration file and an OpenDPI spec.`,
-		Example: `  # Interactive mode
-  daco init
-
-  # Non-interactive (runs automatically when --name is provided)
-  daco init --name "Customer Analytics"`,
+		Short: "Initialize a daco project in the current directory",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(cmd, opts)
+			in.Usr = cli.User(cmd.Context())
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			in.Cwd = cwd
+
+			out, err := engine.Init(cmd.Context(), in)
+			if err != nil {
+				return err
+			}
+
+			w := cmd.OutOrStdout()
+			if out.Created {
+				fmt.Fprintf(w, "Created %s and registered %q\n", out.ProjectPath, out.Name)
+			} else {
+				fmt.Fprintf(w, "Registered %q at %s\n", out.Name, out.ProjectPath)
+			}
+			return nil
 		},
 	}
-
-	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Data product name")
-	cmd.Flags().StringVarP(&opts.version, "version", "v", "1.0.0", "Initial spec version")
-	cmd.Flags().StringVarP(&opts.description, "description", "d", "", "Data product description")
-
+	cmd.Flags().StringVarP(&in.Name, "name", "n", "", "Project name")
 	return cmd
-}
-
-func runInit(cmd *cobra.Command, opts *initOptions) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	dacoPath := filepath.Join(cwd, "daco.yaml")
-	if _, err := os.Stat(dacoPath); err == nil {
-		return errors.New("daco.yaml already exists; project already initialized")
-	}
-
-	if !cmd.Flags().Changed("name") {
-		if err := prompts.RunInitForm(
-			&opts.name,
-			&opts.version,
-			&opts.description,
-		); err != nil {
-			return err
-		}
-	} else {
-		// Non-interactive: validate the provided name
-		if opts.name == "" {
-			return fmt.Errorf("--name cannot be empty")
-		}
-	}
-
-	specDir := filepath.Join(cwd, "spec")
-	specPath := filepath.Join(specDir, "opendpi.yaml")
-
-	if _, err := os.Stat(specPath); err == nil {
-		return fmt.Errorf("spec file already exists: %s", specPath)
-	}
-
-	if err := os.MkdirAll(specDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create spec directory: %w", err)
-	}
-
-	spec := &opendpi.Spec{
-		OpenDPI: "1.0.0",
-		Info: opendpi.Info{
-			Title:       opts.name,
-			Version:     opts.version,
-			Description: opts.description,
-		},
-		Connections: map[string]opendpi.Connection{},
-		Ports:       map[string]opendpi.Port{},
-	}
-
-	if err := opendpi.YAMLWriter.Write(spec, specDir); err != nil {
-		return fmt.Errorf("failed to write spec file: %w", err)
-	}
-
-	cfg := config.Config{
-		Version: config.CurrentConfigVersion,
-		Path:    "./spec",
-	}
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid configuration: %w", err)
-	}
-	if err := cfg.Save(dacoPath); err != nil {
-		return fmt.Errorf("config file couldn't be saved: %w", err)
-	}
-
-	prompts.PrintResult([]prompts.ResultField{
-		{Label: "Data product name", Value: opts.name},
-		{Label: "Version", Value: opts.version},
-		{Label: "Description", Value: opts.description},
-	}, "✓ Created opendpi.yaml")
-
-	return nil
 }

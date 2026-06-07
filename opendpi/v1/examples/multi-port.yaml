@@ -8,14 +8,6 @@ info:
   version: "2.0.0"
   description: Analytics data for the e-commerce platform
 
-tags:
-  - name: orders
-    description: Order-related data
-  - name: users
-    description: User-related data
-  - name: real-time
-    description: Streaming data
-
 connections:
   warehouse:
     type: postgresql

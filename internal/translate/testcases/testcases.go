@@ -10,7 +10,7 @@
 // matrix of "which constraint, which target" stays in lockstep.
 package testcases
 
-import "github.com/dacolabs/jsonschema-go/jsonschema"
+import "github.com/google/jsonschema-go/jsonschema"
 
 func f64(v float64) *float64 { return &v }
 func iptr(v int) *int        { return &v }

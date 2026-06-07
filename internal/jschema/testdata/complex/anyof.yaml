@@ -1,7 +1,0 @@
-anyOf:
-  - type: string
-  - type: integer
-  - type: object
-    properties:
-      value:
-        type: number

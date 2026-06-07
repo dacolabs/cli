@@ -1,84 +1,64 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Daco Labs
+
 package cli
 
 import (
-	"github.com/dacolabs/daco/internal/cli/commands"
-	"github.com/dacolabs/daco/internal/cli/session"
-	"github.com/dacolabs/daco/internal/cli/tui"
-	"github.com/dacolabs/daco/internal/translate"
-	"github.com/dacolabs/daco/internal/version"
+	"context"
+	"errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"github.com/dacolabs/daco/internal/cli/settings"
 )
 
-// NewRootCmd builds the root cobra command with all subcommands attached.
-func NewRootCmd(translators translate.Register) *cobra.Command {
-	rootCmd := &cobra.Command{
+// TUIRunner is set by the cmd/daco bootstrap (which imports both cli and tui)
+// to break the otherwise-cyclic dependency. When nil, `daco` with no args
+// falls back to printing help.
+var TUIRunner func(ctx context.Context) error
+
+func tuiRunner(ctx context.Context) error {
+	if TUIRunner == nil {
+		return errors.New("TUI not registered")
+	}
+	return TUIRunner(ctx)
+}
+
+func New() *cobra.Command {
+	return &cobra.Command{
 		Use:           "daco",
-		Short:         "daco is the command-line interface for the daco platform",
+		Short:         "Daco CLI",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := session.PreRunLoad(cmd, nil); err != nil {
-				return err
-			}
-			sctx, err := session.RequireFromCommand(cmd)
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			usr, err := loadOrCreateUser()
 			if err != nil {
 				return err
 			}
-			return tui.Run(sctx, translators)
+			cmd.SetContext(WithUser(cmd.Context(), usr))
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return cmd.Help()
+			}
+			return tuiRunner(cmd.Context())
 		},
 	}
-	rootCmd.SetVersionTemplate(version.Info() + "\n")
-
-	addCommands(rootCmd, translators)
-
-	return rootCmd
 }
 
-func addCommands(rootCmd *cobra.Command, translators translate.Register) {
-	portsCmd := &cobra.Command{
-		Use:   "ports",
-		Short: "Manage data product ports",
-		Long: `Manage data product ports defined in the OpenDPI spec. Ports represent
-data interfaces (input or output) with associated JSON schemas and connections.
-Use subcommands to add, list, describe, remove, or translate port schemas.`,
-		PersistentPreRunE: session.PreRunLoad,
+func loadOrCreateUser() (*settings.User, error) {
+	usr, err := settings.LoadUser()
+	if err == nil {
+		return usr, nil
 	}
-	portsCmd.AddCommand(
-		commands.NewPortsAddCmd(),
-		commands.NewPortsDescribeCmd(),
-		commands.NewPortsListCmd(),
-		commands.NewPortsRemoveCmd(),
-		commands.NewPortsTranslateCmd(translators))
-
-	connsCmd := &cobra.Command{
-		Use:   "connections",
-		Short: "Manage data product connections",
-		Long: `Manage infrastructure connections defined in the OpenDPI spec. Connections
-	describe how to reach external systems (Kafka, PostgreSQL, S3, HTTP, etc.)
-	and are referenced by ports. Use subcommands to add, list, describe, or remove connections.`,
-		PersistentPreRunE: session.PreRunLoad,
+	if !errors.Is(err, settings.ErrUserNotFound) {
+		return nil, err
 	}
-	connsCmd.AddCommand(
-		commands.NewConnectionsAddCmd(),
-		commands.NewConnectionsDescribeCmd(),
-		commands.NewConnectionsListCmd(),
-		commands.NewConnectionsRemoveCmd())
-
-	productCmd := &cobra.Command{
-		Use:   "product",
-		Short: "Manage data product metadata",
-		Long: `Manage data product metadata defined in the OpenDPI spec.
-	Use subcommands to view or upgrade the product version.`,
-		PersistentPreRunE: session.PreRunLoad,
+	usr = &settings.User{Projects: map[string]string{}}
+	if err := usr.Save(); err != nil {
+		return nil, fmt.Errorf("create user settings: %w", err)
 	}
-	productCmd.AddCommand(
-		commands.NewProductVersionCmd(),
-		commands.NewProductUpgradeCmd())
-
-	rootCmd.AddCommand(
-		commands.NewInitCmd(),
-		commands.NewDescribeCmd(),
-		portsCmd,
-		connsCmd,
-		productCmd)
+	return usr, nil
 }

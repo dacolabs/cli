@@ -4,6 +4,8 @@ Connections define where your data infrastructure lives. They form a registry th
 
 ## Structure
 
+A connection can be defined inline:
+
 ```yaml
 connections:
   <connection_id>:
@@ -12,6 +14,18 @@ connections:
     description: <string>   # Optional - human-readable description
     variables: <object>     # Optional - type-specific config
 ```
+
+…or as a reference to an external connection file:
+
+```yaml
+connections:
+  <connection_id>:
+    $ref: <path>            # Required - relative or absolute file path
+```
+
+The `$ref` form is mutually exclusive with the inline fields. See
+[Sharing connections across products](#sharing-connections-across-products)
+for when to reach for it.
 
 ## Connection Object
 
@@ -140,6 +154,43 @@ ports:
 ```
 
 The connection reference must point to a connection defined in the same document.
+
+## Sharing connections across products
+
+When several data products read from the same infrastructure, repeating the
+connection definition in every document drifts over time. Pull the connection
+into its own file and reference it with `$ref`:
+
+```
+my-project/
+├── connections/
+│   └── warehouse.yaml          # single source of truth
+└── products/
+    ├── orders/opendpi.yaml     # references ../../connections/warehouse.yaml
+    └── customers/opendpi.yaml  # references ../../connections/warehouse.yaml
+```
+
+The standalone connection file follows the same shape as an inline connection:
+
+```yaml
+# connections/warehouse.yaml
+type: postgresql
+host: warehouse.db.example.com:5432
+variables:
+  database: analytics
+  schema: public
+```
+
+And each product references it from its own `connections:` map:
+
+```yaml
+# products/orders/opendpi.yaml
+connections:
+  warehouse:
+    $ref: ../../connections/warehouse.yaml
+```
+
+Paths are resolved relative to the directory of the file containing the `$ref`.
 
 ## Design Considerations
 

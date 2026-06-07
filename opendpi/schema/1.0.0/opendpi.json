@@ -19,13 +19,6 @@
         "info": {
             "$ref": "https://opendpi.org/schema/1.0.0/info"
         },
-        "tags": {
-            "type": "array",
-            "description": "An array of tags for categorizing ports.",
-            "items": {
-                "$ref": "https://opendpi.org/schema/1.0.0/tag"
-            }
-        },
         "connections": {
             "type": "object",
             "description": "A registry of named connections. Each key is a unique identifier for the connection.",

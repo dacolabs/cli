@@ -72,7 +72,7 @@ ports:
 
 - **Type agnostic** - Works with any data infrastructure (databases, streams, object storage, APIs)
 - **JSON Schema based** - Familiar, well-tooled, widely supported
-- **Reference support** - Use `$ref` for DRY, reusable definitions
+- **Reference support** - Use `$ref` to share schemas across ports and connections across products
 - **Lightweight** - Minimal required fields, easy to get started
 - **Extensible** - Custom variables per connection for any type
 
@@ -80,12 +80,12 @@ ports:
 
 | Version | Status | Docs |
 |---------|--------|------|
-| [v1](./v1/) | Current | [Getting Started](./v1/README.md) · [Specification](./v1/specification.md) · [Schema]((./schema/1.0.0/)) |
+| [v1](./v1/) | Current | [Getting Started](./v1/README.md) · [Specification](./v1/specification.md) · [Schema](./schema/1.0.0/) |
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on proposing changes to the specification.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines on proposing changes to the specification.
 
 ## License
 
-[Apache 2.0](./LICENSE)
+[Apache 2.0](../LICENSE)

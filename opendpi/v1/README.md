@@ -89,6 +89,17 @@ A registry of infrastructure connections. Each connection has:
 - A `host` address
 - Optional `variables` for type-specific config
 
+A connection can also be defined as a reference to an external file, so the
+same connection can be shared across multiple data products:
+
+```yaml
+connections:
+  my_database:
+    $ref: ../connections/my_database.yaml
+```
+
+See [Connections](./concepts/connections.md) for details.
+
 #### 4. Ports
 
 ```yaml

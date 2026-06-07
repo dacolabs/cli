@@ -1,0 +1,43 @@
+{
+  "opendpi": "1.0.0",
+  "info": {
+    "title": "Orders",
+    "version": "1.0.0",
+    "description": "Order data sourced from the shared analytics warehouse"
+  },
+  "connections": {
+    "warehouse": {
+      "$ref": "connections/shared_warehouse.yaml"
+    }
+  },
+  "ports": {
+    "orders": {
+      "description": "Order rows from the warehouse",
+      "connections": [
+        {
+          "connection": "#/connections/warehouse",
+          "location": "orders"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "required": ["order_id", "created_at"],
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "customer_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

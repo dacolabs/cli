@@ -11,7 +11,6 @@ opendpi: "1.0.0"        # Required - spec version
 info: { ... }           # Required - product metadata
 connections: { ... }    # Required - infrastructure connections
 ports: { ... }          # Required - data interfaces
-tags: [ ... ]           # Optional - categorization
 components: { ... }     # Optional - reusable definitions
 ```
 
@@ -74,12 +73,39 @@ connections:
 
 ### Connection Object
 
+A connection map value is either an **inline** definition or a **reference**
+to an external connection file (`$ref`). The two forms are mutually exclusive.
+
+#### Inline form
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | Yes | Type identifier (user-defined) |
 | `host` | string | Yes | Addressable host, broker list, or base URL |
 | `description` | string | No | Human-readable description |
 | `variables` | object | No | Type-specific key-value configuration |
+
+#### Ref form
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$ref` | string | Yes | Relative or absolute file path to an external connection definition (YAML or JSON). The referenced file must itself match the inline form. |
+
+Example showing both forms side by side:
+
+```yaml
+connections:
+  warehouse:
+    type: postgresql
+    host: warehouse.db.example.com:5432
+
+  shared_events:
+    $ref: ../connections/events.yaml
+```
+
+The `$ref` form is useful when multiple data products share the same
+infrastructure: each product references a single source-of-truth connection
+file rather than duplicating its definition.
 
 #### Type
 
@@ -222,27 +248,6 @@ ports:
 
 ---
 
-## Tags (Optional)
-
-An array of tags for categorizing ports.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Tag name |
-| `description` | string | No | Tag description |
-
-### Example
-
-```yaml
-tags:
-  - name: pii
-    description: Contains personally identifiable information
-  - name: aggregated
-    description: Pre-aggregated metrics
-```
-
----
-
 ## Components (Optional)
 
 Reusable definitions that can be referenced throughout the document.
@@ -324,12 +329,6 @@ info:
   title: E-Commerce Analytics
   version: "3.0.0"
   description: Analytics data products for the e-commerce platform
-
-tags:
-  - name: orders
-    description: Order-related data
-  - name: real-time
-    description: Streaming data
 
 connections:
   warehouse:
