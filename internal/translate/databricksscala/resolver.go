@@ -5,6 +5,7 @@
 package databricksscala
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -69,10 +70,14 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		}
 	}
 
+	var entries []string
 	if f.Description != "" {
-		escaped := strings.ReplaceAll(f.Description, `\`, `\\`)
-		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-		f.Tag = `.withComment("` + escaped + `")`
+		d, _ := json.Marshal(f.Description)
+		entries = append(entries, `"comment": `+string(d))
+	}
+	entries = append(entries, translate.ConstraintEntriesJSON(f.Constraints)...)
+	if len(entries) > 0 {
+		f.Tag = `, Metadata.fromJson("""{` + strings.Join(entries, ", ") + `}""")`
 	}
 }
 

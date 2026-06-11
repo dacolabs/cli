@@ -4,6 +4,12 @@ from __future__ import annotations
 {{ if .Extra.NeedsDatetimeImport }}
 import datetime
 {{- end }}
+{{- if .Extra.NeedsUUIDImport }}
+import uuid
+{{- end }}
+{{- if .Extra.NeedsDecimalImport }}
+from decimal import Decimal
+{{- end }}
 from typing import Optional{{ if .Extra.NeedsLiteralImport }}, Literal{{ end }}
 
 from pydantic import BaseModel{{ if .Extra.NeedsFieldImport }}, Field{{ end }}

@@ -74,6 +74,11 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	if !f.Nullable {
 		f.Tag = " NOT NULL"
 	}
+	// Spark DDL has no CHECK constraints, so preserve the full constraint set as an
+	// inline block comment (closes before the trailing comma, unlike a -- comment).
+	if text := translate.ConstraintsText(f.Constraints); text != "" {
+		f.Tag += " /* " + text + " */"
+	}
 }
 
 func sparkSQLIntType(k translate.IntKind) string {

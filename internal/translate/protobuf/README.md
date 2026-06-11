@@ -42,6 +42,10 @@ message OrdersSchema {
 
 Each enum field becomes a top-level `enum` declaration (named after the field, PascalCased), with the conventional `*_UNSPECIFIED = 0;` zero value. Identical `(name, symbols)` pairs are deduplicated across fields. Enums with non-string values or symbols that violate proto identifier rules fall back to `string`. Protobuf has no native decimal type; `multipleOf` doesn't narrow `double`. Protobuf has no 8/16-bit scalars, so `Int8`/`Int16` bounds widen to `int32` (or `uint32` when non-negative).
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). `int64` narrows to `int32`/`uint32`/`uint64` from bounds and sign; `date`/`date-time` map to `google.protobuf.Timestamp` (`uuid` stays `string`). String enums become native proto3 enums. Constraints are enforced via [protovalidate](https://github.com/bufbuild/protovalidate) field options — `(buf.validate.field).<type> = {gte/lte/gt/lt, pattern, min_len, max_len}` — and the full constraint set is also emitted as a leading `//` comment (so `multipleOf`, which has no protovalidate rule, is still preserved).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
@@ -56,7 +60,7 @@ Each enum field becomes a top-level `enum` declaration (named after the field, P
 - [x] boolean
 - [x] array
 - [x] object
-- [ ] null
+- [x] null
 
 ### Schema Composition
 - [ ] allOf
@@ -85,12 +89,12 @@ Each enum field becomes a top-level `enum` declaration (named after the field, P
 
 ### Numeric Validation
 - [x] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] exclusiveMinimum / exclusiveMaximum
+- [x] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
-- [ ] pattern
+- [x] minLength / maxLength
+- [x] pattern
 
 ### References & Definitions
 - [x] $ref
@@ -100,11 +104,11 @@ Each enum field becomes a top-level `enum` declaration (named after the field, P
 - [ ] $dynamicRef / $dynamicAnchor
 
 ### String Formats
-- [ ] date
-- [ ] date-time
+- [x] date
+- [x] date-time
 - [ ] time
 - [ ] duration
-- [ ] uuid
+- [x] uuid
 - [ ] uri / uri-reference / uri-template
 - [ ] iri / iri-reference
 - [ ] email / idn-email

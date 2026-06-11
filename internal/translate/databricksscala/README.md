@@ -35,6 +35,10 @@ object Users extends Serializable {
 
 Integer narrowing and decimal narrowing behave the same as [`spark-scala`](../sparkscala/README.md).
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Narrowing matches `sparkscala`. The description (as `comment`) and all constraints are merged into a single `Metadata.fromJson("""{...}""")` argument on each `StructField`.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

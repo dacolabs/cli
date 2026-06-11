@@ -35,6 +35,10 @@ object Users extends Serializable {
 
 Integer bounds narrow to `ByteType` / `ShortType` / `IntegerType` / `LongType`. `multipleOf` paired with bounds promotes numbers to `DecimalType(precision, scale)`.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Integers narrow to `ByteType`/`ShortType`/`IntegerType`; fractional `multipleOf` narrows to `DecimalType`. All constraints are then preserved losslessly as a `Metadata.fromJson("""{...}""")` argument on each `StructField`.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

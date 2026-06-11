@@ -54,6 +54,10 @@ Constraint translation map:
 | `minItems` / `maxItems` | `Field(min_length=, max_length=)`  |
 | `description`           | `Field(description=...)`           |
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Constraints are enforced natively via Pydantic `Field(ge=, le=, gt=, lt=, multiple_of=, min_length=, max_length=, pattern=)`, and `enum`/`const` become `Literal[...]`. Types also narrow to richer Python types: `format: uuid` → `uuid.UUID`, and a fractional `multipleOf` → `Decimal`.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

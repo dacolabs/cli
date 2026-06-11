@@ -7,6 +7,7 @@ package databrickspyspark
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/dacolabs/daco/internal/translate"
 )
@@ -69,9 +70,13 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		f.Type = sparkIntType(translate.NarrowInteger(f.Constraints))
 	}
 
+	var entries []string
 	if f.Description != "" {
-		escaped := strconv.Quote(f.Description)
-		f.Tag = `, metadata={"comment": ` + escaped + `}`
+		entries = append(entries, `"comment": `+strconv.Quote(f.Description))
+	}
+	entries = append(entries, translate.ConstraintEntriesPy(f.Constraints)...)
+	if len(entries) > 0 {
+		f.Tag = ", metadata={" + strings.Join(entries, ", ") + "}"
 	}
 }
 

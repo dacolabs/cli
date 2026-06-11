@@ -15,7 +15,16 @@ var protoEnumSymbolRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type resolver struct{}
 
-func (r *resolver) PrimitiveType(schemaType, _ string) string {
+func (r *resolver) PrimitiveType(schemaType, format string) string {
+	if schemaType == "string" && format != "" {
+		switch format {
+		case "date", "date-time":
+			return "google.protobuf.Timestamp"
+		case "uuid":
+			return "string"
+		}
+	}
+
 	switch schemaType {
 	case "string":
 		return "string"

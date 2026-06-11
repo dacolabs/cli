@@ -233,6 +233,12 @@ func collectNumericChecks(colName string, c *translate.Constraints, checks *[]dq
 			fmt.Sprintf("%s must be less than %v", colName, *c.ExclusiveMaximum),
 		))
 	}
+	if c.MultipleOf != nil {
+		*checks = append(*checks, newSQLCheck(
+			fmt.Sprintf("%s %% %v = 0", quoteSQL(colName), *c.MultipleOf),
+			fmt.Sprintf("%s must be a multiple of %v", colName, *c.MultipleOf),
+		))
+	}
 }
 
 // newCheck creates a check with a single column argument.

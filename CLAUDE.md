@@ -125,6 +125,8 @@ Per-target behavior is concentrated in a `TypeResolver` ([internal/translate/res
 - Naming (`FormatDefName`, `FormatRootName`, `RefType`).
 - `EnrichField(*Field)` — the post-processing escape hatch. Mutate `Name` for casing, wrap `Type` for nullability (`Optional[T]`, `*T`), set `Tag` for struct tags / Python defaults. Called once per field, after type resolution, before template execution.
 
+**Constraints follow the narrow + validate principle**: every translator narrows the type as tightly as the target allows *and* preserves the remaining JSON Schema constraints through its best validation/metadata channel (struct tags, `CHECK`, metadata dicts, comments, …), losslessly. The shared renderers live in [internal/translate/constraints.go](internal/translate/constraints.go) (`ActiveConstraints`, `ConstraintsJSON`, `ConstraintsPyDict`, `ConstraintsText`). See [internal/translate/CONSTRAINTS.md](internal/translate/CONSTRAINTS.md) for the per-target contract table before adding or changing constraint handling.
+
 A new translator is therefore: a `Translator` struct with `Translate` + `FileExtension`, a `resolver` implementing `TypeResolver`, and an embedded `*.go.tmpl` file. **You must also register it in `internal/translate/registry/registry.go`'s `Default()` map** — the CLI's `--format` flag accepts whatever keys are in that map. Look at `internal/translate/pyspark/` and `internal/translate/gotypes/` as canonical examples; both consume the same `SchemaData` shape.
 
 ### TUI

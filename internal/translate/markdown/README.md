@@ -37,6 +37,10 @@ User information
 | `price`  | number  | No       | (maximum: 99999.99, multipleOf: 0.01, narrows to: decimal(7,2)) |
 ```
 
+## Constraint handling
+
+markdown is a documentation target: it renders every constraint in the field's Constraints column and adds a `narrows to: ...` hint showing the physical type a typed target would pick. Nothing is dropped. See [../CONSTRAINTS.md](../CONSTRAINTS.md).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

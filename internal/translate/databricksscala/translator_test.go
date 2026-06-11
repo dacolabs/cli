@@ -317,9 +317,29 @@ func TestTranslate_WithComment(t *testing.T) {
 
 	result := string(output)
 
-	assert.Contains(t, result, `.withComment("Unique identifier")`)
-	// Field without description should not have withComment
-	assert.NotContains(t, result, `"name", StringType, nullable = true).withComment`)
+	assert.Contains(t, result, `Metadata.fromJson("""{"comment": "Unique identifier"}""")`)
+	// Field without description or constraints should not have a metadata argument.
+	assert.NotContains(t, result, `"name", StringType, nullable = true, Metadata`)
+}
+
+func TestTranslate_ConstraintsInMetadata(t *testing.T) {
+	minimum := 0.0
+	maximum := 150.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"age": {Type: "integer", Minimum: &minimum, Maximum: &maximum, Description: "Age"},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("person", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	// Narrowed type plus comment + constraints merged into one Metadata object.
+	assert.Contains(t, result, "ShortType")
+	assert.Contains(t, result, `Metadata.fromJson("""{"comment": "Age", "minimum": 0, "maximum": 150}""")`)
 }
 
 func TestFileExtension(t *testing.T) {

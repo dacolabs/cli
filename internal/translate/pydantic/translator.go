@@ -39,6 +39,8 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 	data.Extra["NeedsDatetimeImport"] = false
 	data.Extra["NeedsFieldImport"] = false
 	data.Extra["NeedsLiteralImport"] = false
+	data.Extra["NeedsUUIDImport"] = false
+	data.Extra["NeedsDecimalImport"] = false
 	scan := func(f translate.Field) {
 		if strings.Contains(f.Type, "datetime.") {
 			data.Extra["NeedsDatetimeImport"] = true
@@ -48,6 +50,12 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, _ str
 		}
 		if strings.Contains(f.Type, "Literal[") {
 			data.Extra["NeedsLiteralImport"] = true
+		}
+		if strings.Contains(f.Type, "uuid.UUID") {
+			data.Extra["NeedsUUIDImport"] = true
+		}
+		if strings.Contains(f.Type, "Decimal") {
+			data.Extra["NeedsDecimalImport"] = true
 		}
 	}
 	for _, def := range data.Defs {

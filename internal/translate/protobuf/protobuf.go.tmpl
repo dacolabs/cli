@@ -3,6 +3,13 @@
 syntax = "proto3";
 
 package {{ .Extra.Package }};
+{{- if .Extra.NeedsTimestamp }}
+
+import "google/protobuf/timestamp.proto";
+{{- end }}
+{{- if .Extra.NeedsValidate }}
+import "buf/validate/validate.proto";
+{{- end }}
 {{- range .Extra.Enums }}
 
 enum {{ .Name }} {
@@ -16,6 +23,9 @@ enum {{ .Name }} {
 
 message {{ .Name }} {
 {{- range .Fields }}
+{{- if .Description }}
+  // {{ .Description }}
+{{- end }}
   {{ .Type }} {{ .Name }} {{ .Tag }};
 {{- end }}
 }
@@ -23,6 +33,9 @@ message {{ .Name }} {
 
 message {{ .Root.Name }} {
 {{- range .Root.Fields }}
+{{- if .Description }}
+  // {{ .Description }}
+{{- end }}
   {{ .Type }} {{ .Name }} {{ .Tag }};
 {{- end }}
 }

@@ -37,6 +37,10 @@ orders_schema = T.StructType([
 
 `minimum`/`maximum` narrow integers to `ByteType` / `ShortType` / `IntegerType` / `LongType`. `multipleOf` paired with bounds promotes numbers to `DecimalType(precision, scale)`. `additionalProperties` without `properties` becomes `MapType`.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Integers narrow to `ByteType`/`ShortType`/`IntegerType` from `minimum`/`maximum`; numbers with a fractional `multipleOf` narrow to `DecimalType(precision, scale)`. Every constraint present on a field is then preserved losslessly in the field's `StructField(..., metadata={...})` dict (Spark cannot enforce them, but they remain machine-readable).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

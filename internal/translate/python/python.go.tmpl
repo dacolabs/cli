@@ -3,8 +3,19 @@
 from __future__ import annotations
 
 import dataclasses
-{{ if .Extra.NeedsDatetimeImport }}import datetime
-{{ end }}from typing import Optional{{ if .Extra.NeedsLiteralImport }}, Literal{{ end }}
+{{- if .Extra.NeedsDatetimeImport }}
+import datetime
+{{- end }}
+{{- if .Extra.NeedsReImport }}
+import re
+{{- end }}
+{{- if .Extra.NeedsUUIDImport }}
+import uuid
+{{- end }}
+{{- if .Extra.NeedsDecimalImport }}
+from decimal import Decimal
+{{- end }}
+from typing import Optional{{ if .Extra.NeedsLiteralImport }}, Literal{{ end }}
 {{ range .Defs }}
 
 @dataclasses.dataclass
@@ -12,10 +23,26 @@ class {{ .Name }}:
 {{- range .Fields }}
     {{ .Name }}: {{ .Type }}{{ .Tag }}
 {{- end }}
+{{- $pi := index $.Extra.PostInit .Name }}
+{{- if $pi }}
+
+    def __post_init__(self) -> None:
+{{- range $pi }}
+{{ . }}
+{{- end }}
+{{- end }}
 {{ end }}
 
 @dataclasses.dataclass
 class {{ .Root.Name }}:
 {{- range .Root.Fields }}
     {{ .Name }}: {{ .Type }}{{ .Tag }}
+{{- end }}
+{{- $pi := index $.Extra.PostInit .Root.Name }}
+{{- if $pi }}
+
+    def __post_init__(self) -> None:
+{{- range $pi }}
+{{ . }}
+{{- end }}
 {{- end }}

@@ -35,12 +35,16 @@ type UsersSchema struct {
 
 Integer narrowing: bounds in `[-128, 127]` → `int8`, `[-32768, 32767]` → `int16`, `[INT32_MIN, INT32_MAX]` → `int32`, otherwise `int64`. When `minimum >= 0`, the result is the matching unsigned type (`uint8` / `uint16` / `uint32` / `uint64`). Go has no native decimal type — `multipleOf` doesn't narrow `float64`.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). `int64` narrows to sized signed/unsigned ints (`int8`…`uint64`) from bounds and sign. Remaining constraints are emitted as a [go-playground/validator](https://github.com/go-playground/validator) `validate:"..."` struct tag alongside the `json` tag: `minimum`/`maximum` and `minLength`/`maxLength` → `min`/`max`, exclusive bounds → `gt`/`lt`, `enum` → `oneof`, `const` → `eq`. `pattern` and `multipleOf` have no validator builtin and are omitted (the generated code assumes the validator library downstream).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
-- [ ] const
+- [x] enum
+- [x] const
 
 ### Type Values
 - [x] string
@@ -78,11 +82,11 @@ Integer narrowing: bounds in `[-128, 127]` → `int8`, `[-32768, 32767]` → `in
 
 ### Numeric Validation
 - [x] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
+- [x] exclusiveMinimum / exclusiveMaximum
 - [ ] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
+- [x] minLength / maxLength
 - [ ] pattern
 
 ### References & Definitions

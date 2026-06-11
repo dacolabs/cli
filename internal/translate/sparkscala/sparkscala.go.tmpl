@@ -7,14 +7,14 @@ object {{ index .Extra "ObjectName" }} extends Serializable {
 {{- range .Defs }}
   lazy val {{ .Name }}: StructType = StructType(Array(
 {{- range $i, $f := .Fields }}{{ if $i }},{{ end }}
-    StructField("{{ $f.Name }}", {{ $f.Type }}, nullable = {{ if $f.Nullable }}true{{ else }}false{{ end }})
+    StructField("{{ $f.Name }}", {{ $f.Type }}, nullable = {{ if $f.Nullable }}true{{ else }}false{{ end }}{{ $f.Tag }})
 {{- end }}
   ))
 {{ end }}
 
   lazy val {{ .Root.Name }}: StructType = StructType(Array(
 {{- range $i, $f := .Root.Fields }}{{ if $i }},{{ end }}
-    StructField("{{ $f.Name }}", {{ $f.Type }}, nullable = {{ if $f.Nullable }}true{{ else }}false{{ end }})
+    StructField("{{ $f.Name }}", {{ $f.Type }}, nullable = {{ if $f.Nullable }}true{{ else }}false{{ end }}{{ $f.Tag }})
 {{- end }}
   ))
 }

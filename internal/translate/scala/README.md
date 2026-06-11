@@ -29,6 +29,10 @@ case class UsersSchema(
 )
 ```
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Integers narrow to `Byte`/`Short`/`Int` from bounds and fractional `multipleOf` to `BigDecimal`; plain Scala case classes carry no separate validation channel, so constraints are reflected only through the narrowed field types.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

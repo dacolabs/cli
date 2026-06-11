@@ -37,6 +37,10 @@ Translates JSON Schema to Apache Avro schema documents (`.avsc`). Integer bounds
 
 Enum names default to the PascalCased field name. Enums with non-string values or symbols that violate Avro's identifier rules (`[A-Za-z_][A-Za-z0-9_]*`) fall back to `string`.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). `long` narrows to `int` when bounds fit signed 32-bit; a fractional `multipleOf` narrows to the `decimal` logical type; string enums with valid symbols become a native Avro `enum`. The field description maps to Avro `doc`, and every remaining constraint is preserved losslessly as field custom attributes (Avro permits and ignores unknown field attributes).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
@@ -51,7 +55,7 @@ Enum names default to the PascalCased field name. Enums with non-string values o
 - [x] boolean
 - [x] array
 - [x] object
-- [ ] null
+- [x] null
 
 ### Schema Composition
 - [ ] allOf

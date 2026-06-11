@@ -4,6 +4,7 @@
 package avro
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -29,10 +30,47 @@ type avroRecord struct {
 	Fields    []avroField `json:"fields"`
 }
 
-// avroField represents a field within an Avro record.
+// avroField represents a field within an Avro record. Doc maps the schema description
+// to Avro's `doc`, and Props carries JSON Schema constraints as field custom attributes
+// (Avro permits and ignores unknown field attributes), keeping constraints lossless.
 type avroField struct {
-	Name string `json:"name"`
-	Type any    `json:"type"`
+	Name  string
+	Type  any
+	Doc   string
+	Props []translate.KV
+}
+
+// MarshalJSON emits name, type, optional doc, then constraint properties in canonical
+// order (a struct/map would lose that ordering).
+func (f avroField) MarshalJSON() ([]byte, error) {
+	var b bytes.Buffer
+	name, _ := json.Marshal(f.Name)
+	typ, err := json.Marshal(f.Type)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Avro field type: %w", err)
+	}
+	b.WriteString(`{"name":`)
+	b.Write(name)
+	b.WriteString(`,"type":`)
+	b.Write(typ)
+	if f.Doc != "" {
+		d, _ := json.Marshal(f.Doc)
+		b.WriteString(`,"doc":`)
+		b.Write(d)
+	}
+	for _, kv := range f.Props {
+		v, mErr := json.Marshal(kv.Value)
+		if mErr != nil {
+			continue
+		}
+		k, _ := json.Marshal(kv.Key)
+		b.WriteByte(',')
+		b.Write(k)
+		b.WriteByte(':')
+		b.Write(v)
+	}
+	b.WriteByte('}')
+	return b.Bytes(), nil
 }
 
 // avroArray represents an Avro array type.
@@ -102,8 +140,10 @@ func buildFields(fields []translate.Field, defs map[string]*translate.TypeDef, i
 			avroType = []any{"null", avroType}
 		}
 		result = append(result, avroField{
-			Name: fields[i].Name,
-			Type: avroType,
+			Name:  fields[i].Name,
+			Type:  avroType,
+			Doc:   fields[i].Description,
+			Props: translate.ActiveConstraints(fields[i].Constraints),
 		})
 	}
 	return result

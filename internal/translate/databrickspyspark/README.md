@@ -35,6 +35,10 @@ orders_schema = T.StructType([
 
 Integer narrowing, decimal narrowing, and `additionalProperties → MapType` behave exactly like [`pyspark`](../pyspark/README.md).
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Integers/numbers narrow exactly as in `pyspark`. The field description (as `comment`) and all JSON Schema constraints are merged into a single `StructField(..., metadata={...})` dict, preserving them losslessly alongside the comment.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

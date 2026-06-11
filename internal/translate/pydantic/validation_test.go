@@ -39,7 +39,9 @@ func TestValidation_MultipleOfEmitsField(t *testing.T) {
 	out, err := (&Translator{}).Translate("t", testcases.DecimalFromMultipleOf(), "schemas")
 	require.NoError(t, err)
 	result := string(out)
-	assert.Contains(t, result, "price: float = Field(multiple_of=0.01)")
+	// Fractional multipleOf narrows the type to Decimal for exact fixed-point values.
+	assert.Contains(t, result, "price: Decimal = Field(multiple_of=0.01)")
+	assert.Contains(t, result, "from decimal import Decimal")
 }
 
 func TestValidation_NumberRangeEmitsField(t *testing.T) {

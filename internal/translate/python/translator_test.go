@@ -76,8 +76,34 @@ func TestTranslate_DateFormats(t *testing.T) {
 
 	assert.Contains(t, result, "created_at: datetime.datetime")
 	assert.Contains(t, result, "birth_date: datetime.date")
-	assert.Contains(t, result, "uuid: str")
+	assert.Contains(t, result, "uuid: uuid.UUID")
 	assert.Contains(t, result, "import datetime")
+	assert.Contains(t, result, "import uuid")
+}
+
+func TestTranslate_PostInitValidation(t *testing.T) {
+	minimum := 0.0
+	maximum := 150.0
+	pattern := "^[a-z]+$"
+	schema := &jsonschema.Schema{
+		Type:     "object",
+		Required: []string{"age", "name"},
+		Properties: map[string]*jsonschema.Schema{
+			"age":  {Type: "integer", Minimum: &minimum, Maximum: &maximum},
+			"name": {Type: "string", Pattern: pattern},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("person", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	assert.Contains(t, result, "def __post_init__(self) -> None:")
+	assert.Contains(t, result, "if not (self.age >= 0):")
+	assert.Contains(t, result, "if not (self.age <= 150):")
+	assert.Contains(t, result, `if not (re.fullmatch("^[a-z]+$", self.name) is not None):`)
+	assert.Contains(t, result, "import re")
 }
 
 func TestTranslate_NoDatetimeImport(t *testing.T) {

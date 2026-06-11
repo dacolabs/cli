@@ -418,7 +418,28 @@ func TestTranslate_DecimalWithMetadata(t *testing.T) {
 
 	result := string(output)
 	assert.Contains(t, result, "T.DecimalType(38, 2)")
-	assert.Contains(t, result, `metadata={"comment": "Product price"}`)
+	// Comment and constraints are merged into a single metadata dict.
+	assert.Contains(t, result, `metadata={"comment": "Product price", "multipleOf": 0.01}`)
+}
+
+func TestTranslate_ConstraintsInMetadata(t *testing.T) {
+	minimum := 0.0
+	maximum := 150.0
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"age": {Type: "integer", Minimum: &minimum, Maximum: &maximum},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("person", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	// Narrowed type plus the constraints preserved losslessly in metadata.
+	assert.Contains(t, result, "T.ShortType()")
+	assert.Contains(t, result, `metadata={"minimum": 0, "maximum": 150}`)
 }
 
 func TestTranslate_MapType(t *testing.T) {

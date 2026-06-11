@@ -76,8 +76,9 @@ func TestTranslate_DateFormats(t *testing.T) {
 
 	assert.Contains(t, result, "created_at: datetime.datetime")
 	assert.Contains(t, result, "birth_date: datetime.date")
-	assert.Contains(t, result, "uuid: str")
+	assert.Contains(t, result, "uuid: uuid.UUID")
 	assert.Contains(t, result, "import datetime")
+	assert.Contains(t, result, "import uuid")
 }
 
 func TestTranslate_NoDatetimeImport(t *testing.T) {

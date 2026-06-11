@@ -34,12 +34,16 @@ CREATE TABLE users_schema (
 
 For Delta-Lake CHECK constraints on `enum`/`const`/`pattern`/`minLength`, use [`databricks-sql`](../databrickssql/README.md).
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Types narrow like `databricks-sql` (`TINYINT`/`DECIMAL`/`VARCHAR`). Plain Spark DDL has no `CHECK` constraints, so the full constraint set is preserved as an inline `/* ... */` block comment on each column — machine-readable and lossless, but not engine-enforced. For enforceable constraints use [databricks-sql](../databrickssql/README.md).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
 - [x] type
-- [ ] enum
-- [ ] const
+- [x] enum
+- [x] const
 
 ### Type Values
 - [x] string
@@ -77,12 +81,12 @@ For Delta-Lake CHECK constraints on `enum`/`const`/`pattern`/`minLength`, use [`
 
 ### Numeric Validation
 - [x] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
+- [x] exclusiveMinimum / exclusiveMaximum
 - [x] multipleOf
 
 ### String Validation
 - [x] minLength / maxLength
-- [ ] pattern
+- [x] pattern
 
 ### References & Definitions
 - [x] $ref

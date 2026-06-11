@@ -76,6 +76,10 @@ Constraint translation map:
 
 For nullable fields, every check is wrapped as `col IS NULL OR (…)` so optional columns don't fail when absent.
 
+## Constraint handling
+
+dqx-yaml is a pure validation target: it emits a DQX data-quality check for every constraint — `enum` (is_in_list), `const` (is_equal_to), `minimum`/`maximum` (is_in_range / bounds), exclusive bounds and `multipleOf` (sql_expression), `minLength`/`maxLength` and `minItems`/`maxItems` (sql_expression), `pattern` (regex_match), and the string formats. See [../CONSTRAINTS.md](../CONSTRAINTS.md).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords

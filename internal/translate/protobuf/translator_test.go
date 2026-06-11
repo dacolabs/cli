@@ -73,10 +73,34 @@ func TestTranslate_DateFormats(t *testing.T) {
 
 	result := string(output)
 
-	// All date/string formats map to string in proto3
-	assert.Contains(t, result, "string created_at")
-	assert.Contains(t, result, "string birth_date")
+	// date/date-time map to the Timestamp well-known type; uuid stays string.
+	assert.Contains(t, result, "google.protobuf.Timestamp created_at")
+	assert.Contains(t, result, "google.protobuf.Timestamp birth_date")
 	assert.Contains(t, result, "string uuid")
+	assert.Contains(t, result, `import "google/protobuf/timestamp.proto";`)
+}
+
+func TestTranslate_ValidationOptions(t *testing.T) {
+	minimum := 0.0
+	maximum := 150.0
+	minLen := 1
+	schema := &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"age":  {Type: "integer", Minimum: &minimum, Maximum: &maximum},
+			"name": {Type: "string", MinLength: &minLen},
+		},
+	}
+
+	translator := &Translator{}
+	output, err := translator.Translate("person", schema, "schemas")
+	require.NoError(t, err)
+
+	result := string(output)
+	assert.Contains(t, result, `import "buf/validate/validate.proto";`)
+	// minimum: 0 makes age non-negative, so it narrows to uint32.
+	assert.Contains(t, result, "(buf.validate.field).uint32 = {gte: 0, lte: 150}")
+	assert.Contains(t, result, "(buf.validate.field).string = {min_len: 1}")
 }
 
 func TestTranslate_ArrayType(t *testing.T) {

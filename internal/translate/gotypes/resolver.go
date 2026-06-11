@@ -4,6 +4,8 @@
 package gotypes
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -61,13 +63,92 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		f.Type = goIntType(translate.NarrowInteger(f.Constraints), translate.IsNonNegative(f.Constraints))
 	}
 
-	tag := f.Name
+	jsonTag := f.Name
 	if f.Nullable {
-		tag += ",omitempty"
+		jsonTag += ",omitempty"
 		f.Type = "*" + f.Type
 	}
-	f.Tag = "`json:\"" + tag + "\"`"
+	tag := "`json:\"" + jsonTag + "\""
+	if rules := goValidateRules(f); rules != "" {
+		tag += " validate:\"" + rules + "\""
+	}
+	tag += "`"
+	f.Tag = tag
 	f.Name = toPascalCase(f.Name)
+}
+
+// goValidateRules maps constraints to a go-playground/validator tag body (e.g.
+// `min=0,max=150,oneof=a b`). pattern and multipleOf have no validator builtin and are
+// omitted. Optional (pointer) fields are prefixed with omitempty so nil passes.
+func goValidateRules(f *translate.Field) string {
+	c := f.Constraints
+	var rules []string
+	if c.Minimum != nil {
+		rules = append(rules, "min="+goNum(*c.Minimum))
+	}
+	if c.Maximum != nil {
+		rules = append(rules, "max="+goNum(*c.Maximum))
+	}
+	if c.ExclusiveMinimum != nil {
+		rules = append(rules, "gt="+goNum(*c.ExclusiveMinimum))
+	}
+	if c.ExclusiveMaximum != nil {
+		rules = append(rules, "lt="+goNum(*c.ExclusiveMaximum))
+	}
+	if c.MinLength != nil {
+		rules = append(rules, fmt.Sprintf("min=%d", *c.MinLength))
+	}
+	if c.MaxLength != nil {
+		rules = append(rules, fmt.Sprintf("max=%d", *c.MaxLength))
+	}
+	if c.MinItems != nil {
+		rules = append(rules, fmt.Sprintf("min=%d", *c.MinItems))
+	}
+	if c.MaxItems != nil {
+		rules = append(rules, fmt.Sprintf("max=%d", *c.MaxItems))
+	}
+	if len(c.Enum) > 0 {
+		parts := make([]string, len(c.Enum))
+		for i, v := range c.Enum {
+			parts[i] = goOneofValue(v)
+		}
+		rules = append(rules, "oneof="+strings.Join(parts, " "))
+	}
+	if c.Const != nil {
+		rules = append(rules, "eq="+goOneofValue(*c.Const))
+	}
+	if len(rules) == 0 {
+		return ""
+	}
+	if f.Nullable {
+		return "omitempty," + strings.Join(rules, ",")
+	}
+	return strings.Join(rules, ",")
+}
+
+// goNum renders a float bound as a Go-style numeric literal, dropping the trailing .0.
+func goNum(v float64) string {
+	if v == float64(int64(v)) {
+		return strconv.FormatInt(int64(v), 10)
+	}
+	return strconv.FormatFloat(v, 'f', -1, 64)
+}
+
+// goOneofValue renders an enum/const value for a validator oneof/eq rule.
+func goOneofValue(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case bool:
+		if x {
+			return "true"
+		}
+		return "false"
+	case float64:
+		return goNum(x)
+	default:
+		return fmt.Sprintf("%v", x)
+	}
 }
 
 // goIntType picks the narrowest Go integer type for the constraint kind.

@@ -66,6 +66,10 @@ func (r *resolver) EnrichField(f *translate.Field) {
 	case "T.LongType()":
 		f.Type = sparkIntType(translate.NarrowInteger(f.Constraints))
 	}
+
+	if meta := translate.ConstraintsPyDict(f.Constraints); meta != "" {
+		f.Tag = ", metadata=" + meta
+	}
 }
 
 func sparkIntType(k translate.IntKind) string {

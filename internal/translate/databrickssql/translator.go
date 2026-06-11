@@ -113,8 +113,45 @@ func collectConstraints(fields []translate.Field) []constraintClause {
 				Expr: fmt.Sprintf("length(%s) >= %d", col, *f.Constraints.MinLength),
 			})
 		}
+
+		// Range checks. Narrowing to TINYINT/DECIMAL only approximates the bound, so
+		// emit explicit CHECKs to keep the constraint exact.
+		switch min, max := f.Constraints.Minimum, f.Constraints.Maximum; {
+		case min != nil && max != nil:
+			out = append(out, constraintClause{
+				Name: f.Name + "_range",
+				Expr: fmt.Sprintf("%s BETWEEN %s AND %s", col, numLit(*min), numLit(*max)),
+			})
+		case min != nil:
+			out = append(out, constraintClause{Name: f.Name + "_min", Expr: fmt.Sprintf("%s >= %s", col, numLit(*min))})
+		case max != nil:
+			out = append(out, constraintClause{Name: f.Name + "_max", Expr: fmt.Sprintf("%s <= %s", col, numLit(*max))})
+		}
+
+		if v := f.Constraints.ExclusiveMinimum; v != nil {
+			out = append(out, constraintClause{Name: f.Name + "_gt", Expr: fmt.Sprintf("%s > %s", col, numLit(*v))})
+		}
+		if v := f.Constraints.ExclusiveMaximum; v != nil {
+			out = append(out, constraintClause{Name: f.Name + "_lt", Expr: fmt.Sprintf("%s < %s", col, numLit(*v))})
+		}
+
+		if v := f.Constraints.MultipleOf; v != nil {
+			out = append(out, constraintClause{
+				Name: f.Name + "_multiple",
+				Expr: fmt.Sprintf("%s %% %s = 0", col, numLit(*v)),
+			})
+		}
 	}
 	return out
+}
+
+// numLit renders a float bound as a SQL numeric literal, dropping the trailing .0 for
+// whole numbers so 150.0 prints as 150.
+func numLit(v float64) string {
+	if v == float64(int64(v)) {
+		return fmt.Sprintf("%d", int64(v))
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 func inlineStruct(fields []translate.Field, defs map[string]*translate.TypeDef, visited map[string]bool) {

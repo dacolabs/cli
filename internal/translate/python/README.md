@@ -37,6 +37,10 @@ class OrdersSchema:
 
 Numeric ranges, lengths, patterns, and other constraints aren't enforceable in plain dataclass output; switch to `pydantic` if you need them.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). Plain dataclasses gain a generated `__post_init__` that enforces constraints at runtime: range (`minimum`/`maximum`/exclusive), length (`minLength`/`maxLength`), `pattern` (via `re.fullmatch`), `multipleOf`, and `enum`/`const` membership. `enum`/`const` are also typed as `Literal[...]`, and types narrow to richer Python types (`format: uuid` → `uuid.UUID`, fractional `multipleOf` → `Decimal`).
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
@@ -79,13 +83,13 @@ Numeric ranges, lengths, patterns, and other constraints aren't enforceable in p
 - [ ] maxContains / minContains
 
 ### Numeric Validation
-- [ ] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
-- [ ] multipleOf
+- [x] minimum / maximum
+- [x] exclusiveMinimum / exclusiveMaximum
+- [x] multipleOf
 
 ### String Validation
-- [ ] minLength / maxLength
-- [ ] pattern
+- [x] minLength / maxLength
+- [x] pattern
 
 ### References & Definitions
 - [x] $ref

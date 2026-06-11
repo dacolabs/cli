@@ -41,6 +41,10 @@ USING DELTA;
 
 CHECK clauses are appended after the column list. Delta enforces them on insert/update.
 
+## Constraint handling
+
+Follows the narrow + validate principle (see [../CONSTRAINTS.md](../CONSTRAINTS.md)). `BIGINT` narrows to `TINYINT`/`SMALLINT`/`INT` from bounds, `DOUBLE` to `DECIMAL(p,s)` from fractional `multipleOf`, `STRING` to `VARCHAR(n)` from `maxLength`. Because narrowing only approximates a bound, the exact constraints are additionally enforced via Delta `CHECK` constraints: `enum`/`const` (IN / =), `pattern` (RLIKE), `minLength` (length), `minimum`/`maximum` (BETWEEN), `exclusiveMinimum`/`exclusiveMaximum` (>, <), and `multipleOf` (% = 0). Descriptions become column `COMMENT`s.
+
 ## Supported JSON Schema Features
 
 ### Type Keywords
@@ -84,7 +88,7 @@ CHECK clauses are appended after the column list. Delta enforces them on insert/
 
 ### Numeric Validation
 - [x] minimum / maximum
-- [ ] exclusiveMinimum / exclusiveMaximum
+- [x] exclusiveMinimum / exclusiveMaximum
 - [x] multipleOf
 
 ### String Validation

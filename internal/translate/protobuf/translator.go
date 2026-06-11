@@ -9,6 +9,7 @@ import (
 	"embed"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -62,15 +63,26 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, outpu
 	enums := extractEnums(data.Defs, &data.Root)
 	data.Extra["Enums"] = enums
 
-	// sets sequential proto field numbers (= 1, = 2, ...) on each message.
-	for i := range data.Defs {
-		for j := range data.Defs[i].Fields {
-			data.Defs[i].Fields[j].Tag = fmt.Sprintf("= %d", j+1)
+	// Assign proto field numbers, attach protovalidate options, and fold constraints +
+	// description into a leading comment. Track which imports the file needs.
+	needsValidate := false
+	applyFieldMeta := func(fields []translate.Field) {
+		for j := range fields {
+			if opt := protovalidateOption(fields[j].Type, fields[j].Constraints); opt != "" {
+				fields[j].Tag = fmt.Sprintf("= %d [%s]", j+1, opt)
+				needsValidate = true
+			} else {
+				fields[j].Tag = fmt.Sprintf("= %d", j+1)
+			}
+			fields[j].Description = fieldComment(fields[j].Description, fields[j].Constraints)
 		}
 	}
-	for j := range data.Root.Fields {
-		data.Root.Fields[j].Tag = fmt.Sprintf("= %d", j+1)
+	for i := range data.Defs {
+		applyFieldMeta(data.Defs[i].Fields)
 	}
+	applyFieldMeta(data.Root.Fields)
+	data.Extra["NeedsValidate"] = needsValidate
+	data.Extra["NeedsTimestamp"] = usesTimestamp(data.Defs, data.Root)
 
 	var buf bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, "protobuf.go.tmpl", data); err != nil {
@@ -78,6 +90,87 @@ func (t *Translator) Translate(portName string, schema *jsonschema.Schema, outpu
 	}
 
 	return buf.Bytes(), nil
+}
+
+// protovalidateOption builds a `(buf.validate.field).<scalar> = {...}` option from the
+// field's value constraints, or "" when none apply. multipleOf has no protovalidate
+// equivalent and survives only in the leading comment.
+func protovalidateOption(typeStr string, c translate.Constraints) string {
+	base := strings.TrimPrefix(typeStr, "optional ")
+	var rules []string
+	switch base {
+	case "int32", "int64", "uint32", "uint64", "double", "float":
+		if c.Minimum != nil {
+			rules = append(rules, "gte: "+protoNum(*c.Minimum))
+		}
+		if c.Maximum != nil {
+			rules = append(rules, "lte: "+protoNum(*c.Maximum))
+		}
+		if c.ExclusiveMinimum != nil {
+			rules = append(rules, "gt: "+protoNum(*c.ExclusiveMinimum))
+		}
+		if c.ExclusiveMaximum != nil {
+			rules = append(rules, "lt: "+protoNum(*c.ExclusiveMaximum))
+		}
+	case "string":
+		if c.Pattern != "" {
+			rules = append(rules, "pattern: "+strconv.Quote(c.Pattern))
+		}
+		if c.MinLength != nil {
+			rules = append(rules, fmt.Sprintf("min_len: %d", *c.MinLength))
+		}
+		if c.MaxLength != nil {
+			rules = append(rules, fmt.Sprintf("max_len: %d", *c.MaxLength))
+		}
+	default:
+		return ""
+	}
+	if len(rules) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("(buf.validate.field).%s = {%s}", base, strings.Join(rules, ", "))
+}
+
+// protoNum renders a float bound as a proto numeric literal, dropping the trailing .0
+// so 150.0 prints as 150.
+func protoNum(v float64) string {
+	if v == float64(int64(v)) {
+		return strconv.FormatInt(int64(v), 10)
+	}
+	return strconv.FormatFloat(v, 'f', -1, 64)
+}
+
+// fieldComment folds the description and the full constraint set into a single comment
+// line, so constraints protovalidate can't express are still preserved losslessly.
+func fieldComment(desc string, c translate.Constraints) string {
+	text := translate.ConstraintsText(c)
+	switch {
+	case desc != "" && text != "":
+		return desc + " (" + text + ")"
+	case desc != "":
+		return desc
+	default:
+		return text
+	}
+}
+
+// usesTimestamp reports whether any field maps to google.protobuf.Timestamp, requiring
+// the well-known-types import.
+func usesTimestamp(defs []translate.TypeDef, root translate.TypeDef) bool {
+	has := func(fields []translate.Field) bool {
+		for i := range fields {
+			if strings.Contains(fields[i].Type, "google.protobuf.Timestamp") {
+				return true
+			}
+		}
+		return false
+	}
+	for i := range defs {
+		if has(defs[i].Fields) {
+			return true
+		}
+	}
+	return has(root.Fields)
 }
 
 // protoEnum describes a top-level enum declaration in the generated .proto file.

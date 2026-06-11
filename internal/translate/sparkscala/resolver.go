@@ -6,6 +6,7 @@ package sparkscala
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dacolabs/daco/internal/translate"
 )
@@ -66,6 +67,10 @@ func (r *resolver) EnrichField(f *translate.Field) {
 		if kind, shape := translate.NarrowNumber(f.Constraints); kind == translate.NumberDecimal {
 			f.Type = fmt.Sprintf("DecimalType(%d, %d)", shape.Precision, shape.Scale)
 		}
+	}
+
+	if entries := translate.ConstraintEntriesJSON(f.Constraints); len(entries) > 0 {
+		f.Tag = `, Metadata.fromJson("""{` + strings.Join(entries, ", ") + `}""")`
 	}
 }
 

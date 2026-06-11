@@ -19,6 +19,8 @@ func (r *resolver) PrimitiveType(schemaType, format string) string {
 			return "datetime.date"
 		case "date-time":
 			return "datetime.datetime"
+		case "uuid":
+			return "uuid.UUID"
 		}
 	}
 
@@ -59,6 +61,13 @@ func (r *resolver) FormatRootName(portName string) string {
 func (r *resolver) EnrichField(f *translate.Field) {
 	if lit := buildLiteralType(f.Constraints); lit != "" {
 		f.Type = lit
+	}
+
+	// Narrow a fractional-step float to Decimal for exact fixed-point values.
+	if f.Type == "float" {
+		if kind, _ := translate.NarrowNumber(f.Constraints); kind == translate.NumberDecimal {
+			f.Type = "Decimal"
+		}
 	}
 
 	if f.Nullable {
