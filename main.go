@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dacolabs/cli/internal/apply"
 	"github.com/dacolabs/cli/internal/catalogapi"
 	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/cli/internal/creds"
@@ -42,6 +43,8 @@ func run(args []string) error {
 		return cmdWhoami(context.Background())
 	case "datasets":
 		return cmdDatasets(context.Background())
+	case "apply":
+		return cmdApply(context.Background(), args[1:])
 	default:
 		fmt.Print(usage)
 		return fmt.Errorf("unknown command %q", args[0])
@@ -166,6 +169,88 @@ func cmdDatasets(ctx context.Context) error {
 	return nil
 }
 
+func cmdApply(ctx context.Context, args []string) error {
+	var files []string
+	dryRun := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--dry-run":
+			dryRun = true
+		case "-f", "--filename":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("apply: %s requires a path", args[i-1])
+			}
+			files = append(files, args[i])
+		case "--help", "-h":
+			fmt.Print(applyUsage)
+			return nil
+		default:
+			return fmt.Errorf("apply: unknown argument %q\n%s", args[i], applyUsage)
+		}
+	}
+	if len(files) == 0 {
+		return fmt.Errorf("apply: at least one -f path is required\n%s", applyUsage)
+	}
+
+	units, err := apply.Load(files)
+	if err != nil {
+		return err
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	store, err := credentialStore()
+	if err != nil {
+		return err
+	}
+	token, sess, err := session.AccessToken(ctx, store, http.DefaultClient)
+	if err != nil {
+		return err
+	}
+	base := cfg.BaseURL
+	if base == "" {
+		base = sess.BaseURL
+	}
+	if base == "" {
+		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
+	}
+	client, err := catalogapi.NewAuthenticatedClient(base, token, http.DefaultClient)
+	if err != nil {
+		return err
+	}
+
+	results, err := apply.Run(ctx, client, units, dryRun)
+	if err != nil {
+		return err
+	}
+	var created, patched, unchanged, failed int
+	for _, r := range results {
+		line := fmt.Sprintf("%s  %s@%s", r.Action, r.Urn, r.Version)
+		if r.Message != "" {
+			line += "  " + r.Message
+		}
+		fmt.Println(line)
+		switch r.Action {
+		case apply.ActionCreated:
+			created++
+		case apply.ActionPatched:
+			patched++
+		case apply.ActionUnchanged:
+			unchanged++
+		default:
+			failed++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "summary: created=%d patched=%d unchanged=%d error=%d\n", created, patched, unchanged, failed)
+	if failed > 0 {
+		return fmt.Errorf("apply finished with %d error(s)", failed)
+	}
+	return nil
+}
+
 func displayIdentity(email, id string) string {
 	email = strings.TrimSpace(email)
 	if email != "" {
@@ -186,6 +271,7 @@ Usage:
   daco logout
   daco whoami
   daco datasets
+  daco apply -f <file|dir> [-f ...] [--dry-run]
   daco --help
   daco --version
 
@@ -197,4 +283,12 @@ Environment:
   DACO_CLIENT_ID   Override AuthKit client ID (public; baked in for staging)
   DACO_AUTH_API    AuthKit API host (default https://api.workos.com)
   DACO_CREDENTIALS_FILE  Override credentials path
+`
+
+const applyUsage = `Apply Dataset YAML (create/update; no prune):
+  daco apply -f datasets.yaml
+  daco apply -f ./manifests --dry-run
+
+Documents use kind: Dataset with Catalog fields (urn, version, title, description, metadata, contract).
+Multiple documents may be separated with ---. Conflicting urn@version declarations fail before API calls.
 `
