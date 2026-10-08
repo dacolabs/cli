@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dacolabs/cli/internal/catalog"
+	"github.com/dacolabs/cli/internal/catalogapi"
 	"github.com/dacolabs/cli/internal/config"
 	"github.com/dacolabs/cli/internal/creds"
 	"github.com/dacolabs/cli/internal/session"
@@ -150,11 +150,19 @@ func cmdDatasets(ctx context.Context) error {
 	if base == "" {
 		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
 	}
-	body, _, err := catalog.Client{BaseURL: base, Token: token}.Get(ctx, "/api/catalog/datasets?pageSize=5")
+	client, err := catalogapi.NewAuthenticatedClient(base, token, http.DefaultClient)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(body))
+	pageSize := int32(5)
+	res, err := client.ListDatasetsWithResponse(ctx, &catalogapi.ListDatasetsParams{PageSize: &pageSize})
+	if err != nil {
+		return err
+	}
+	if res.StatusCode() < 200 || res.StatusCode() >= 300 {
+		return fmt.Errorf("catalog %s: %s", res.Status(), strings.TrimSpace(string(res.Body)))
+	}
+	fmt.Println(string(res.Body))
 	return nil
 }
 

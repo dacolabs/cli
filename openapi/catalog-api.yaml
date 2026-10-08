@@ -1,0 +1,765 @@
+openapi: 3.1.0
+info:
+  title: Catalog API
+  version: 0.1.0
+  description: >-
+    Create complete tenant-scoped Dataset Versions through one Dataset command.
+    Reading a Dataset returns its greatest numeric SemVer directly; explicit
+    Version URLs provide stable historical reads and updates. Contracts use
+    self-contained Draft 2020-12 JSON Schemas. Dataset inventory uses keyset
+    pagination, while the separate GraphQL Metadata API supports search.
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+security:
+  - OAuthBearer: []
+tags:
+  - name: Datasets
+paths:
+  /api/catalog/datasets:
+    get:
+      tags: [Datasets]
+      operationId: listDatasets
+      x-daco-permission: catalog:read
+      summary: List Datasets
+      parameters:
+        - name: pageSize
+          in: query
+          description: Maximum number of Datasets to return; zero uses the default and values above 200 are capped.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: pageToken
+          in: query
+          description: Opaque continuation token from a previous response.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Page of Datasets in ascending bytewise URN order
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+    post:
+      tags: [Datasets]
+      operationId: createDataset
+      x-daco-permission: catalog:write
+      summary: Create a Dataset Version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatasetInput"
+      responses:
+        "201":
+          description: Dataset Version created
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Location:
+              description: Percent-encoded explicit Dataset Version item URL.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+  /api/catalog/datasets/{urn}:
+    parameters:
+      - $ref: "#/components/parameters/DatasetURN"
+    get:
+      tags: [Datasets]
+      operationId: getDataset
+      x-daco-permission: catalog:read
+      summary: Get a Dataset's greatest Version
+      responses:
+        "200":
+          description: Dataset found
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+  /api/catalog/datasets/{urn}/versions:
+    parameters:
+      - $ref: "#/components/parameters/DatasetURN"
+    get:
+      tags: [Datasets]
+      operationId: listDatasetVersions
+      x-daco-permission: catalog:read
+      summary: List a Dataset's Versions in descending numeric SemVer order
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Page of Versions
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetVersionList"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+  /api/catalog/datasets/{urn}/versions/{version}:
+    parameters:
+      - $ref: "#/components/parameters/DatasetURN"
+      - $ref: "#/components/parameters/VersionPathParameter"
+    get:
+      tags: [Datasets]
+      operationId: getDatasetVersion
+      x-daco-permission: catalog:read
+      summary: Get an explicit Dataset Version and its Contract
+      responses:
+        "200":
+          description: Version found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+    patch:
+      tags: [Datasets]
+      operationId: patchDatasetVersion
+      x-daco-permission: catalog:write
+      summary: Merge-patch mutable Version fields
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/DatasetVersionPatch"
+      responses:
+        "200":
+          description: Version patched
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dataset"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+  /api/catalog/datasets/{urn}/versions/{version}/materializations:
+    parameters:
+      - $ref: "#/components/parameters/DatasetURN"
+      - $ref: "#/components/parameters/VersionPathParameter"
+    get:
+      tags: [Datasets]
+      operationId: listMaterializations
+      x-daco-permission: catalog:read
+      summary: List a Version's materialization bindings
+      responses:
+        "200":
+          description: Materialization bindings
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterializationList"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+    post:
+      tags: [Datasets]
+      operationId: createMaterialization
+      x-daco-permission: catalog:write
+      summary: Add an immutable catalog binding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterializationInput"
+      responses:
+        "201":
+          description: Materialization binding created
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Materialization"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+  /api/catalog/datasets/{urn}/versions/{version}/materializations/{materializationUrn}:
+    parameters:
+      - $ref: "#/components/parameters/DatasetURN"
+      - $ref: "#/components/parameters/VersionPathParameter"
+      - $ref: "#/components/parameters/MaterializationURN"
+    get:
+      tags: [Datasets]
+      operationId: getMaterialization
+      x-daco-permission: catalog:read
+      summary: Get a materialization binding
+      responses:
+        "200":
+          description: Materialization binding found
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Materialization"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+    delete:
+      tags: [Datasets]
+      operationId: deleteMaterialization
+      x-daco-permission: catalog:write
+      summary: Remove a catalog binding without touching its provider
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "204":
+          description: Materialization binding removed
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+        "504": { $ref: "#/components/responses/GatewayTimeout" }
+components:
+  securitySchemes:
+    OAuthBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: WorkOS OAuth access token for the environment and active organization.
+  parameters:
+    DatasetURN:
+      name: urn
+      in: path
+      required: true
+      description: Opaque, case-sensitive Dataset identity supplied in percent-encoded form.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
+    VersionPathParameter:
+      name: version
+      in: path
+      required: true
+      description: Stable numeric Semantic Version.
+      schema:
+        $ref: "#/components/schemas/SemVer"
+    MaterializationURN:
+      name: materializationUrn
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+      description: Zero selects the default of 50; positive values are capped at 200.
+    PageToken:
+      name: pageToken
+      in: query
+      schema:
+        type: string
+        minLength: 1
+    IfMatch:
+      name: If-Match
+      in: header
+      description: Optional current ETag; mismatch prevents the command.
+      schema:
+        type: string
+        minLength: 1
+  headers:
+    RequestID:
+      description: Server-generated identifier for request correlation.
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Location:
+      description: Percent-encoded resource item URL.
+      required: true
+      schema:
+        type: string
+        format: uri-reference
+    ETag:
+      description: Revision ETag for optional optimistic concurrency.
+      required: true
+      schema:
+        type: string
+  schemas:
+    SemVer:
+      type: string
+      pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+      description: Stable numeric major.minor.patch without prerelease or build suffixes.
+      examples: ["1.2.3"]
+    JSONMetadata:
+      type: object
+      additionalProperties: true
+      description: A JSON object; arrays and scalars are invalid at the top level.
+    ContractInput:
+      type: object
+      additionalProperties: false
+      required: [schema, metadata]
+      properties:
+        schema:
+          type: object
+          additionalProperties: true
+          description: Valid Draft 2020-12 JSON Schema object.
+        metadata:
+          $ref: "#/components/schemas/JSONMetadata"
+    Contract:
+      type: object
+      additionalProperties: false
+      required: [schema, metadata]
+      properties:
+        schema:
+          type: object
+          additionalProperties: true
+        metadata:
+          $ref: "#/components/schemas/JSONMetadata"
+    Dataset:
+      type: object
+      additionalProperties: false
+      required: [urn, version, title, description, metadata, contract, revision, createdAt, updatedAt]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Immutable, opaque, case-sensitive Dataset identity.
+          examples: ["urn:daco:dataset:orders"]
+        version:
+          $ref: "#/components/schemas/SemVer"
+        title:
+          type: string
+        description:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/JSONMetadata"
+        contract:
+          $ref: "#/components/schemas/Contract"
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DatasetSummary:
+      type: object
+      additionalProperties: false
+      required: [urn, version, title]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+        version:
+          $ref: "#/components/schemas/SemVer"
+        title:
+          type: string
+    DatasetInput:
+      type: object
+      additionalProperties: false
+      required: [urn, version, title, description, metadata, contract]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+        version:
+          $ref: "#/components/schemas/SemVer"
+        title:
+          type: string
+          minLength: 1
+          description: Trimmed before validating the 200-character limit.
+        description:
+          type: string
+          minLength: 1
+        metadata:
+          $ref: "#/components/schemas/JSONMetadata"
+        contract:
+          $ref: "#/components/schemas/ContractInput"
+    DatasetVersionPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Trimmed before validating the 200-character limit.
+        description:
+          type: string
+          minLength: 1
+        metadata:
+          $ref: "#/components/schemas/JSONMetadata"
+    DatasetVersionList:
+      type: object
+      additionalProperties: false
+      required: [versions]
+      properties:
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dataset"
+        nextPageToken:
+          type: string
+          minLength: 1
+    SnowflakeTableLocator:
+      type: object
+      additionalProperties: false
+      required: [account, database, schema, table]
+      properties:
+        account: { type: string, minLength: 1 }
+        database: { type: string, minLength: 1 }
+        schema: { type: string, minLength: 1 }
+        table: { type: string, minLength: 1 }
+    DatabricksTableLocator:
+      type: object
+      additionalProperties: false
+      required: [workspaceUrl, catalog, schema, table]
+      properties:
+        workspaceUrl: { type: string, format: uri, minLength: 1 }
+        catalog: { type: string, minLength: 1 }
+        schema: { type: string, minLength: 1 }
+        table: { type: string, minLength: 1 }
+    MaterializationInput:
+      type: object
+      additionalProperties: false
+      required: [kind, locator]
+      properties:
+        kind:
+          type: string
+          enum: [snowflake-table, databricks-table]
+        locator:
+          oneOf:
+            - $ref: "#/components/schemas/SnowflakeTableLocator"
+            - $ref: "#/components/schemas/DatabricksTableLocator"
+    Materialization:
+      type: object
+      additionalProperties: false
+      required: [urn, kind, locator, revision, createdAt]
+      properties:
+        urn:
+          type: string
+          pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
+        kind:
+          type: string
+          enum: [snowflake-table, databricks-table]
+        locator:
+          oneOf:
+            - $ref: "#/components/schemas/SnowflakeTableLocator"
+            - $ref: "#/components/schemas/DatabricksTableLocator"
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+    MaterializationList:
+      type: object
+      additionalProperties: false
+      required: [materializations]
+      properties:
+        materializations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Materialization"
+    DatasetList:
+      type: object
+      additionalProperties: false
+      required: [datasets]
+      properties:
+        datasets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DatasetSummary"
+        nextPageToken:
+          type: string
+          minLength: 1
+          description: Opaque URL-safe continuation token; omitted on the final page.
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, requestId]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: Stable problem type path.
+          examples: ["/problems/invalid-request"]
+        title:
+          type: string
+          minLength: 1
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        requestId:
+          type: string
+          minLength: 1
+        invalidParams:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvalidParameter"
+    InvalidParameter:
+      type: object
+      additionalProperties: false
+      required: [name, reason]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 1
+  responses:
+    Unauthorized:
+      description: A valid OAuth bearer access token is required.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+        WWW-Authenticate:
+          description: Bearer authentication challenge.
+          required: true
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Forbidden:
+      description: The verified identity lacks an active organization or the operation permission.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    BadRequest:
+      description: The request is malformed or violates the API contract.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: The requested route or resource does not exist.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    MethodNotAllowed:
+      description: The route exists but does not support the request method.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+        Allow:
+          description: Comma-separated methods supported by the route.
+          required: true
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: The request conflicts with current state.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    PreconditionFailed:
+      description: The supplied If-Match ETag does not match the current resource.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    PayloadTooLarge:
+      description: The request body exceeds one mebibyte.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InternalServerError:
+      description: The request failed unexpectedly.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ServiceUnavailable:
+      description: A required dependency is unavailable.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    GatewayTimeout:
+      description: The application request deadline expired.
+      headers:
+        X-Request-ID:
+          $ref: "#/components/headers/RequestID"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

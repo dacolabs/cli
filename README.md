@@ -6,7 +6,7 @@ This repository is the **CLI product** (`daco`). Language client libraries are g
 
 ## Status
 
-AuthKit device login works. Catalog commands are still thin (`datasets` lists the first page).
+AuthKit device login works. Catalog HTTP calls use an **oapi-codegen** client generated from a CLI-safe Catalog OpenAPI snapshot. Commands (`datasets`, etc.) stay hand-written.
 
 ## Build
 
@@ -14,6 +14,19 @@ AuthKit device login works. Catalog commands are still thin (`datasets` lists th
 go build -o daco .
 ./daco --help
 ```
+
+## Catalog OpenAPI client
+
+The committed client lives in `internal/catalogapi/` (generated) plus a small auth helper. Refresh from the product contract when Catalog OpenAPI changes:
+
+```bash
+# from a daco monorepo checkout with this repo at cli/, or set CATALOG_OPENAPI=
+./scripts/sync-catalog-openapi.sh
+./scripts/generate-catalog-client.sh
+./scripts/check-catalog-client-drift.sh
+```
+
+Requires Go 1.24+ and either a PATH `oapi-codegen` at **v2.8.0** or network access for `go run …@v2.8.0`.
 
 ## Authenticate
 
