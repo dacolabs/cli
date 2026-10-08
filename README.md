@@ -6,22 +6,37 @@ This repository is the **CLI product** (`daco`). Language client libraries are g
 
 ## Status
 
-Early scaffold. The binary will call the remote Catalog HTTP API using WorkOS Connect M2M credentials (`client_credentials`). Interactive login and API keys are out of scope for v1.
+AuthKit device login works. Catalog commands are still thin (`datasets` lists the first page).
 
-## Development
+## Build
 
 ```bash
 go build -o daco .
 ./daco --help
 ```
 
-## Configuration (planned)
+## Authenticate
+
+```bash
+export DACO_CLIENT_ID=client_...   # WorkOS AuthKit client ID (same environment as the web app)
+export DACO_BASE_URL=https://...   # Catalog API origin
+
+./daco login    # open the printed URL, confirm the code
+./daco whoami
+./daco datasets
+./daco logout
+```
+
+`daco login` uses WorkOS AuthKit **device authorization** (public client; no API key in the binary). Tokens are stored at `~/.config/daco/credentials.json` (`0600`), or `DACO_CREDENTIALS_FILE` when set. Access tokens refresh automatically when possible.
+
+## Environment
 
 | Variable | Purpose |
 |---|---|
+| `DACO_CLIENT_ID` | WorkOS AuthKit client ID |
 | `DACO_BASE_URL` | Catalog API origin |
-| `DACO_CLIENT_ID` | WorkOS Connect M2M client ID |
-| `DACO_CLIENT_SECRET` | WorkOS Connect M2M client secret |
+| `DACO_AUTH_API` | AuthKit API host (default `https://api.workos.com`) |
+| `DACO_CREDENTIALS_FILE` | Override credentials path |
 
 ## Related
 
