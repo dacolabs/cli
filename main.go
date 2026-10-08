@@ -184,8 +184,9 @@ Usage:
 Authenticate with WorkOS AuthKit device authorization (human session), then call the Catalog API.
 
 Environment:
-  DACO_CLIENT_ID   WorkOS AuthKit client ID (required for login)
-  DACO_BASE_URL    Catalog API origin (required for datasets)
+  DACO_ENV         staging (default) or production
+  DACO_BASE_URL    Catalog API origin (defaults with DACO_ENV)
+  DACO_CLIENT_ID   Override AuthKit client ID (public; baked in for staging)
   DACO_AUTH_API    AuthKit API host (default https://api.workos.com)
   DACO_CREDENTIALS_FILE  Override credentials path
 `

@@ -18,13 +18,15 @@ func TestRunVersion(t *testing.T) {
 	}
 }
 
-func TestLoginRequiresClientID(t *testing.T) {
+func TestLoginDefaultsDoNotRequireManualClientID(t *testing.T) {
 	t.Setenv("DACO_CLIENT_ID", "")
 	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_ENV", "staging")
+	t.Setenv("DACO_AUTH_API", "http://127.0.0.1:9") // force quick network failure after config resolves
 	t.Setenv("DACO_CREDENTIALS_FILE", filepath.Join(t.TempDir(), "creds.json"))
 	err := run([]string{"login"})
-	if err == nil || err.Error() == "" {
-		t.Fatalf("expected client id error, got %v", err)
+	if err == nil {
+		t.Fatal("expected auth API failure after resolving defaults")
 	}
 }
 
