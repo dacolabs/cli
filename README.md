@@ -36,7 +36,30 @@ The AuthKit **client ID is public** and baked into the CLI for staging (same cla
 ./daco login      # defaults to staging AuthKit + https://main.app.daco.services
 ./daco whoami
 ./daco datasets
+./daco apply -f datasets.yaml
 ./daco logout
+```
+
+### Apply Dataset YAML
+
+Declare one or more `kind: Dataset` documents (multi-doc with `---`, or split across files/dirs). Apply creates missing versions, patches title/description/metadata when the contract matches, and errors if the contract changed (bump `version` instead). No prune.
+
+```yaml
+kind: Dataset
+urn: urn:daco:dataset:orders
+version: "1.0.0"
+title: Orders
+description: Customer orders
+metadata: {}
+contract:
+  schema:
+    type: object
+  metadata: {}
+```
+
+```bash
+./daco apply -f datasets.yaml
+./daco apply -f ./manifests --dry-run
 ```
 
 Local Catalog against your machine:
