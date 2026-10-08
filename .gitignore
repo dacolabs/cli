@@ -1,0 +1,8 @@
+/daco
+/daco.exe
+*.exe
+*.test
+*.out
+.DS_Store
+.idea/
+.vscode/
