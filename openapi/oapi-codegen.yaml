@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+package: catalogapi
+generate:
+  models: true
+  client: true
+output: internal/catalogapi/client.gen.go
+output-options:
+  skip-prune: true
