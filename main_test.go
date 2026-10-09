@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,8 +15,29 @@ func TestRunHelp(t *testing.T) {
 }
 
 func TestRunVersion(t *testing.T) {
-	if err := run([]string{"--version"}); err != nil {
+	prev := version
+	version = "1.2.3-test"
+	t.Cleanup(func() { version = prev })
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout := os.Stdout
+	os.Stdout = w
+	err = run([]string{"--version"})
+	_ = w.Close()
+	os.Stdout = stdout
+	if err != nil {
 		t.Fatalf("version: %v", err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(out)
+	if got != "daco 1.2.3-test\n" {
+		t.Fatalf("version output: %q", got)
 	}
 }
 
