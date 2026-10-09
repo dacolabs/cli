@@ -262,7 +262,8 @@ func displayIdentity(email, id string) string {
 	return "(unknown)"
 }
 
-const version = "0.0.0-dev"
+// Set at link time by GoReleaser: -X main.version={{.Version}}
+var version = "0.0.0-dev"
 
 const usage = `daco - Daco Catalog CLI
 

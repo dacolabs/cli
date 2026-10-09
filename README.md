@@ -13,7 +13,39 @@ AuthKit device login works. Catalog HTTP calls use an **oapi-codegen** client ge
 ```bash
 go build -o daco .
 ./daco --help
+./daco --version
 ```
+
+## Install
+
+From a [GitHub Release](https://github.com/dacolabs/cli/releases) (preferred once tagged):
+
+```bash
+# example: macOS arm64
+curl -fsSL -o daco.tar.gz \
+  "https://github.com/dacolabs/cli/releases/download/v0.1.0/daco_0.1.0_Darwin_arm64.tar.gz"
+tar -xzf daco.tar.gz daco
+sudo mv daco /usr/local/bin/
+daco --version
+```
+
+Or from source at a version tag:
+
+```bash
+go install github.com/dacolabs/cli@v0.1.0
+```
+
+## Release
+
+Tagged builds publish archives via GoReleaser (`.goreleaser.yaml`, `.github/workflows/release.yml`):
+
+```bash
+git checkout main && git pull
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+`daco --version` reports the release version injected at link time (`-X main.version=…`).
 
 ## Catalog OpenAPI client
 
