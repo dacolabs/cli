@@ -123,8 +123,12 @@ release:
 
     **Full Changelog**: https://github.com/dacolabs/cli/compare/{{ .PreviousTag }}...{{ .Tag }}
 
-brews:
+# Formulae are deprecated; publish a Homebrew Cask (see goreleaser.com/deprecations#brews).
+# First Catalog cut should add tap_migrations.json {"daco":"daco"} and remove Formula/daco.rb.
+homebrew_casks:
   - name: daco
+    binaries:
+      - daco
     repository:
       owner: dacolabs
       name: homebrew-tap
@@ -137,15 +141,18 @@ brews:
           name: homebrew-tap
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
-    directory: Formula
     homepage: "https://github.com/dacolabs/cli"
     description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
-    test: |
-      system "#{bin}/daco", "--version"
-    install: |
-      bin.install "daco"
+    # Unsigned CLI binary: clear quarantine on macOS install.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/daco"]
+          end
+
 
 scoops:
   - name: daco
