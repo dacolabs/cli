@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g., 0.1.0, 0.1.0-alpha.1, 0.1.0-beta.1)"
+        description: "Version to release (e.g., 1.0.0, 1.0.0-alpha.1, 1.0.0-beta.1)"
         required: true
         type: string
 
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  GO_VERSION: "1.23.0"
+  GO_VERSION: "1.24.x"
 
 jobs:
   validate:
@@ -29,7 +29,7 @@ jobs:
 
           # Validate semver format (with optional pre-release suffix)
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z]+\.[0-9]+)?$'; then
-            echo "Error: Invalid version format. Use semver (e.g., 0.1.0, 0.1.0-alpha.1, 0.1.0-beta.1)"
+            echo "Error: Invalid version format. Use semver (e.g., 1.0.0, 1.0.0-alpha.1, 1.0.0-beta.1)"
             exit 1
           fi
 

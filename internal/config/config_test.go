@@ -1,117 +1,60 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 Daco Labs
-
-package config
+package config_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/dacolabs/cli/internal/config"
 )
 
-func TestConfig_LoadAndSave(t *testing.T) {
-	tmpDir := t.TempDir()
-	cfgPath := filepath.Join(tmpDir, "daco.yaml")
+func TestLoadDefaultsToStagingPublicBinding(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "")
 
-	cfg := Config{
-		Version: 1,
-		Path:    "spec/spec.yaml",
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	err := cfg.Save(cfgPath)
-	require.NoError(t, err)
-
-	loaded, err := Load(cfgPath)
-	require.NoError(t, err)
-
-	assert.Equal(t, cfg.Version, loaded.Version)
-	assert.Equal(t, cfg.Path, loaded.Path)
-}
-
-func TestConfig_Validate(t *testing.T) {
-	tests := []struct {
-		name    string
-		cfg     Config
-		wantErr string
-	}{
-		{
-			name:    "valid config",
-			cfg:     Config{Version: 1},
-			wantErr: "",
-		},
-		{
-			name:    "unsupported version",
-			cfg:     Config{Version: 99},
-			wantErr: "unsupported config version",
-		},
+	if err := c.RequireClientID(); err != nil {
+		t.Fatal(err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.cfg.Validate()
-			if tt.wantErr == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErr)
-			}
-		})
+	if c.ClientID != config.StagingClientID {
+		t.Fatalf("client=%q", c.ClientID)
+	}
+	if err := c.RequireBaseURL(); err != nil {
+		t.Fatal(err)
+	}
+	if c.BaseURL != config.StagingBaseURL {
+		t.Fatalf("base=%q", c.BaseURL)
 	}
 }
 
-func TestConfig_SaveFormat(t *testing.T) {
-	tmpDir := t.TempDir()
-	cfgPath := filepath.Join(tmpDir, "daco.yaml")
+func TestEnvOverridesDefaults(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "client_override")
+	t.Setenv("DACO_BASE_URL", "http://127.0.0.1:8080")
+	t.Setenv("DACO_ENV", "staging")
 
-	cfg := Config{
-		Version: 1,
-		Path:    "spec/spec.yaml",
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	err := cfg.Save(cfgPath)
-	require.NoError(t, err)
-
-	content, err := os.ReadFile(cfgPath) //nolint:gosec // test file path
-	require.NoError(t, err)
-
-	output := string(content)
-	assert.Contains(t, output, "version: 1")
-	assert.Contains(t, output, "path: spec/spec.yaml")
+	if c.ClientID != "client_override" || c.BaseURL != "http://127.0.0.1:8080" {
+		t.Fatalf("%+v", c)
+	}
 }
 
-func TestConfig_Load(t *testing.T) {
-	cfg, err := Load("testdata/valid.yaml")
-	require.NoError(t, err)
+func TestProductionRequiresConfiguredBinding(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "production")
 
-	assert.Equal(t, 1, cfg.Version)
-	assert.Equal(t, "spec/spec.yaml", cfg.Path)
-}
-
-func TestConfig_Load_NotFound(t *testing.T) {
-	_, err := Load("testdata/nonexistent.yaml")
-	assert.Error(t, err)
-}
-
-func TestConfig_Load_Invalid(t *testing.T) {
-	_, err := Load("testdata/invalid.yaml")
-	assert.Error(t, err)
-}
-
-func TestConfig_Save_InvalidPath(t *testing.T) {
-	cfg := Config{Version: 1}
-
-	err := cfg.Save("/nonexistent/directory/config.yaml")
-	assert.Error(t, err)
-}
-
-func TestConfig_Load_Empty(t *testing.T) {
-	tmpDir := t.TempDir()
-	emptyFile := filepath.Join(tmpDir, "empty.yaml")
-	require.NoError(t, os.WriteFile(emptyFile, []byte(""), 0o600))
-
-	_, err := Load(emptyFile)
-	assert.Error(t, err)
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.RequireClientID(); err == nil {
+		t.Fatal("expected missing production client id")
+	}
 }

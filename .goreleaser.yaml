@@ -10,7 +10,7 @@ before:
 
 builds:
   - id: daco
-    main: ./cmd/daco
+    main: .
     binary: daco
     env:
       - CGO_ENABLED=0
@@ -26,9 +26,7 @@ builds:
         goarch: arm64
     ldflags:
       - -s -w
-      - -X github.com/dacolabs/cli/internal/version.Version={{.Version}}
-      - -X github.com/dacolabs/cli/internal/version.Commit={{.Commit}}
-      - -X github.com/dacolabs/cli/internal/version.Date={{.Date}}
+      - -X main.version={{.Version}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -89,7 +87,7 @@ changelog:
 release:
   github:
     owner: dacolabs
-    name: cli
+    name: daco-cli
   draft: false
   prerelease: auto
   mode: replace
@@ -97,6 +95,8 @@ release:
     ## Daco CLI {{ .Tag }}
 
     {{ if .Prerelease }}> This is a pre-release version.{{ end }}
+
+    Official command-line interface for the Daco Catalog API.
 
     ### Installation
 
@@ -113,7 +113,7 @@ release:
 
     **Go:**
     ```bash
-    go install github.com/dacolabs/cli/cmd/daco@{{ .Tag }}
+    go install github.com/dacolabs/cli@{{ .Tag }}
     ```
 
     **Manual Download:**
@@ -121,7 +121,7 @@ release:
   footer: |
     ---
 
-    **Full Changelog**: https://github.com/dacolabs/cli/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/dacolabs/daco-cli/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 brews:
   - name: daco
@@ -138,8 +138,8 @@ brews:
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     directory: Formula
-    homepage: "https://github.com/dacolabs/cli"
-    description: "Swiss army knife for data product projects"
+    homepage: "https://github.com/dacolabs/daco-cli"
+    description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
     test: |
@@ -161,8 +161,8 @@ scoops:
           name: scoop-bucket
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
-    homepage: "https://github.com/dacolabs/cli"
-    description: "Swiss army knife for data product projects"
+    homepage: "https://github.com/dacolabs/daco-cli"
+    description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
 

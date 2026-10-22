@@ -1,6 +1,10 @@
 # Daco CLI
 
-Swiss army knife for data product projects.
+Official command-line interface for the [Daco](https://dacolabs.com) Catalog API.
+
+This repository is the **CLI product** (`daco`). Language client libraries are generated in [`dacolabs/sdk`](https://github.com/dacolabs/sdk) from Catalog OpenAPI snapshots.
+
+> OpenDPI / data-product authoring releases through **v0.3.x** remain available as historical GitHub Releases and on the `opendpi-legacy` branch. From **v1.0.0**, `daco` is the Catalog CLI.
 
 ## Installation
 
@@ -20,26 +24,111 @@ scoop install daco
 ### Go Install
 
 ```bash
-go install github.com/dacolabs/cli/cmd/daco@latest
+go install github.com/dacolabs/cli@v1.0.0
 ```
 
 ### Manual Download
 
-Download the appropriate binary from the [releases page](https://github.com/dacolabs/cli/releases).
+Download the appropriate binary from the [releases page](https://github.com/dacolabs/daco-cli/releases).
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/dacolabs/cli.git
-cd cli
+git clone https://github.com/dacolabs/daco-cli.git
+cd daco-cli
 make build
 ./bin/daco --help
 ```
 
-## Contributing
+## Status
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, project structure, and guidelines.
+AuthKit device login works. Catalog HTTP calls use an **oapi-codegen** client generated from a CLI-safe Catalog OpenAPI snapshot. Commands (`datasets`, etc.) stay hand-written.
+
+## Authenticate
+
+The AuthKit **client ID is public** and baked into the CLI for staging (same class of value as a browser OAuth client id). End users do not need to supply it.
+
+```bash
+./daco login      # defaults to staging AuthKit + https://main.app.daco.services
+./daco whoami
+./daco datasets
+./daco apply -f datasets.yaml
+./daco logout
+```
+
+### Apply Dataset YAML
+
+Declare one or more `kind: Dataset` documents (multi-doc with `---`, or split across files/dirs). Apply creates missing versions, patches title/description/metadata when the contract matches, and errors if the contract changed (bump `version` instead). No prune.
+
+```yaml
+kind: Dataset
+urn: urn:daco:dataset:orders
+version: "1.0.0"
+title: Orders
+description: Customer orders
+metadata: {}
+contract:
+  schema:
+    type: object
+  metadata: {}
+```
+
+```bash
+./daco apply -f datasets.yaml
+./daco apply -f ./manifests --dry-run
+```
+
+Local Catalog against your machine:
+
+```bash
+export DACO_BASE_URL=http://127.0.0.1:8080
+./daco login
+./daco datasets
+```
+
+`daco login` uses WorkOS AuthKit **device authorization** (public client; no API key or client secret in the binary). Tokens are stored at `~/.config/daco/credentials.json` (`0600`), or `DACO_CREDENTIALS_FILE` when set.
+
+## Environment
+
+| Variable | Purpose |
+|---|---|
+| `DACO_ENV` | `staging` (default) or `production` |
+| `DACO_BASE_URL` | Override Catalog API origin (default follows `DACO_ENV`) |
+| `DACO_CLIENT_ID` | Override AuthKit client ID (defaults are public and baked in) |
+| `DACO_AUTH_API` | AuthKit API host (default `https://api.workos.com`) |
+| `DACO_CREDENTIALS_FILE` | Override credentials path |
+
+Production client ID is not checked in yet; use `DACO_ENV=staging` or set `DACO_CLIENT_ID` explicitly until production binding exists.
+
+## Catalog OpenAPI client
+
+The committed client lives in `internal/catalogapi/` (generated) plus a small auth helper. Refresh from the product contract when Catalog OpenAPI changes:
+
+```bash
+# from a daco monorepo checkout with this repo at daco-cli/, or set CATALOG_OPENAPI=
+./scripts/sync-catalog-openapi.sh
+./scripts/generate-catalog-client.sh
+./scripts/check-catalog-client-drift.sh
+```
+
+Requires Go 1.24+ and either a PATH `oapi-codegen` at **v2.8.0** or network access for `go run …@v2.8.0`.
+
+## Release
+
+Catalog releases use the **Release** workflow (`workflow_dispatch`) with GoReleaser, which publishes GitHub Release archives and opens PRs on [`dacolabs/homebrew-tap`](https://github.com/dacolabs/homebrew-tap) and [`dacolabs/scoop-bucket`](https://github.com/dacolabs/scoop-bucket).
+
+```text
+Actions → Release → Run workflow → version: 1.0.0
+```
+
+`daco --version` reports the release version injected at link time (`-X main.version=…`).
+
+## Related
+
+- Product / OpenAPI source of truth: [`dacolabs/daco`](https://github.com/dacolabs/daco) (`api/catalog-api.yaml`)
+- Generated language clients: [`dacolabs/sdk`](https://github.com/dacolabs/sdk)
+- Public staging AuthKit binding: `infra/workos/staging.json` in the product repo
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see [LICENSE](LICENSE) for details.
+Apache License 2.0
