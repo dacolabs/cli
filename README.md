@@ -29,13 +29,13 @@ go install github.com/dacolabs/cli@v1.0.0
 
 ### Manual Download
 
-Download the appropriate binary from the [releases page](https://github.com/dacolabs/daco-cli/releases).
+Download the appropriate binary from the [releases page](https://github.com/dacolabs/cli/releases).
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/dacolabs/daco-cli.git
-cd daco-cli
+git clone https://github.com/dacolabs/cli.git
+cd cli
 make build
 ./bin/daco --help
 ```
@@ -105,7 +105,7 @@ Production client ID is not checked in yet; use `DACO_ENV=staging` or set `DACO_
 The committed client lives in `internal/catalogapi/` (generated) plus a small auth helper. Refresh from the product contract when Catalog OpenAPI changes:
 
 ```bash
-# from a daco monorepo checkout with this repo at daco-cli/, or set CATALOG_OPENAPI=
+# from a daco monorepo checkout with this repo as a submodule, or set CATALOG_OPENAPI=
 ./scripts/sync-catalog-openapi.sh
 ./scripts/generate-catalog-client.sh
 ./scripts/check-catalog-client-drift.sh

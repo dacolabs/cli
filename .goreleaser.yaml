@@ -87,7 +87,7 @@ changelog:
 release:
   github:
     owner: dacolabs
-    name: daco-cli
+    name: cli
   draft: false
   prerelease: auto
   mode: replace
@@ -121,7 +121,7 @@ release:
   footer: |
     ---
 
-    **Full Changelog**: https://github.com/dacolabs/daco-cli/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/dacolabs/cli/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 brews:
   - name: daco
@@ -138,7 +138,7 @@ brews:
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     directory: Formula
-    homepage: "https://github.com/dacolabs/daco-cli"
+    homepage: "https://github.com/dacolabs/cli"
     description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
@@ -161,7 +161,7 @@ scoops:
           name: scoop-bucket
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
-    homepage: "https://github.com/dacolabs/daco-cli"
+    homepage: "https://github.com/dacolabs/cli"
     description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto

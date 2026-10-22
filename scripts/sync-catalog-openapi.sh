@@ -2,8 +2,8 @@
 # Refresh openapi/catalog-api.yaml from the product repo Catalog contract.
 # Usage:
 #   CATALOG_OPENAPI=/path/to/daco/api/catalog-api.yaml ./scripts/sync-catalog-openapi.sh
-# When this CLI is checked out as the daco monorepo submodule at daco-cli/
-# (or historically cli/), the default source is ../api/catalog-api.yaml.
+# When this CLI is checked out as a daco monorepo submodule, the default
+# source is ../api/catalog-api.yaml.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 src="${CATALOG_OPENAPI:-}"
