@@ -6,8 +6,6 @@ cd "$root"
 run_codegen() {
   if [[ -n "${OAPI_CODEGEN:-}" ]]; then
     "$OAPI_CODEGEN" "$@"
-  elif command -v oapi-codegen >/dev/null 2>&1; then
-    oapi-codegen "$@"
   else
     go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0 "$@"
   fi

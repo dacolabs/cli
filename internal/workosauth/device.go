@@ -19,9 +19,16 @@ type Client struct {
 	http     *http.Client
 }
 
+const defaultHTTPTimeout = 30 * time.Second
+
 func New(baseURL, clientID string, httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: defaultHTTPTimeout}
+	} else if httpClient.Timeout == 0 {
+		// Copy so callers sharing DefaultClient still get a bound.
+		cloned := *httpClient
+		cloned.Timeout = defaultHTTPTimeout
+		httpClient = &cloned
 	}
 	return &Client{baseURL: strings.TrimRight(baseURL, "/"), clientID: clientID, http: httpClient}
 }

@@ -51,6 +51,17 @@ func TestLoginDefaultsDoNotRequireManualClientID(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected auth API failure after resolving defaults")
 	}
+	msg := err.Error()
+	if strings.Contains(msg, "DACO_CLIENT_ID") || strings.Contains(msg, "AuthKit client ID") {
+		t.Fatalf("login failed on client ID config, want Auth API failure: %v", err)
+	}
+}
+
+func TestRunRejectsTrailingArgs(t *testing.T) {
+	err := run([]string{"login", "--oops"})
+	if err == nil || !strings.Contains(err.Error(), "unexpected arguments") {
+		t.Fatalf("err=%v", err)
+	}
 }
 
 func TestLogoutClearsMissingFile(t *testing.T) {

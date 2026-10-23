@@ -54,3 +54,11 @@ func TestNewAuthenticatedClientListDatasetsSendsBearer(t *testing.T) {
 		t.Fatal("expected JSON200 payload")
 	}
 }
+
+func TestNewAuthenticatedClientRejectsCleartextNonLocalhost(t *testing.T) {
+	t.Parallel()
+	_, err := catalogapi.NewAuthenticatedClient("http://example.com", "tok", nil)
+	if err == nil {
+		t.Fatal("expected error for http non-localhost")
+	}
+}

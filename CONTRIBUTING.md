@@ -4,9 +4,12 @@ Thanks for helping improve the Daco CLI.
 
 ## Development
 
-1. Install a recent Go toolchain.
+1. Install a recent Go toolchain (1.24+).
 2. Clone this repository.
-3. Run `go test ./...` and `go build -o daco .`.
+3. Run `make setup` to enable `.githooks` (Conventional Commits `commit-msg` check).
+4. Run `go test ./...` and `go build -o daco .` (or `make test` / `make build`).
+
+Commit messages should follow [Conventional Commits](https://www.conventionalcommits.org/) (for example `feat: …`, `fix: …`, `chore: …`).
 
 ## Scope
 
@@ -18,8 +21,10 @@ Thanks for helping improve the Daco CLI.
 
 ## Regenerating the Catalog client
 
+Requires **Python 3** (for `./scripts/sync-catalog-openapi.sh`) and Go 1.24+.
+
 1. Sync the snapshot (strips monorepo-only `x-go-type` imports): `./scripts/sync-catalog-openapi.sh`
-2. Generate: `./scripts/generate-catalog-client.sh`
+2. Generate: `./scripts/generate-catalog-client.sh` (uses pinned `oapi-codegen@v2.8.0` via `go run`, or set `OAPI_CODEGEN` to that binary)
 3. Verify: `./scripts/check-catalog-client-drift.sh` and `go test ./...`
 
 ## Pull requests

@@ -29,9 +29,11 @@ func Load() (Config, error) {
 	env := strings.ToLower(strings.TrimSpace(first(os.Getenv("DACO_ENV"), "staging")))
 	defaults := environmentDefaults(env)
 
+	// Prefer DACO_CLIENT_ID, then baked-in defaults, then WORKOS_CLIENT_ID as a last
+	// resort (so a shell WORKOS_CLIENT_ID cannot override the staging binding).
 	c := Config{
 		Env:      env,
-		ClientID: strings.TrimSpace(first(os.Getenv("DACO_CLIENT_ID"), os.Getenv("WORKOS_CLIENT_ID"), defaults.ClientID)),
+		ClientID: strings.TrimSpace(first(os.Getenv("DACO_CLIENT_ID"), defaults.ClientID, os.Getenv("WORKOS_CLIENT_ID"))),
 		AuthAPI:  strings.TrimSpace(first(os.Getenv("DACO_AUTH_API"), DefaultAuthAPI)),
 		BaseURL:  strings.TrimRight(strings.TrimSpace(first(os.Getenv("DACO_BASE_URL"), defaults.BaseURL)), "/"),
 	}
@@ -43,7 +45,7 @@ func Load() (Config, error) {
 
 func (c Config) RequireClientID() error {
 	if c.ClientID == "" {
-		if c.Env == "production" {
+		if isProductionEnv(c.Env) {
 			return fmt.Errorf("production AuthKit client ID is not baked into this CLI yet; set DACO_CLIENT_ID or use DACO_ENV=staging")
 		}
 		return fmt.Errorf("set DACO_CLIENT_ID or DACO_ENV to a supported environment")
@@ -70,6 +72,10 @@ func environmentDefaults(env string) envDefaults {
 	default:
 		return envDefaults{ClientID: StagingClientID, BaseURL: StagingBaseURL}
 	}
+}
+
+func isProductionEnv(env string) bool {
+	return env == "production" || env == "prod"
 }
 
 func first(values ...string) string {

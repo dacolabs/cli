@@ -23,19 +23,8 @@ paths:
       x-daco-permission: catalog:read
       summary: List Datasets
       parameters:
-        - name: pageSize
-          in: query
-          description: Maximum number of Datasets to return; zero uses the default and values above 200 are capped.
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-        - name: pageToken
-          in: query
-          description: Opaque continuation token from a previous response.
-          schema:
-            type: string
-            minLength: 1
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageToken"
       responses:
         "200":
           description: Page of Datasets in ascending bytewise URN order
@@ -376,7 +365,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
+        pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
     PageSize:
       name: pageSize
       in: query
@@ -576,7 +565,7 @@ components:
       properties:
         urn:
           type: string
-          pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
+          pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
         kind:
           type: string
           enum: [snowflake-table, databricks-table]

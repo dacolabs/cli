@@ -30,25 +30,42 @@ func run(args []string) error {
 	}
 	switch args[0] {
 	case "--help", "-h", "help":
+		if len(args) > 1 {
+			return fmt.Errorf("unexpected arguments after %s", args[0])
+		}
 		fmt.Print(usage)
 		return nil
 	case "--version", "-v", "version":
+		if len(args) > 1 {
+			return fmt.Errorf("unexpected arguments after %s", args[0])
+		}
 		fmt.Printf("daco %s\n", version)
 		return nil
-	case "login":
-		return cmdLogin(context.Background())
-	case "logout":
-		return cmdLogout()
-	case "whoami":
-		return cmdWhoami(context.Background())
-	case "datasets":
-		return cmdDatasets(context.Background())
+	case "login", "logout", "whoami", "datasets":
+		if len(args) > 1 {
+			return fmt.Errorf("unexpected arguments after %s", args[0])
+		}
+		switch args[0] {
+		case "login":
+			return cmdLogin(context.Background())
+		case "logout":
+			return cmdLogout()
+		case "whoami":
+			return cmdWhoami(context.Background())
+		case "datasets":
+			return cmdDatasets(context.Background())
+		}
+		return nil
 	case "apply":
 		return cmdApply(context.Background(), args[1:])
 	default:
 		fmt.Print(usage)
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func httpClient() *http.Client {
+	return &http.Client{Timeout: 30 * time.Second}
 }
 
 func credentialStore() (creds.FileStore, error) {
@@ -71,13 +88,14 @@ func cmdLogin(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	client := workosauth.New(cfg.AuthAPI, cfg.ClientID, http.DefaultClient)
+	client := workosauth.New(cfg.AuthAPI, cfg.ClientID, httpClient())
 	auth, err := client.AuthorizeDevice(ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Open %s and confirm code %s\n", auth.VerificationURIComplete, auth.UserCode)
-	if auth.VerificationURIComplete == "" {
+	if auth.VerificationURIComplete != "" {
+		fmt.Fprintf(os.Stderr, "Open %s and confirm code %s\n", auth.VerificationURIComplete, auth.UserCode)
+	} else {
 		fmt.Fprintf(os.Stderr, "Open %s and enter code %s\n", auth.VerificationURI, auth.UserCode)
 	}
 	tok, err := client.PollDevice(ctx, auth)
@@ -123,7 +141,7 @@ func cmdWhoami(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, sess, err := session.AccessToken(ctx, store, http.DefaultClient)
+	_, sess, err := session.AccessToken(ctx, store, httpClient())
 	if err != nil {
 		return err
 	}
@@ -142,7 +160,7 @@ func cmdDatasets(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	token, sess, err := session.AccessToken(ctx, store, http.DefaultClient)
+	token, sess, err := session.AccessToken(ctx, store, httpClient())
 	if err != nil {
 		return err
 	}
@@ -153,7 +171,7 @@ func cmdDatasets(ctx context.Context) error {
 	if base == "" {
 		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
 	}
-	client, err := catalogapi.NewAuthenticatedClient(base, token, http.DefaultClient)
+	client, err := catalogapi.NewAuthenticatedClient(base, token, httpClient())
 	if err != nil {
 		return err
 	}
@@ -206,7 +224,7 @@ func cmdApply(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	token, sess, err := session.AccessToken(ctx, store, http.DefaultClient)
+	token, sess, err := session.AccessToken(ctx, store, httpClient())
 	if err != nil {
 		return err
 	}
@@ -217,7 +235,7 @@ func cmdApply(ctx context.Context, args []string) error {
 	if base == "" {
 		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
 	}
-	client, err := catalogapi.NewAuthenticatedClient(base, token, http.DefaultClient)
+	client, err := catalogapi.NewAuthenticatedClient(base, token, httpClient())
 	if err != nil {
 		return err
 	}
@@ -282,6 +300,7 @@ Environment:
   DACO_ENV         staging (default) or production
   DACO_BASE_URL    Catalog API origin (defaults with DACO_ENV)
   DACO_CLIENT_ID   Override AuthKit client ID (public; baked in for staging)
+  WORKOS_CLIENT_ID Fallback AuthKit client ID when DACO_CLIENT_ID and baked-in defaults are empty
   DACO_AUTH_API    AuthKit API host (default https://api.workos.com)
   DACO_CREDENTIALS_FILE  Override credentials path
 `

@@ -3,7 +3,6 @@ package apply
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -158,28 +157,13 @@ func mutablePatch(desired catalogapi.DatasetInput, existing catalogapi.Dataset) 
 }
 
 func metadataEqual(a, b catalogapi.JSONMetadata) (bool, error) {
-	ab, err := json.Marshal(a)
+	ab, err := canonicalJSON(a)
 	if err != nil {
 		return false, err
 	}
-	bb, err := json.Marshal(b)
+	bb, err := canonicalJSON(b)
 	if err != nil {
 		return false, err
 	}
-	var an, bn any
-	if err := json.Unmarshal(ab, &an); err != nil {
-		return false, err
-	}
-	if err := json.Unmarshal(bb, &bn); err != nil {
-		return false, err
-	}
-	ab2, err := json.Marshal(an)
-	if err != nil {
-		return false, err
-	}
-	bb2, err := json.Marshal(bn)
-	if err != nil {
-		return false, err
-	}
-	return bytes.Equal(ab2, bb2), nil
+	return bytes.Equal(ab, bb), nil
 }

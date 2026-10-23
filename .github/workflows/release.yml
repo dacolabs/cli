@@ -33,6 +33,13 @@ jobs:
             exit 1
           fi
 
+          # Catalog releases start at v1; keep 0.x frozen for OpenDPI legacy.
+          MAJOR="${VERSION%%.*}"
+          if [ "$MAJOR" -lt 1 ]; then
+            echo "Error: Catalog releases must be v1.0.0 or higher (got $VERSION). OpenDPI ≤0.3.x stays on opendpi-legacy."
+            exit 1
+          fi
+
           VERSION_TAG="v$VERSION"
           echo "version_tag=$VERSION_TAG" >> $GITHUB_OUTPUT
 

@@ -38,6 +38,34 @@ func DefaultPath() (string, error) {
 	return filepath.Join(home, ".config", "daco", "credentials.json"), nil
 }
 
+// WithLock serializes credential read/write across processes for the duration of fn.
+func (s FileStore) WithLock(fn func() error) error {
+	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
+		return err
+	}
+	lockPath := s.Path + ".lock"
+	var f *os.File
+	var err error
+	for i := 0; i < 100; i++ {
+		f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+		if err == nil {
+			break
+		}
+		if !os.IsExist(err) {
+			return err
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if f == nil {
+		return fmt.Errorf("could not acquire credentials lock at %s", lockPath)
+	}
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(lockPath)
+	}()
+	return fn()
+}
+
 func (s FileStore) Save(session Session) error {
 	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
 		return err
@@ -46,11 +74,32 @@ func (s FileStore) Save(session Session) error {
 	if err != nil {
 		return err
 	}
-	tmp := s.Path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	tmp, err := os.CreateTemp(filepath.Dir(s.Path), ".credentials-*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.Path)
+	tmpName := tmp.Name()
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.Remove(tmpName)
+		}
+	}()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpName, 0o600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, s.Path); err != nil {
+		return err
+	}
+	cleanup = false
+	return nil
 }
 
 func (s FileStore) Load() (Session, error) {

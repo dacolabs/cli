@@ -10,12 +10,38 @@ import (
 	"github.com/dacolabs/cli/internal/workosauth"
 )
 
+const refreshTimeout = 30 * time.Second
+
 type Store interface {
 	Load() (creds.Session, error)
 	Save(creds.Session) error
 }
 
+type lockStore interface {
+	Store
+	WithLock(fn func() error) error
+}
+
 func AccessToken(ctx context.Context, store Store, httpClient *http.Client) (string, creds.Session, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, refreshTimeout)
+		defer cancel()
+	}
+	if ls, ok := store.(lockStore); ok {
+		var token string
+		var session creds.Session
+		err := ls.WithLock(func() error {
+			var err error
+			token, session, err = accessTokenUnlocked(ctx, store, httpClient)
+			return err
+		})
+		return token, session, err
+	}
+	return accessTokenUnlocked(ctx, store, httpClient)
+}
+
+func accessTokenUnlocked(ctx context.Context, store Store, httpClient *http.Client) (string, creds.Session, error) {
 	session, err := store.Load()
 	if err != nil {
 		return "", creds.Session{}, err

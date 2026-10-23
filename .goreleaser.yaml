@@ -102,8 +102,10 @@ release:
 
     **Homebrew (macOS/Linux):**
     ```bash
-    brew install dacolabs/tap/daco
+    brew install --cask dacolabs/tap/daco
     ```
+
+    After the first Catalog Cask publish: add `tap_migrations.json` `{"daco":"daco"}` and remove `Formula/daco.rb` in homebrew-tap.
 
     **Scoop (Windows):**
     ```powershell

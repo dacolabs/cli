@@ -16,12 +16,16 @@ import (
 func TestAuthorizeDevice(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/user_management/authorize/device" || r.Method != http.MethodPost {
-			t.Fatalf("unexpected %s %s", r.Method, r.URL.Path)
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.Error(w, "unexpected", http.StatusBadRequest)
+			return
 		}
 		body, _ := io.ReadAll(r.Body)
 		values, _ := url.ParseQuery(string(body))
 		if values.Get("client_id") != "client_test" {
-			t.Fatalf("client_id=%q", values.Get("client_id"))
+			t.Errorf("client_id=%q", values.Get("client_id"))
+			http.Error(w, "bad client", http.StatusBadRequest)
+			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"device_code":               "device_abc",
@@ -39,8 +43,23 @@ func TestAuthorizeDevice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if auth.DeviceCode != "device_abc" || auth.UserCode != "ABCD-EFGH" || auth.Interval != time.Second {
-		t.Fatalf("%+v", auth)
+	if auth.DeviceCode != "device_abc" {
+		t.Fatalf("DeviceCode=%q", auth.DeviceCode)
+	}
+	if auth.UserCode != "ABCD-EFGH" {
+		t.Fatalf("UserCode=%q", auth.UserCode)
+	}
+	if auth.VerificationURI != "https://auth.example/device" {
+		t.Fatalf("VerificationURI=%q", auth.VerificationURI)
+	}
+	if auth.VerificationURIComplete != "https://auth.example/device?user_code=ABCD-EFGH" {
+		t.Fatalf("VerificationURIComplete=%q", auth.VerificationURIComplete)
+	}
+	if auth.ExpiresIn != 300*time.Second {
+		t.Fatalf("ExpiresIn=%v", auth.ExpiresIn)
+	}
+	if auth.Interval != time.Second {
+		t.Fatalf("Interval=%v", auth.Interval)
 	}
 }
 
@@ -48,13 +67,27 @@ func TestPollDeviceSuccess(t *testing.T) {
 	var calls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/user_management/authenticate" {
-			t.Fatalf("path %s", r.URL.Path)
+			t.Errorf("path %s", r.URL.Path)
+			http.Error(w, "bad path", http.StatusBadRequest)
+			return
 		}
 		calls++
 		body, _ := io.ReadAll(r.Body)
 		values, _ := url.ParseQuery(string(body))
 		if values.Get("grant_type") != "urn:ietf:params:oauth:grant-type:device_code" {
-			t.Fatalf("grant=%q", values.Get("grant_type"))
+			t.Errorf("grant=%q", values.Get("grant_type"))
+			http.Error(w, "bad grant", http.StatusBadRequest)
+			return
+		}
+		if values.Get("device_code") != "device_abc" {
+			t.Errorf("device_code=%q", values.Get("device_code"))
+			http.Error(w, "bad device", http.StatusBadRequest)
+			return
+		}
+		if values.Get("client_id") != "client_test" {
+			t.Errorf("client_id=%q", values.Get("client_id"))
+			http.Error(w, "bad client", http.StatusBadRequest)
+			return
 		}
 		if calls == 1 {
 			w.WriteHeader(http.StatusBadRequest)
@@ -111,7 +144,9 @@ func TestRefresh(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		values, _ := url.ParseQuery(string(body))
 		if values.Get("grant_type") != "refresh_token" || values.Get("refresh_token") != "old_refresh" {
-			t.Fatalf("%s", body)
+			t.Errorf("%s", body)
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token":    "new_access",

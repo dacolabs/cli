@@ -146,9 +146,6 @@ func splitYAMLDocs(path string) ([][]byte, error) {
 			}
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		if node.Kind == 0 && len(node.Content) == 0 {
-			continue
-		}
 		buf, err := yaml.Marshal(&node)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)

@@ -93,6 +93,38 @@ func TestLoadRejectsUnknownKind(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+	if !strings.Contains(err.Error(), "unknown kind") {
+		t.Fatalf("error = %v, want unknown kind", err)
+	}
+}
+
+func TestLoadSkipsEmptyDocuments(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ds.yaml")
+	content := `
+---
+kind: Dataset
+urn: urn:daco:dataset:orders
+version: "1.0.0"
+title: Orders
+description: Orders data
+metadata: {}
+contract:
+  schema: {"type":"object"}
+  metadata: {}
+---
+`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	units, err := apply.Load([]string{path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(units) != 1 {
+		t.Fatalf("got %d units, want 1", len(units))
+	}
 }
 
 func TestLoadFromDirectory(t *testing.T) {

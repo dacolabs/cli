@@ -11,7 +11,7 @@ This repository is the **CLI product** (`daco`). Language client libraries are g
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew install dacolabs/tap/daco
+brew install --cask dacolabs/tap/daco
 ```
 
 ### Scoop (Windows)
@@ -92,9 +92,10 @@ export DACO_BASE_URL=http://127.0.0.1:8080
 
 | Variable | Purpose |
 |---|---|
-| `DACO_ENV` | `staging` (default) or `production` |
-| `DACO_BASE_URL` | Override Catalog API origin (default follows `DACO_ENV`) |
+| `DACO_ENV` | `staging` (default) or `production` (`prod` alias) |
+| `DACO_BASE_URL` | Override Catalog API origin (default follows `DACO_ENV`); `http` only for localhost |
 | `DACO_CLIENT_ID` | Override AuthKit client ID (defaults are public and baked in) |
+| `WORKOS_CLIENT_ID` | Fallback AuthKit client ID when `DACO_CLIENT_ID` and baked-in defaults are empty |
 | `DACO_AUTH_API` | AuthKit API host (default `https://api.workos.com`) |
 | `DACO_CREDENTIALS_FILE` | Override credentials path |
 
@@ -111,15 +112,21 @@ The committed client lives in `internal/catalogapi/` (generated) plus a small au
 ./scripts/check-catalog-client-drift.sh
 ```
 
-Requires Go 1.24+ and either a PATH `oapi-codegen` at **v2.8.0** or network access for `go run …@v2.8.0`.
+Requires Go 1.24+, **Python 3** (sync script), and network access for `go run …@v2.8.0` (or set `OAPI_CODEGEN` to an oapi-codegen **v2.8.0** binary).
 
 ## Release
 
-Catalog releases use the **Release** workflow (`workflow_dispatch`) with GoReleaser, which publishes GitHub Release archives and opens PRs on [`dacolabs/homebrew-tap`](https://github.com/dacolabs/homebrew-tap) and [`dacolabs/scoop-bucket`](https://github.com/dacolabs/scoop-bucket).
+Catalog releases use the **Release** workflow (`workflow_dispatch`) with GoReleaser, which publishes GitHub Release archives and opens PRs on [`dacolabs/homebrew-tap`](https://github.com/dacolabs/homebrew-tap) and [`dacolabs/scoop-bucket`](https://github.com/dacolabs/scoop-bucket). Versions must be **v1.0.0+** (0.x remains OpenDPI legacy).
 
 ```text
 Actions → Release → Run workflow → version: 1.0.0
 ```
+
+After the first Catalog Cask lands in the tap, complete the one-time Homebrew migration in [`dacolabs/homebrew-tap`](https://github.com/dacolabs/homebrew-tap):
+
+1. Add `tap_migrations.json` with `{"daco":"daco"}` so `brew install daco` redirects formula users to the Cask.
+2. Remove legacy `Formula/daco.rb`.
+3. Document install as `brew install --cask dacolabs/tap/daco`.
 
 `daco --version` reports the release version injected at link time (`-X main.version=…`).
 

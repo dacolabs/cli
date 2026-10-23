@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dacolabs/cli/internal/config"
@@ -54,7 +55,66 @@ func TestProductionRequiresConfiguredBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.RequireClientID(); err == nil {
+	reqErr := c.RequireClientID()
+	if reqErr == nil {
 		t.Fatal("expected missing production client id")
+	}
+	if !strings.Contains(reqErr.Error(), "production AuthKit client ID") {
+		t.Fatalf("err=%v", reqErr)
+	}
+	if c.BaseURL != config.ProductionBaseURL {
+		t.Fatalf("base=%q", c.BaseURL)
+	}
+}
+
+func TestProdAliasUsesProductionError(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "prod")
+
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqErr := c.RequireClientID()
+	if reqErr == nil {
+		t.Fatal("expected missing production client id")
+	}
+	if !strings.Contains(reqErr.Error(), "production AuthKit client ID") {
+		t.Fatalf("err=%v", reqErr)
+	}
+}
+
+func TestWorkOSClientIDFallbackWhenNoBakedInDefault(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "client_from_workos")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "production")
+
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ClientID != "client_from_workos" {
+		t.Fatalf("client=%q", c.ClientID)
+	}
+	if c.BaseURL != config.ProductionBaseURL {
+		t.Fatalf("base=%q", c.BaseURL)
+	}
+}
+
+func TestWorkOSClientIDDoesNotOverrideStagingDefault(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "client_from_workos")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "staging")
+
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ClientID != config.StagingClientID {
+		t.Fatalf("client=%q, want baked-in staging", c.ClientID)
 	}
 }
