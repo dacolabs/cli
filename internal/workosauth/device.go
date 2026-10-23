@@ -162,7 +162,7 @@ func (c *Client) authenticate(ctx context.Context, form url.Values) (Tokens, boo
 	if err != nil {
 		return Tokens{}, false, false, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return Tokens{}, false, false, err
@@ -197,7 +197,7 @@ func (c *Client) postForm(ctx context.Context, path string, form url.Values, des
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err

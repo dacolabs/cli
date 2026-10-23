@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/dacolabs/cli/internal/catalogapi"
@@ -99,7 +100,7 @@ func TestSecureHTTPClientAllowsLoopbackHTTPRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("status=%d", res.StatusCode)
 	}
@@ -107,10 +108,10 @@ func TestSecureHTTPClientAllowsLoopbackHTTPRedirect(t *testing.T) {
 
 func TestSecureHTTPClientCapsRedirects(t *testing.T) {
 	t.Parallel()
-	var hits int
+	var hits atomic.Int32
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits++
+		hits.Add(1)
 		http.Redirect(w, r, srv.URL+"/next", http.StatusFound)
 	}))
 	t.Cleanup(srv.Close)
@@ -120,7 +121,7 @@ func TestSecureHTTPClientCapsRedirects(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected redirect loop to stop")
 	}
-	if hits < 10 {
-		t.Fatalf("hits=%d, want at least 10 before stop", hits)
+	if hits.Load() < 10 {
+		t.Fatalf("hits=%d, want at least 10 before stop", hits.Load())
 	}
 }

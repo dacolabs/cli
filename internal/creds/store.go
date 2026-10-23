@@ -64,11 +64,12 @@ func (s FileStore) WithLock(fn func() error) error {
 	}
 	lockPath := s.lockPath()
 	var f *os.File
+	var token string
 	var err error
 	for i := 0; i < 100; i++ {
 		f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err == nil {
-			token := newLockToken()
+			token = newLockToken()
 			if _, werr := f.WriteString(token); werr != nil {
 				_ = f.Close()
 				_ = os.Remove(lockPath)
@@ -117,7 +118,10 @@ func (s FileStore) WithLock(fn func() error) error {
 	}
 	defer func() {
 		_ = f.Close()
-		_ = os.Remove(lockPath)
+		// Only remove our lock; a stale reclaim may have handed the path to another process.
+		if cur, readErr := os.ReadFile(lockPath); readErr == nil && string(cur) == token {
+			_ = os.Remove(lockPath)
+		}
 	}()
 	return fn()
 }

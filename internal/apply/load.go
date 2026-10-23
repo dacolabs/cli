@@ -50,11 +50,11 @@ func decodeDatasetDoc(doc []byte) (catalogapi.DatasetInput, error) {
 	if err := dec.Decode(&raw); err != nil {
 		return catalogapi.DatasetInput{}, err
 	}
-	if err := rejectNullMetadata(raw.Metadata); err != nil {
+	if err := rejectNullMetadata("metadata", raw.Metadata); err != nil {
 		return catalogapi.DatasetInput{}, err
 	}
-	if err := rejectNullMetadata(raw.Contract.Metadata); err != nil {
-		return catalogapi.DatasetInput{}, fmt.Errorf("contract: %w", err)
+	if err := rejectNullMetadata("contract.metadata", raw.Contract.Metadata); err != nil {
+		return catalogapi.DatasetInput{}, err
 	}
 	return catalogapi.DatasetInput{
 		Urn:         raw.Urn,
@@ -66,10 +66,13 @@ func decodeDatasetDoc(doc []byte) (catalogapi.DatasetInput, error) {
 	}, nil
 }
 
-func rejectNullMetadata(m catalogapi.JSONMetadata) error {
+func rejectNullMetadata(path string, m catalogapi.JSONMetadata) error {
 	for k, v := range m {
 		if v == nil {
-			return fmt.Errorf("metadata.%s is null; omit the key to delete it on apply, or set a non-null JSON value", k)
+			if path == "metadata" {
+				return fmt.Errorf("%s.%s is null; omit the key to delete it on apply, or set a non-null JSON value", path, k)
+			}
+			return fmt.Errorf("%s.%s is null; set a non-null JSON value (contract metadata is not merge-patched by apply)", path, k)
 		}
 	}
 	return nil

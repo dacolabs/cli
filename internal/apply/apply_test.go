@@ -72,11 +72,11 @@ func TestApplyPatchesMutableFields(t *testing.T) {
 	var patchBody map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet:
+		switch r.Method {
+		case http.MethodGet:
 			w.Header().Set("ETag", `"rev-1"`)
 			_ = json.NewEncoder(w).Encode(existing)
-		case r.Method == http.MethodPatch:
+		case http.MethodPatch:
 			gotIfMatch = r.Header.Get("If-Match")
 			body, _ := io.ReadAll(r.Body)
 			if err := json.Unmarshal(body, &patchBody); err != nil {

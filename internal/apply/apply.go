@@ -129,7 +129,7 @@ func contractsEqual(desired catalogapi.ContractInput, existing catalogapi.Contra
 	if err != nil {
 		return false, err
 	}
-	asInput := catalogapi.ContractInput{Schema: existing.Schema, Metadata: existing.Metadata}
+	asInput := catalogapi.ContractInput(existing)
 	got, err := canonicalJSON(asInput)
 	if err != nil {
 		return false, err
@@ -167,13 +167,11 @@ func mutablePatch(desired catalogapi.DatasetInput, existing catalogapi.Dataset) 
 // Desired null values are rejected by Load; only removal nulls are emitted here.
 func metadataMergePatch(desired, existing catalogapi.JSONMetadata) catalogapi.JSONMetadata {
 	out := catalogapi.JSONMetadata{}
-	if desired != nil {
-		for k, v := range desired {
-			if v == nil {
-				continue
-			}
-			out[k] = v
+	for k, v := range desired {
+		if v == nil {
+			continue
 		}
+		out[k] = v
 	}
 	for k := range existing {
 		if _, ok := out[k]; !ok {
