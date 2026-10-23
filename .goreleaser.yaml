@@ -10,7 +10,7 @@ before:
 
 builds:
   - id: daco
-    main: ./cmd/daco
+    main: .
     binary: daco
     env:
       - CGO_ENABLED=0
@@ -26,9 +26,7 @@ builds:
         goarch: arm64
     ldflags:
       - -s -w
-      - -X github.com/dacolabs/cli/internal/version.Version={{.Version}}
-      - -X github.com/dacolabs/cli/internal/version.Commit={{.Commit}}
-      - -X github.com/dacolabs/cli/internal/version.Date={{.Date}}
+      - -X main.version={{.Version}}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -98,12 +96,16 @@ release:
 
     {{ if .Prerelease }}> This is a pre-release version.{{ end }}
 
+    Official command-line interface for the Daco Catalog API.
+
     ### Installation
 
     **Homebrew (macOS/Linux):**
     ```bash
-    brew install dacolabs/tap/daco
+    brew install --cask dacolabs/tap/daco
     ```
+
+    After the first Catalog Cask publish: add `tap_migrations.json` `{"daco":"daco"}` and remove `Formula/daco.rb` in homebrew-tap.
 
     **Scoop (Windows):**
     ```powershell
@@ -113,7 +115,7 @@ release:
 
     **Go:**
     ```bash
-    go install github.com/dacolabs/cli/cmd/daco@{{ .Tag }}
+    go install github.com/dacolabs/cli@{{ .Tag }}
     ```
 
     **Manual Download:**
@@ -123,8 +125,12 @@ release:
 
     **Full Changelog**: https://github.com/dacolabs/cli/compare/{{ .PreviousTag }}...{{ .Tag }}
 
-brews:
+# Formulae are deprecated; publish a Homebrew Cask (see goreleaser.com/deprecations#brews).
+# First Catalog cut should add tap_migrations.json {"daco":"daco"} and remove Formula/daco.rb.
+homebrew_casks:
   - name: daco
+    binaries:
+      - daco
     repository:
       owner: dacolabs
       name: homebrew-tap
@@ -137,15 +143,18 @@ brews:
           name: homebrew-tap
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
-    directory: Formula
     homepage: "https://github.com/dacolabs/cli"
-    description: "Swiss army knife for data product projects"
+    description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
-    test: |
-      system "#{bin}/daco", "--version"
-    install: |
-      bin.install "daco"
+    # Unsigned CLI binary: clear quarantine on macOS install.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/daco"]
+          end
+
 
 scoops:
   - name: daco
@@ -162,7 +171,7 @@ scoops:
           branch: main
     commit_msg_template: "feat(release): update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/dacolabs/cli"
-    description: "Swiss army knife for data product projects"
+    description: "Official CLI for the Daco Catalog API"
     license: "Apache-2.0"
     skip_upload: auto
 

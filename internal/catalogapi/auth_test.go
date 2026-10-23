@@ -1,0 +1,127 @@
+package catalogapi_test
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+	"testing"
+
+	"github.com/dacolabs/cli/internal/catalogapi"
+)
+
+func TestNewAuthenticatedClientListDatasetsSendsBearer(t *testing.T) {
+	t.Parallel()
+
+	var gotAuth, gotPath, gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"datasets": []any{},
+		})
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := catalogapi.NewAuthenticatedClient(srv.URL, "test-token", srv.Client())
+	if err != nil {
+		t.Fatalf("NewAuthenticatedClient: %v", err)
+	}
+	pageSize := int32(5)
+	res, err := client.ListDatasetsWithResponse(context.Background(), &catalogapi.ListDatasetsParams{
+		PageSize: &pageSize,
+	})
+	if err != nil {
+		t.Fatalf("ListDatasetsWithResponse: %v", err)
+	}
+	if res.StatusCode() != http.StatusOK {
+		body, _ := io.ReadAll(res.HTTPResponse.Body)
+		t.Fatalf("status %d body %s", res.StatusCode(), body)
+	}
+	if gotAuth != "Bearer test-token" {
+		t.Fatalf("Authorization = %q, want Bearer test-token", gotAuth)
+	}
+	if gotPath != "/api/catalog/datasets" {
+		t.Fatalf("path = %q", gotPath)
+	}
+	if gotQuery != "pageSize=5" {
+		t.Fatalf("query = %q", gotQuery)
+	}
+	if res.JSON200 == nil {
+		t.Fatal("expected JSON200 payload")
+	}
+}
+
+func TestNewAuthenticatedClientRejectsCleartextNonLocalhost(t *testing.T) {
+	t.Parallel()
+	_, err := catalogapi.NewAuthenticatedClient("http://example.com", "tok", nil)
+	if err == nil {
+		t.Fatal("expected error for http non-localhost")
+	}
+}
+
+func TestSecureHTTPClientRejectsHTTPSToHTTPRedirect(t *testing.T) {
+	t.Parallel()
+	httpsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Non-loopback http target so the cleartext guard must refuse (loopback http is allowed).
+		http.Redirect(w, r, "http://example.com/dest", http.StatusFound)
+	}))
+	t.Cleanup(httpsSrv.Close)
+
+	client := catalogapi.SecureHTTPClient(httpsSrv.Client())
+	req, err := http.NewRequest(http.MethodGet, httpsSrv.URL+"/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Do(req)
+	if err == nil {
+		t.Fatal("expected redirect to cleartext to fail")
+	}
+}
+
+func TestSecureHTTPClientAllowsLoopbackHTTPRedirect(t *testing.T) {
+	t.Parallel()
+	final := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(final.Close)
+
+	start := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, final.URL+"/ok", http.StatusFound)
+	}))
+	t.Cleanup(start.Close)
+
+	client := catalogapi.SecureHTTPClient(start.Client())
+	res, err := client.Get(start.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", res.StatusCode)
+	}
+}
+
+func TestSecureHTTPClientCapsRedirects(t *testing.T) {
+	t.Parallel()
+	var hits atomic.Int32
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		http.Redirect(w, r, srv.URL+"/next", http.StatusFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := catalogapi.SecureHTTPClient(srv.Client())
+	_, err := client.Get(srv.URL + "/")
+	if err == nil {
+		t.Fatal("expected redirect loop to stop")
+	}
+	if hits.Load() < 10 {
+		t.Fatalf("hits=%d, want at least 10 before stop", hits.Load())
+	}
+}
