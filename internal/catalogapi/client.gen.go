@@ -17,36 +17,60 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for MaterializationKind.
+// Defines values for Materialization0Kind.
 const (
-	MaterializationKindDatabricksTable MaterializationKind = "databricks-table"
-	MaterializationKindSnowflakeTable  MaterializationKind = "snowflake-table"
+	Materialization0KindSnowflakeTable Materialization0Kind = "snowflake-table"
 )
 
-// Valid indicates whether the value is a known member of the MaterializationKind enum.
-func (e MaterializationKind) Valid() bool {
+// Valid indicates whether the value is a known member of the Materialization0Kind enum.
+func (e Materialization0Kind) Valid() bool {
 	switch e {
-	case MaterializationKindDatabricksTable:
-		return true
-	case MaterializationKindSnowflakeTable:
+	case Materialization0KindSnowflakeTable:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for MaterializationInputKind.
+// Defines values for Materialization1Kind.
 const (
-	MaterializationInputKindDatabricksTable MaterializationInputKind = "databricks-table"
-	MaterializationInputKindSnowflakeTable  MaterializationInputKind = "snowflake-table"
+	Materialization1KindDatabricksTable Materialization1Kind = "databricks-table"
 )
 
-// Valid indicates whether the value is a known member of the MaterializationInputKind enum.
-func (e MaterializationInputKind) Valid() bool {
+// Valid indicates whether the value is a known member of the Materialization1Kind enum.
+func (e Materialization1Kind) Valid() bool {
 	switch e {
-	case MaterializationInputKindDatabricksTable:
+	case Materialization1KindDatabricksTable:
 		return true
-	case MaterializationInputKindSnowflakeTable:
+	default:
+		return false
+	}
+}
+
+// Defines values for MaterializationInput0Kind.
+const (
+	MaterializationInput0KindSnowflakeTable MaterializationInput0Kind = "snowflake-table"
+)
+
+// Valid indicates whether the value is a known member of the MaterializationInput0Kind enum.
+func (e MaterializationInput0Kind) Valid() bool {
+	switch e {
+	case MaterializationInput0KindSnowflakeTable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MaterializationInput1Kind.
+const (
+	MaterializationInput1KindDatabricksTable MaterializationInput1Kind = "databricks-table"
+)
+
+// Valid indicates whether the value is a known member of the MaterializationInput1Kind enum.
+func (e MaterializationInput1Kind) Valid() bool {
+	switch e {
+	case MaterializationInput1KindDatabricksTable:
 		return true
 	default:
 		return false
@@ -165,34 +189,55 @@ type JSONMetadata map[string]interface{}
 
 // Materialization defines model for Materialization.
 type Materialization struct {
-	CreatedAt time.Time               `json:"createdAt"`
-	Kind      MaterializationKind     `json:"kind"`
-	Locator   Materialization_Locator `json:"locator"`
-	Revision  int64                   `json:"revision"`
-	Urn       string                  `json:"urn"`
-}
-
-// MaterializationKind defines model for Materialization.Kind.
-type MaterializationKind string
-
-// Materialization_Locator defines model for Materialization.Locator.
-type Materialization_Locator struct {
 	union json.RawMessage
 }
+
+// Materialization0 defines model for Materialization.0.
+type Materialization0 struct {
+	CreatedAt time.Time             `json:"createdAt"`
+	Kind      Materialization0Kind  `json:"kind"`
+	Locator   SnowflakeTableLocator `json:"locator"`
+	Revision  int64                 `json:"revision"`
+	Urn       string                `json:"urn"`
+}
+
+// Materialization0Kind defines model for Materialization.0.Kind.
+type Materialization0Kind string
+
+// Materialization1 defines model for Materialization.1.
+type Materialization1 struct {
+	CreatedAt time.Time              `json:"createdAt"`
+	Kind      Materialization1Kind   `json:"kind"`
+	Locator   DatabricksTableLocator `json:"locator"`
+	Revision  int64                  `json:"revision"`
+	Urn       string                 `json:"urn"`
+}
+
+// Materialization1Kind defines model for Materialization.1.Kind.
+type Materialization1Kind string
 
 // MaterializationInput defines model for MaterializationInput.
 type MaterializationInput struct {
-	Kind    MaterializationInputKind     `json:"kind"`
-	Locator MaterializationInput_Locator `json:"locator"`
-}
-
-// MaterializationInputKind defines model for MaterializationInput.Kind.
-type MaterializationInputKind string
-
-// MaterializationInput_Locator defines model for MaterializationInput.Locator.
-type MaterializationInput_Locator struct {
 	union json.RawMessage
 }
+
+// MaterializationInput0 defines model for MaterializationInput.0.
+type MaterializationInput0 struct {
+	Kind    MaterializationInput0Kind `json:"kind"`
+	Locator SnowflakeTableLocator     `json:"locator"`
+}
+
+// MaterializationInput0Kind defines model for MaterializationInput.0.Kind.
+type MaterializationInput0Kind string
+
+// MaterializationInput1 defines model for MaterializationInput.1.
+type MaterializationInput1 struct {
+	Kind    MaterializationInput1Kind `json:"kind"`
+	Locator DatabricksTableLocator    `json:"locator"`
+}
+
+// MaterializationInput1Kind defines model for MaterializationInput.1.Kind.
+type MaterializationInput1Kind string
 
 // MaterializationList defines model for MaterializationList.
 type MaterializationList struct {
@@ -315,22 +360,22 @@ type PatchDatasetVersionApplicationMergePatchPlusJSONRequestBody = DatasetVersio
 // CreateMaterializationJSONRequestBody defines body for CreateMaterialization for application/json ContentType.
 type CreateMaterializationJSONRequestBody = MaterializationInput
 
-// AsSnowflakeTableLocator returns the union data inside the Materialization_Locator as a SnowflakeTableLocator
-func (t Materialization_Locator) AsSnowflakeTableLocator() (SnowflakeTableLocator, error) {
-	var body SnowflakeTableLocator
+// AsMaterialization0 returns the union data inside the Materialization as a Materialization0
+func (t Materialization) AsMaterialization0() (Materialization0, error) {
+	var body Materialization0
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSnowflakeTableLocator overwrites any union data inside the Materialization_Locator as the provided SnowflakeTableLocator
-func (t *Materialization_Locator) FromSnowflakeTableLocator(v SnowflakeTableLocator) error {
+// FromMaterialization0 overwrites any union data inside the Materialization as the provided Materialization0
+func (t *Materialization) FromMaterialization0(v Materialization0) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSnowflakeTableLocator performs a merge with any union data inside the Materialization_Locator, using the provided SnowflakeTableLocator
-func (t *Materialization_Locator) MergeSnowflakeTableLocator(v SnowflakeTableLocator) error {
+// MergeMaterialization0 performs a merge with any union data inside the Materialization, using the provided Materialization0
+func (t *Materialization) MergeMaterialization0(v Materialization0) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -341,22 +386,22 @@ func (t *Materialization_Locator) MergeSnowflakeTableLocator(v SnowflakeTableLoc
 	return err
 }
 
-// AsDatabricksTableLocator returns the union data inside the Materialization_Locator as a DatabricksTableLocator
-func (t Materialization_Locator) AsDatabricksTableLocator() (DatabricksTableLocator, error) {
-	var body DatabricksTableLocator
+// AsMaterialization1 returns the union data inside the Materialization as a Materialization1
+func (t Materialization) AsMaterialization1() (Materialization1, error) {
+	var body Materialization1
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromDatabricksTableLocator overwrites any union data inside the Materialization_Locator as the provided DatabricksTableLocator
-func (t *Materialization_Locator) FromDatabricksTableLocator(v DatabricksTableLocator) error {
+// FromMaterialization1 overwrites any union data inside the Materialization as the provided Materialization1
+func (t *Materialization) FromMaterialization1(v Materialization1) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeDatabricksTableLocator performs a merge with any union data inside the Materialization_Locator, using the provided DatabricksTableLocator
-func (t *Materialization_Locator) MergeDatabricksTableLocator(v DatabricksTableLocator) error {
+// MergeMaterialization1 performs a merge with any union data inside the Materialization, using the provided Materialization1
+func (t *Materialization) MergeMaterialization1(v Materialization1) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -367,32 +412,32 @@ func (t *Materialization_Locator) MergeDatabricksTableLocator(v DatabricksTableL
 	return err
 }
 
-func (t Materialization_Locator) MarshalJSON() ([]byte, error) {
+func (t Materialization) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *Materialization_Locator) UnmarshalJSON(b []byte) error {
+func (t *Materialization) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
 
-// AsSnowflakeTableLocator returns the union data inside the MaterializationInput_Locator as a SnowflakeTableLocator
-func (t MaterializationInput_Locator) AsSnowflakeTableLocator() (SnowflakeTableLocator, error) {
-	var body SnowflakeTableLocator
+// AsMaterializationInput0 returns the union data inside the MaterializationInput as a MaterializationInput0
+func (t MaterializationInput) AsMaterializationInput0() (MaterializationInput0, error) {
+	var body MaterializationInput0
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromSnowflakeTableLocator overwrites any union data inside the MaterializationInput_Locator as the provided SnowflakeTableLocator
-func (t *MaterializationInput_Locator) FromSnowflakeTableLocator(v SnowflakeTableLocator) error {
+// FromMaterializationInput0 overwrites any union data inside the MaterializationInput as the provided MaterializationInput0
+func (t *MaterializationInput) FromMaterializationInput0(v MaterializationInput0) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeSnowflakeTableLocator performs a merge with any union data inside the MaterializationInput_Locator, using the provided SnowflakeTableLocator
-func (t *MaterializationInput_Locator) MergeSnowflakeTableLocator(v SnowflakeTableLocator) error {
+// MergeMaterializationInput0 performs a merge with any union data inside the MaterializationInput, using the provided MaterializationInput0
+func (t *MaterializationInput) MergeMaterializationInput0(v MaterializationInput0) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -403,22 +448,22 @@ func (t *MaterializationInput_Locator) MergeSnowflakeTableLocator(v SnowflakeTab
 	return err
 }
 
-// AsDatabricksTableLocator returns the union data inside the MaterializationInput_Locator as a DatabricksTableLocator
-func (t MaterializationInput_Locator) AsDatabricksTableLocator() (DatabricksTableLocator, error) {
-	var body DatabricksTableLocator
+// AsMaterializationInput1 returns the union data inside the MaterializationInput as a MaterializationInput1
+func (t MaterializationInput) AsMaterializationInput1() (MaterializationInput1, error) {
+	var body MaterializationInput1
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromDatabricksTableLocator overwrites any union data inside the MaterializationInput_Locator as the provided DatabricksTableLocator
-func (t *MaterializationInput_Locator) FromDatabricksTableLocator(v DatabricksTableLocator) error {
+// FromMaterializationInput1 overwrites any union data inside the MaterializationInput as the provided MaterializationInput1
+func (t *MaterializationInput) FromMaterializationInput1(v MaterializationInput1) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeDatabricksTableLocator performs a merge with any union data inside the MaterializationInput_Locator, using the provided DatabricksTableLocator
-func (t *MaterializationInput_Locator) MergeDatabricksTableLocator(v DatabricksTableLocator) error {
+// MergeMaterializationInput1 performs a merge with any union data inside the MaterializationInput, using the provided MaterializationInput1
+func (t *MaterializationInput) MergeMaterializationInput1(v MaterializationInput1) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -429,12 +474,12 @@ func (t *MaterializationInput_Locator) MergeDatabricksTableLocator(v DatabricksT
 	return err
 }
 
-func (t MaterializationInput_Locator) MarshalJSON() ([]byte, error) {
+func (t MaterializationInput) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *MaterializationInput_Locator) UnmarshalJSON(b []byte) error {
+func (t *MaterializationInput) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }

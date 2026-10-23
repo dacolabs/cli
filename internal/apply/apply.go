@@ -164,10 +164,14 @@ func mutablePatch(desired catalogapi.DatasetInput, existing catalogapi.Dataset) 
 
 // metadataMergePatch sets desired keys and nulls keys removed from YAML so
 // application/merge-patch+json converges to the desired object.
+// Desired null values are rejected by Load; only removal nulls are emitted here.
 func metadataMergePatch(desired, existing catalogapi.JSONMetadata) catalogapi.JSONMetadata {
 	out := catalogapi.JSONMetadata{}
 	if desired != nil {
 		for k, v := range desired {
+			if v == nil {
+				continue
+			}
 			out[k] = v
 		}
 	}

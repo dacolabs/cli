@@ -43,12 +43,12 @@ type DeviceAuthorization struct {
 }
 
 type Tokens struct {
-	AccessToken     string
-	RefreshToken    string
-	OrganizationID  string
-	UserID          string
-	UserEmail       string
-	ExpiresAt       time.Time
+	AccessToken    string
+	RefreshToken   string
+	OrganizationID string
+	UserID         string
+	UserEmail      string
+	ExpiresAt      time.Time
 }
 
 type authError struct {
@@ -86,6 +86,20 @@ func (c *Client) AuthorizeDevice(ctx context.Context) (DeviceAuthorization, erro
 	}, nil
 }
 
+// after is time.After; tests may replace it to observe poll waits without sleeping.
+var after = time.After
+
+func pollWait(interval time.Duration, deadline time.Time) time.Duration {
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return 0
+	}
+	if interval > remaining {
+		return remaining
+	}
+	return interval
+}
+
 func (c *Client) PollDevice(ctx context.Context, auth DeviceAuthorization) (Tokens, error) {
 	deadline := time.Now().Add(auth.ExpiresIn)
 	interval := auth.Interval
@@ -110,10 +124,14 @@ func (c *Client) PollDevice(ctx context.Context, auth DeviceAuthorization) (Toke
 		if slowDown {
 			interval += 5 * time.Second
 		}
+		wait := pollWait(interval, deadline)
+		if wait <= 0 {
+			return Tokens{}, fmt.Errorf("device authorization expired")
+		}
 		select {
 		case <-ctx.Done():
 			return Tokens{}, ctx.Err()
-		case <-time.After(interval):
+		case <-after(wait):
 		}
 	}
 }

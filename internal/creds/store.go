@@ -1,6 +1,9 @@
 package creds
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +49,14 @@ func (s FileStore) lockPath() string {
 	return s.Path + ".lock"
 }
 
+func newLockToken() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
+}
+
 // WithLock serializes credential read/write across processes for the duration of fn.
 func (s FileStore) WithLock(fn func() error) error {
 	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
@@ -57,17 +68,49 @@ func (s FileStore) WithLock(fn func() error) error {
 	for i := 0; i < 100; i++ {
 		f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err == nil {
+			token := newLockToken()
+			if _, werr := f.WriteString(token); werr != nil {
+				_ = f.Close()
+				_ = os.Remove(lockPath)
+				return werr
+			}
 			break
 		}
 		if !os.IsExist(err) {
 			return err
 		}
 		info, statErr := os.Stat(lockPath)
-		if statErr == nil && time.Since(info.ModTime()) > StaleLockAge {
-			_ = os.Remove(lockPath)
+		if statErr != nil {
+			time.Sleep(20 * time.Millisecond)
 			continue
 		}
-		time.Sleep(20 * time.Millisecond)
+		if time.Since(info.ModTime()) <= StaleLockAge {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		staleContent, readErr := os.ReadFile(lockPath)
+		if readErr != nil {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		staleMod := info.ModTime()
+		// Re-check identity so we never unlink a lock another process just created.
+		info2, statErr := os.Stat(lockPath)
+		if statErr != nil || !info2.ModTime().Equal(staleMod) {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		content2, readErr := os.ReadFile(lockPath)
+		if readErr != nil || !bytes.Equal(staleContent, content2) {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		if time.Since(info2.ModTime()) <= StaleLockAge {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		_ = os.Remove(lockPath)
+		continue
 	}
 	if f == nil {
 		return fmt.Errorf("could not acquire credentials lock at %s; if no other daco process is running, delete that file and retry", lockPath)

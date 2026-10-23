@@ -50,6 +50,12 @@ func decodeDatasetDoc(doc []byte) (catalogapi.DatasetInput, error) {
 	if err := dec.Decode(&raw); err != nil {
 		return catalogapi.DatasetInput{}, err
 	}
+	if err := rejectNullMetadata(raw.Metadata); err != nil {
+		return catalogapi.DatasetInput{}, err
+	}
+	if err := rejectNullMetadata(raw.Contract.Metadata); err != nil {
+		return catalogapi.DatasetInput{}, fmt.Errorf("contract: %w", err)
+	}
 	return catalogapi.DatasetInput{
 		Urn:         raw.Urn,
 		Version:     raw.Version,
@@ -58,6 +64,15 @@ func decodeDatasetDoc(doc []byte) (catalogapi.DatasetInput, error) {
 		Metadata:    raw.Metadata,
 		Contract:    raw.Contract,
 	}, nil
+}
+
+func rejectNullMetadata(m catalogapi.JSONMetadata) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("metadata.%s is null; omit the key to delete it on apply, or set a non-null JSON value", k)
+		}
+	}
+	return nil
 }
 
 // Load reads -f paths (files or recursive dirs of *.yaml/*.yml), splits on ---,

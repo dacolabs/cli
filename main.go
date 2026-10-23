@@ -183,7 +183,7 @@ func cmdDatasets(ctx context.Context) error {
 		return err
 	}
 	pageSize := int32(200)
-	var all []catalogapi.DatasetSummary
+	all := make([]catalogapi.DatasetSummary, 0)
 	var pageToken *string
 	for {
 		res, err := client.ListDatasetsWithResponse(ctx, &catalogapi.ListDatasetsParams{

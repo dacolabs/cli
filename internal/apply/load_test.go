@@ -62,6 +62,31 @@ contract:
 	}
 }
 
+func TestLoadRejectsNullMetadata(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "null.yaml")
+	content := `
+kind: Dataset
+urn: urn:daco:dataset:orders
+version: "1.0.0"
+title: Orders
+description: d
+metadata:
+  gone: null
+contract:
+  schema: {"type":"object"}
+  metadata: {}
+`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := apply.Load([]string{path})
+	if err == nil || !strings.Contains(err.Error(), "null") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 func TestLoadRejectsUnknownFields(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

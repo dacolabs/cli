@@ -62,3 +62,65 @@ func TestNewAuthenticatedClientRejectsCleartextNonLocalhost(t *testing.T) {
 		t.Fatal("expected error for http non-localhost")
 	}
 }
+
+func TestSecureHTTPClientRejectsHTTPSToHTTPRedirect(t *testing.T) {
+	t.Parallel()
+	httpsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Non-loopback http target so the cleartext guard must refuse (loopback http is allowed).
+		http.Redirect(w, r, "http://example.com/dest", http.StatusFound)
+	}))
+	t.Cleanup(httpsSrv.Close)
+
+	client := catalogapi.SecureHTTPClient(httpsSrv.Client())
+	req, err := http.NewRequest(http.MethodGet, httpsSrv.URL+"/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Do(req)
+	if err == nil {
+		t.Fatal("expected redirect to cleartext to fail")
+	}
+}
+
+func TestSecureHTTPClientAllowsLoopbackHTTPRedirect(t *testing.T) {
+	t.Parallel()
+	final := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(final.Close)
+
+	start := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, final.URL+"/ok", http.StatusFound)
+	}))
+	t.Cleanup(start.Close)
+
+	client := catalogapi.SecureHTTPClient(start.Client())
+	res, err := client.Get(start.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", res.StatusCode)
+	}
+}
+
+func TestSecureHTTPClientCapsRedirects(t *testing.T) {
+	t.Parallel()
+	var hits int
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		http.Redirect(w, r, srv.URL+"/next", http.StatusFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := catalogapi.SecureHTTPClient(srv.Client())
+	_, err := client.Get(srv.URL + "/")
+	if err == nil {
+		t.Fatal("expected redirect loop to stop")
+	}
+	if hits < 10 {
+		t.Fatalf("hits=%d, want at least 10 before stop", hits)
+	}
+}

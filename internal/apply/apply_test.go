@@ -125,8 +125,9 @@ func TestApplyPatchesMutableFields(t *testing.T) {
 		t.Fatalf("patch title=%v", patchBody["title"])
 	}
 	meta, _ := patchBody["metadata"].(map[string]any)
-	if meta["keep"] != true || meta["drop"] != nil {
-		t.Fatalf("metadata patch=%v", meta)
+	drop, dropOK := meta["drop"]
+	if meta["keep"] != true || !dropOK || drop != nil {
+		t.Fatalf("metadata patch=%v (want keep=true and drop present as null)", meta)
 	}
 }
 

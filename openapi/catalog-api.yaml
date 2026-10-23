@@ -549,39 +549,65 @@ components:
         schema: { type: string, minLength: 1 }
         table: { type: string, minLength: 1 }
     MaterializationInput:
-      type: object
-      additionalProperties: false
-      required: [kind, locator]
-      properties:
-        kind:
-          type: string
-          enum: [snowflake-table, databricks-table]
-        locator:
-          oneOf:
-            - $ref: "#/components/schemas/SnowflakeTableLocator"
-            - $ref: "#/components/schemas/DatabricksTableLocator"
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [kind, locator]
+          properties:
+            kind:
+              type: string
+              const: snowflake-table
+            locator:
+              $ref: "#/components/schemas/SnowflakeTableLocator"
+        - type: object
+          additionalProperties: false
+          required: [kind, locator]
+          properties:
+            kind:
+              type: string
+              const: databricks-table
+            locator:
+              $ref: "#/components/schemas/DatabricksTableLocator"
     Materialization:
-      type: object
-      additionalProperties: false
-      required: [urn, kind, locator, revision, createdAt]
-      properties:
-        urn:
-          type: string
-          pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-        kind:
-          type: string
-          enum: [snowflake-table, databricks-table]
-        locator:
-          oneOf:
-            - $ref: "#/components/schemas/SnowflakeTableLocator"
-            - $ref: "#/components/schemas/DatabricksTableLocator"
-        revision:
-          type: integer
-          format: int64
-          minimum: 1
-        createdAt:
-          type: string
-          format: date-time
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [urn, kind, locator, revision, createdAt]
+          properties:
+            urn:
+              type: string
+              pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            kind:
+              type: string
+              const: snowflake-table
+            locator:
+              $ref: "#/components/schemas/SnowflakeTableLocator"
+            revision:
+              type: integer
+              format: int64
+              minimum: 1
+            createdAt:
+              type: string
+              format: date-time
+        - type: object
+          additionalProperties: false
+          required: [urn, kind, locator, revision, createdAt]
+          properties:
+            urn:
+              type: string
+              pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+            kind:
+              type: string
+              const: databricks-table
+            locator:
+              $ref: "#/components/schemas/DatabricksTableLocator"
+            revision:
+              type: integer
+              format: int64
+              minimum: 1
+            createdAt:
+              type: string
+              format: date-time
     MaterializationList:
       type: object
       additionalProperties: false
