@@ -27,10 +27,7 @@ def strip_go_type_extensions(text: str) -> str:
         line = lines[i]
         stripped = line.lstrip(" ")
         indent = len(line) - len(stripped)
-        if stripped.startswith("x-go-type:"):
-            i += 1
-            continue
-        if stripped.startswith("x-go-type-import:"):
+        if stripped.startswith("x-go-type:") or stripped.startswith("x-go-type-import:"):
             i += 1
             while i < len(lines):
                 nxt = lines[i]

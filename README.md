@@ -25,7 +25,11 @@ scoop install daco
 
 ```bash
 go install github.com/dacolabs/cli@v1.0.0
+# installs as $(go env GOPATH)/bin/cli (module path ends in /cli)
+mv "$(go env GOPATH)/bin/cli" "$(go env GOPATH)/bin/daco"
 ```
+
+Prefer Homebrew/Scoop or `make build` when you want the `daco` binary name without renaming.
 
 ### Manual Download
 
@@ -49,11 +53,11 @@ AuthKit device login works. Catalog HTTP calls use an **oapi-codegen** client ge
 The AuthKit **client ID is public** and baked into the CLI for staging (same class of value as a browser OAuth client id). End users do not need to supply it.
 
 ```bash
-./daco login      # defaults to staging AuthKit + https://main.app.daco.services
-./daco whoami
-./daco datasets
-./daco apply -f datasets.yaml
-./daco logout
+./bin/daco login      # defaults to staging AuthKit + https://main.app.daco.services
+./bin/daco whoami
+./bin/daco datasets
+./bin/daco apply -f datasets.yaml
+./bin/daco logout
 ```
 
 ### Apply Dataset YAML
@@ -74,16 +78,16 @@ contract:
 ```
 
 ```bash
-./daco apply -f datasets.yaml
-./daco apply -f ./manifests --dry-run
+./bin/daco apply -f datasets.yaml
+./bin/daco apply -f ./manifests --dry-run
 ```
 
 Local Catalog against your machine:
 
 ```bash
 export DACO_BASE_URL=http://127.0.0.1:8080
-./daco login
-./daco datasets
+./bin/daco login
+./bin/daco datasets
 ```
 
 `daco login` uses WorkOS AuthKit **device authorization** (public client; no API key or client secret in the binary). Tokens are stored at `~/.config/daco/credentials.json` (`0600`), or `DACO_CREDENTIALS_FILE` when set.

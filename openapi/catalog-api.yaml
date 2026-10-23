@@ -494,6 +494,7 @@ components:
         title:
           type: string
           minLength: 1
+          maxLength: 200
           description: Trimmed before validating the 200-character limit.
         description:
           type: string
@@ -510,6 +511,7 @@ components:
         title:
           type: string
           minLength: 1
+          maxLength: 200
           description: Trimmed before validating the 200-character limit.
         description:
           type: string

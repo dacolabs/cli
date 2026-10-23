@@ -23,7 +23,14 @@ Commit messages should follow [Conventional Commits](https://www.conventionalcom
 
 Requires **Python 3** (for `./scripts/sync-catalog-openapi.sh`) and Go 1.24+.
 
-1. Sync the snapshot (strips monorepo-only `x-go-type` imports): `./scripts/sync-catalog-openapi.sh`
+1. Sync the snapshot (strips monorepo-only `x-go-type` imports). From a standalone clone set the product contract path explicitly:
+
+   ```bash
+   CATALOG_OPENAPI=/path/to/daco/api/catalog-api.yaml ./scripts/sync-catalog-openapi.sh
+   ```
+
+   When this repo is checked out as a `dacolabs/daco` submodule, `../api/catalog-api.yaml` is used by default.
+
 2. Generate: `./scripts/generate-catalog-client.sh` (uses pinned `oapi-codegen@v2.8.0` via `go run`, or set `OAPI_CODEGEN` to that binary)
 3. Verify: `./scripts/check-catalog-client-drift.sh` and `go test ./...`
 

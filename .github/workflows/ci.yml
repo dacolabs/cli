@@ -23,6 +23,25 @@ env:
   GO_VERSION: "1.24.x"
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1
+          args: --timeout=5m
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -97,13 +116,14 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [test, build, goreleaser-check]
+    needs: [lint, test, build, goreleaser-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
-          if [[ "${{ needs.test.result }}" != "success" ]] || \
+          if [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.test.result }}" != "success" ]] || \
              [[ "${{ needs.build.result }}" != "success" ]] || \
              [[ "${{ needs.goreleaser-check.result }}" != "success" ]]; then
             echo "One or more jobs failed"

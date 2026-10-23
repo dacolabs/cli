@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,9 +123,12 @@ func TestAccessTokenSaveFailure(t *testing.T) {
 		},
 		errSave: errors.New("disk full"),
 	}
-	_, _, err := session.AccessToken(context.Background(), store, srv.Client())
-	if err == nil || err.Error() != "disk full" {
+	tok, sess, err := session.AccessToken(context.Background(), store, srv.Client())
+	if err == nil || !strings.Contains(err.Error(), "disk full") {
 		t.Fatalf("err=%v", err)
+	}
+	if tok != "new_access" || sess.RefreshToken != "new_refresh" {
+		t.Fatalf("expected refreshed tokens despite save failure: tok=%q sess=%+v", tok, sess)
 	}
 }
 

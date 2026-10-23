@@ -282,11 +282,9 @@ type Unauthorized = Problem
 
 // ListDatasetsParams defines parameters for ListDatasets.
 type ListDatasetsParams struct {
-	// PageSize Maximum number of Datasets to return; zero uses the default and values above 200 are capped.
-	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
-
-	// PageToken Opaque continuation token from a previous response.
-	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+	// PageSize Zero selects the default of 50; positive values are capped at 200.
+	PageSize  *PageSize  `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *PageToken `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // ListDatasetVersionsParams defines parameters for ListDatasetVersions.

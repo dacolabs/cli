@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -65,7 +66,16 @@ func run(args []string) error {
 }
 
 func httpClient() *http.Client {
-	return &http.Client{Timeout: 30 * time.Second}
+	return catalogapi.SecureHTTPClient(&http.Client{Timeout: 30 * time.Second})
+}
+
+func accessToken(ctx context.Context, store creds.FileStore) (string, creds.Session, error) {
+	token, sess, err := session.AccessToken(ctx, store, httpClient())
+	if err != nil && token != "" {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+		return token, sess, nil
+	}
+	return token, sess, err
 }
 
 func credentialStore() (creds.FileStore, error) {
@@ -114,7 +124,7 @@ func cmdLogin(ctx context.Context) error {
 		UserEmail:      tok.UserEmail,
 		ExpiresAt:      tok.ExpiresAt,
 		AuthAPI:        cfg.AuthAPI,
-		BaseURL:        cfg.BaseURL,
+		BaseURL:        cfg.ResolveBaseURL(""),
 	}
 	if err := store.Save(session); err != nil {
 		return err
@@ -141,7 +151,7 @@ func cmdWhoami(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, sess, err := session.AccessToken(ctx, store, httpClient())
+	_, sess, err := accessToken(ctx, store)
 	if err != nil {
 		return err
 	}
@@ -160,14 +170,11 @@ func cmdDatasets(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	token, sess, err := session.AccessToken(ctx, store, httpClient())
+	token, sess, err := accessToken(ctx, store)
 	if err != nil {
 		return err
 	}
-	base := cfg.BaseURL
-	if base == "" {
-		base = sess.BaseURL
-	}
+	base := cfg.ResolveBaseURL(sess.BaseURL)
 	if base == "" {
 		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
 	}
@@ -175,15 +182,34 @@ func cmdDatasets(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	pageSize := int32(5)
-	res, err := client.ListDatasetsWithResponse(ctx, &catalogapi.ListDatasetsParams{PageSize: &pageSize})
+	pageSize := int32(200)
+	var all []catalogapi.DatasetSummary
+	var pageToken *string
+	for {
+		res, err := client.ListDatasetsWithResponse(ctx, &catalogapi.ListDatasetsParams{
+			PageSize:  &pageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return err
+		}
+		if res.StatusCode() < 200 || res.StatusCode() >= 300 {
+			return fmt.Errorf("catalog %s: %s", res.Status(), strings.TrimSpace(string(res.Body)))
+		}
+		if res.JSON200 == nil {
+			return fmt.Errorf("catalog list datasets: empty response")
+		}
+		all = append(all, res.JSON200.Datasets...)
+		if res.JSON200.NextPageToken == nil || *res.JSON200.NextPageToken == "" {
+			break
+		}
+		pageToken = res.JSON200.NextPageToken
+	}
+	out, err := json.MarshalIndent(catalogapi.DatasetList{Datasets: all}, "", "  ")
 	if err != nil {
 		return err
 	}
-	if res.StatusCode() < 200 || res.StatusCode() >= 300 {
-		return fmt.Errorf("catalog %s: %s", res.Status(), strings.TrimSpace(string(res.Body)))
-	}
-	fmt.Println(string(res.Body))
+	fmt.Println(string(out))
 	return nil
 }
 
@@ -224,14 +250,11 @@ func cmdApply(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	token, sess, err := session.AccessToken(ctx, store, httpClient())
+	token, sess, err := accessToken(ctx, store)
 	if err != nil {
 		return err
 	}
-	base := cfg.BaseURL
-	if base == "" {
-		base = sess.BaseURL
-	}
+	base := cfg.ResolveBaseURL(sess.BaseURL)
 	if base == "" {
 		return fmt.Errorf("set DACO_BASE_URL to your Catalog API origin")
 	}

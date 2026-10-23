@@ -33,6 +33,16 @@ metadata: {}
 contract:
   schema: {"type":"object"}
   metadata: {}
+---
+kind: Dataset
+urn: urn:daco:dataset:inventory
+version: "0.1.0"
+title: Inventory
+description: Stock
+metadata: {}
+contract:
+  schema: {"type":"object"}
+  metadata: {}
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
@@ -41,11 +51,39 @@ contract:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(units) != 1 {
-		t.Fatalf("got %d units, want 1", len(units))
+	if len(units) != 2 {
+		t.Fatalf("got %d units, want 2", len(units))
 	}
 	if units[0].Input.Urn != "urn:daco:dataset:orders" || units[0].Input.Version != "1.0.0" {
 		t.Fatalf("unexpected unit: %+v", units[0].Input)
+	}
+	if units[1].Input.Urn != "urn:daco:dataset:inventory" {
+		t.Fatalf("unexpected second unit: %+v", units[1].Input)
+	}
+}
+
+func TestLoadRejectsUnknownFields(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.yaml")
+	content := `
+kind: Dataset
+urn: urn:daco:dataset:orders
+version: "1.0.0"
+title: Orders
+description: d
+metadata: {}
+typoField: oops
+contract:
+  schema: {"type":"object"}
+  metadata: {}
+`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := apply.Load([]string{path})
+	if err == nil {
+		t.Fatal("expected unknown field error")
 	}
 }
 

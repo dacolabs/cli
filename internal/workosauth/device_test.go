@@ -143,7 +143,7 @@ func TestRefresh(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		values, _ := url.ParseQuery(string(body))
-		if values.Get("grant_type") != "refresh_token" || values.Get("refresh_token") != "old_refresh" {
+		if values.Get("grant_type") != "refresh_token" || values.Get("refresh_token") != "old_refresh" || values.Get("client_id") != "client_test" {
 			t.Errorf("%s", body)
 			http.Error(w, "bad form", http.StatusBadRequest)
 			return

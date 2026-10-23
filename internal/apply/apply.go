@@ -97,7 +97,14 @@ func reconcileOne(ctx context.Context, client CatalogClient, unit Unit, dryRun b
 			base.Message = "dry-run"
 			return base
 		}
-		patched, err := client.PatchDatasetVersionWithApplicationMergePatchPlusJSONBodyWithResponse(ctx, unit.Input.Urn, unit.Input.Version, nil, *patch)
+		if get.HTTPResponse == nil || get.Headers200 == nil || get.Headers200.ETag == "" {
+			base.Action = ActionError
+			base.Message = "missing ETag from GET; cannot safely patch"
+			return base
+		}
+		etag := catalogapi.IfMatch(get.Headers200.ETag)
+		params := &catalogapi.PatchDatasetVersionParams{IfMatch: &etag}
+		patched, err := client.PatchDatasetVersionWithApplicationMergePatchPlusJSONBodyWithResponse(ctx, unit.Input.Urn, unit.Input.Version, params, *patch)
 		if err != nil {
 			base.Action = ActionError
 			base.Message = err.Error()
@@ -122,7 +129,6 @@ func contractsEqual(desired catalogapi.ContractInput, existing catalogapi.Contra
 	if err != nil {
 		return false, err
 	}
-	// Normalize existing Contract into the same JSON shape as ContractInput.
 	asInput := catalogapi.ContractInput{Schema: existing.Schema, Metadata: existing.Metadata}
 	got, err := canonicalJSON(asInput)
 	if err != nil {
@@ -146,7 +152,7 @@ func mutablePatch(desired catalogapi.DatasetInput, existing catalogapi.Dataset) 
 	}
 	metaEqual, err := metadataEqual(desired.Metadata, existing.Metadata)
 	if err != nil || !metaEqual {
-		m := desired.Metadata
+		m := metadataMergePatch(desired.Metadata, existing.Metadata)
 		patch.Metadata = &m
 		changed = true
 	}
@@ -154,6 +160,23 @@ func mutablePatch(desired catalogapi.DatasetInput, existing catalogapi.Dataset) 
 		return nil
 	}
 	return &patch
+}
+
+// metadataMergePatch sets desired keys and nulls keys removed from YAML so
+// application/merge-patch+json converges to the desired object.
+func metadataMergePatch(desired, existing catalogapi.JSONMetadata) catalogapi.JSONMetadata {
+	out := catalogapi.JSONMetadata{}
+	if desired != nil {
+		for k, v := range desired {
+			out[k] = v
+		}
+	}
+	for k := range existing {
+		if _, ok := out[k]; !ok {
+			out[k] = nil
+		}
+	}
+	return out
 }
 
 func metadataEqual(a, b catalogapi.JSONMetadata) (bool, error) {

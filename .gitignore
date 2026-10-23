@@ -1,6 +1,7 @@
 /daco
 /daco.exe
 /bin/
+/dist/
 *.exe
 *.test
 *.out

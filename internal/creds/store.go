@@ -11,6 +11,10 @@ import (
 
 var ErrNotFound = errors.New("no stored credentials; run daco login")
 
+// StaleLockAge is how old a credentials lock may be before it is treated as abandoned.
+// Must exceed the session refresh HTTP budget so a live refresh is not interrupted.
+const StaleLockAge = 45 * time.Second
+
 type Session struct {
 	ClientID       string    `json:"clientId"`
 	AccessToken    string    `json:"accessToken"`
@@ -38,12 +42,16 @@ func DefaultPath() (string, error) {
 	return filepath.Join(home, ".config", "daco", "credentials.json"), nil
 }
 
+func (s FileStore) lockPath() string {
+	return s.Path + ".lock"
+}
+
 // WithLock serializes credential read/write across processes for the duration of fn.
 func (s FileStore) WithLock(fn func() error) error {
 	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
 		return err
 	}
-	lockPath := s.Path + ".lock"
+	lockPath := s.lockPath()
 	var f *os.File
 	var err error
 	for i := 0; i < 100; i++ {
@@ -54,10 +62,15 @@ func (s FileStore) WithLock(fn func() error) error {
 		if !os.IsExist(err) {
 			return err
 		}
+		info, statErr := os.Stat(lockPath)
+		if statErr == nil && time.Since(info.ModTime()) > StaleLockAge {
+			_ = os.Remove(lockPath)
+			continue
+		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	if f == nil {
-		return fmt.Errorf("could not acquire credentials lock at %s", lockPath)
+		return fmt.Errorf("could not acquire credentials lock at %s; if no other daco process is running, delete that file and retry", lockPath)
 	}
 	defer func() {
 		_ = f.Close()
@@ -66,7 +79,14 @@ func (s FileStore) WithLock(fn func() error) error {
 	return fn()
 }
 
+// Save writes credentials. Callers that already hold WithLock should use SaveUnlocked.
 func (s FileStore) Save(session Session) error {
+	return s.WithLock(func() error {
+		return s.SaveUnlocked(session)
+	})
+}
+
+func (s FileStore) SaveUnlocked(session Session) error {
 	if err := os.MkdirAll(filepath.Dir(s.Path), 0o700); err != nil {
 		return err
 	}
@@ -121,9 +141,11 @@ func (s FileStore) Load() (Session, error) {
 }
 
 func (s FileStore) Clear() error {
-	err := os.Remove(s.Path)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
+	return s.WithLock(func() error {
+		err := os.Remove(s.Path)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		return nil
+	})
 }

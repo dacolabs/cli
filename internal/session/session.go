@@ -17,6 +17,10 @@ type Store interface {
 	Save(creds.Session) error
 }
 
+type unlockedSaver interface {
+	SaveUnlocked(creds.Session) error
+}
+
 type lockStore interface {
 	Store
 	WithLock(fn func() error) error
@@ -75,8 +79,16 @@ func accessTokenUnlocked(ctx context.Context, store Store, httpClient *http.Clie
 		session.UserEmail = tok.UserEmail
 	}
 	session.ExpiresAt = tok.ExpiresAt
-	if err := store.Save(session); err != nil {
-		return "", creds.Session{}, err
+	if err := saveSession(store, session); err != nil {
+		// Return refreshed tokens so this process can continue; name the persist failure.
+		return session.AccessToken, session, fmt.Errorf("refreshed session but failed to persist credentials (%w)", err)
 	}
 	return session.AccessToken, session, nil
+}
+
+func saveSession(store Store, session creds.Session) error {
+	if us, ok := store.(unlockedSaver); ok {
+		return us.SaveUnlocked(session)
+	}
+	return store.Save(session)
 }

@@ -26,8 +26,8 @@ func TestLoadDefaultsToStagingPublicBinding(t *testing.T) {
 	if err := c.RequireBaseURL(); err != nil {
 		t.Fatal(err)
 	}
-	if c.BaseURL != config.StagingBaseURL {
-		t.Fatalf("base=%q", c.BaseURL)
+	if c.ResolveBaseURL("") != config.StagingBaseURL {
+		t.Fatalf("base=%q", c.ResolveBaseURL(""))
 	}
 }
 
@@ -42,6 +42,22 @@ func TestEnvOverridesDefaults(t *testing.T) {
 	}
 	if c.ClientID != "client_override" || c.BaseURL != "http://127.0.0.1:8080" {
 		t.Fatalf("%+v", c)
+	}
+}
+
+func TestSessionBaseURLPreferredOverDefault(t *testing.T) {
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_BASE_URL", "")
+	t.Setenv("DACO_ENV", "staging")
+
+	c, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := c.ResolveBaseURL("https://custom.example")
+	if got != "https://custom.example" {
+		t.Fatalf("got %q", got)
 	}
 }
 
@@ -62,8 +78,8 @@ func TestProductionRequiresConfiguredBinding(t *testing.T) {
 	if !strings.Contains(reqErr.Error(), "production AuthKit client ID") {
 		t.Fatalf("err=%v", reqErr)
 	}
-	if c.BaseURL != config.ProductionBaseURL {
-		t.Fatalf("base=%q", c.BaseURL)
+	if c.DefaultBaseURL != config.ProductionBaseURL {
+		t.Fatalf("defaultBase=%q", c.DefaultBaseURL)
 	}
 }
 
@@ -99,8 +115,8 @@ func TestWorkOSClientIDFallbackWhenNoBakedInDefault(t *testing.T) {
 	if c.ClientID != "client_from_workos" {
 		t.Fatalf("client=%q", c.ClientID)
 	}
-	if c.BaseURL != config.ProductionBaseURL {
-		t.Fatalf("base=%q", c.BaseURL)
+	if c.DefaultBaseURL != config.ProductionBaseURL {
+		t.Fatalf("base=%q", c.DefaultBaseURL)
 	}
 }
 
@@ -116,5 +132,17 @@ func TestWorkOSClientIDDoesNotOverrideStagingDefault(t *testing.T) {
 	}
 	if c.ClientID != config.StagingClientID {
 		t.Fatalf("client=%q, want baked-in staging", c.ClientID)
+	}
+}
+
+func TestUnsupportedEnvRejected(t *testing.T) {
+	t.Setenv("DACO_ENV", "produciton")
+	t.Setenv("DACO_CLIENT_ID", "")
+	t.Setenv("WORKOS_CLIENT_ID", "")
+	t.Setenv("DACO_BASE_URL", "")
+
+	_, err := config.Load()
+	if err == nil || !strings.Contains(err.Error(), "unsupported DACO_ENV") {
+		t.Fatalf("err=%v", err)
 	}
 }

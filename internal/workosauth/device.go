@@ -98,12 +98,17 @@ func (c *Client) PollDevice(ctx context.Context, auth DeviceAuthorization) (Toke
 		if time.Now().After(deadline) {
 			return Tokens{}, fmt.Errorf("device authorization expired")
 		}
-		tok, pending, err := c.authenticate(ctx, form)
+		reqCtx, cancel := context.WithDeadline(ctx, deadline)
+		tok, pending, slowDown, err := c.authenticate(reqCtx, form)
+		cancel()
 		if err != nil {
 			return Tokens{}, err
 		}
 		if !pending {
 			return tok, nil
+		}
+		if slowDown {
+			interval += 5 * time.Second
 		}
 		select {
 		case <-ctx.Done():
@@ -119,7 +124,7 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string) (Tokens, erro
 		"refresh_token": {refreshToken},
 		"client_id":     {c.clientID},
 	}
-	tok, pending, err := c.authenticate(ctx, form)
+	tok, pending, _, err := c.authenticate(ctx, form)
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -129,38 +134,38 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string) (Tokens, erro
 	return tok, nil
 }
 
-func (c *Client) authenticate(ctx context.Context, form url.Values) (Tokens, bool, error) {
+func (c *Client) authenticate(ctx context.Context, form url.Values) (Tokens, bool, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/user_management/authenticate", strings.NewReader(form.Encode()))
 	if err != nil {
-		return Tokens{}, false, err
+		return Tokens{}, false, false, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	res, err := c.http.Do(req)
 	if err != nil {
-		return Tokens{}, false, err
+		return Tokens{}, false, false, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return Tokens{}, false, err
+		return Tokens{}, false, false, err
 	}
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		tok, err := decodeTokens(body)
-		return tok, false, err
+		return tok, false, false, err
 	}
 	var ae authError
 	_ = json.Unmarshal(body, &ae)
 	switch ae.Error {
 	case "authorization_pending":
-		return Tokens{}, true, nil
+		return Tokens{}, true, false, nil
 	case "slow_down":
-		return Tokens{}, true, nil
+		return Tokens{}, true, true, nil
 	case "access_denied":
-		return Tokens{}, false, fmt.Errorf("device authorization denied")
+		return Tokens{}, false, false, fmt.Errorf("device authorization denied")
 	case "expired_token":
-		return Tokens{}, false, fmt.Errorf("device authorization expired")
+		return Tokens{}, false, false, fmt.Errorf("device authorization expired")
 	default:
-		return Tokens{}, false, fmt.Errorf("authenticate failed: %s (%s)", res.Status, strings.TrimSpace(string(body)))
+		return Tokens{}, false, false, fmt.Errorf("authenticate failed: %s (%s)", res.Status, strings.TrimSpace(string(body)))
 	}
 }
 

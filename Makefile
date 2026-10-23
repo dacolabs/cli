@@ -22,7 +22,7 @@ test: ## Run tests
 	@go test -v -race ./...
 
 clean: ## Remove build artifacts
-	@rm -rf bin/
+	@rm -rf bin/ dist/
 
 release-snapshot: ## Local GoReleaser dry run
 	@goreleaser release --snapshot --clean

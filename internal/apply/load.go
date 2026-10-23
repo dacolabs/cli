@@ -21,8 +21,43 @@ type Unit struct {
 	Input  catalogapi.DatasetInput
 }
 
-type rawDoc struct {
-	Kind string `yaml:"kind"`
+type datasetDoc struct {
+	Kind        string                   `yaml:"kind"`
+	Urn         string                   `yaml:"urn"`
+	Version     catalogapi.SemVer        `yaml:"version"`
+	Title       string                   `yaml:"title"`
+	Description string                   `yaml:"description"`
+	Metadata    catalogapi.JSONMetadata  `yaml:"metadata"`
+	Contract    catalogapi.ContractInput `yaml:"contract"`
+}
+
+func decodeDatasetDoc(doc []byte) (catalogapi.DatasetInput, error) {
+	var head struct {
+		Kind string `yaml:"kind"`
+	}
+	if err := yaml.Unmarshal(doc, &head); err != nil {
+		return catalogapi.DatasetInput{}, err
+	}
+	if head.Kind == "" {
+		return catalogapi.DatasetInput{}, fmt.Errorf("missing kind")
+	}
+	if head.Kind != "Dataset" {
+		return catalogapi.DatasetInput{}, fmt.Errorf("unknown kind %q", head.Kind)
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(doc))
+	dec.KnownFields(true)
+	var raw datasetDoc
+	if err := dec.Decode(&raw); err != nil {
+		return catalogapi.DatasetInput{}, err
+	}
+	return catalogapi.DatasetInput{
+		Urn:         raw.Urn,
+		Version:     raw.Version,
+		Title:       raw.Title,
+		Description: raw.Description,
+		Metadata:    raw.Metadata,
+		Contract:    raw.Contract,
+	}, nil
 }
 
 // Load reads -f paths (files or recursive dirs of *.yaml/*.yml), splits on ---,
@@ -49,18 +84,8 @@ func Load(paths []string) ([]Unit, error) {
 		}
 		for i, doc := range docs {
 			src := fmt.Sprintf("%s#%d", file, i+1)
-			var head rawDoc
-			if err := yaml.Unmarshal(doc, &head); err != nil {
-				return nil, fmt.Errorf("%s: %w", src, err)
-			}
-			if head.Kind == "" {
-				return nil, fmt.Errorf("%s: missing kind", src)
-			}
-			if head.Kind != "Dataset" {
-				return nil, fmt.Errorf("%s: unknown kind %q", src, head.Kind)
-			}
-			var input catalogapi.DatasetInput
-			if err := yaml.Unmarshal(doc, &input); err != nil {
+			input, err := decodeDatasetDoc(doc)
+			if err != nil {
 				return nil, fmt.Errorf("%s: %w", src, err)
 			}
 			norm, err := canonicalJSON(input)
