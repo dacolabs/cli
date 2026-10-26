@@ -6,8 +6,11 @@ info:
     Create complete tenant-scoped Dataset Versions through one Dataset command.
     Reading a Dataset returns its greatest numeric SemVer directly; explicit
     Version URLs provide stable historical reads and updates. Contracts use
-    self-contained Draft 2020-12 JSON Schemas. Dataset inventory uses keyset
-    pagination, while the separate GraphQL Metadata API supports search.
+    self-contained Draft 2020-12 JSON Schemas. Datasets require an ownerGroupUrn
+    (Management group URN) as governance metadata. Data Products collect datasets
+    many-to-many under a required owner group with an ownership-subtree membership
+    rule. Dataset inventory uses keyset pagination, while the separate GraphQL
+    Metadata API supports search.
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
   - url: /
@@ -15,6 +18,7 @@ security:
   - OAuthBearer: []
 tags:
   - name: Datasets
+  - name: Data Products
 paths:
   /api/catalog/datasets:
     get:
@@ -23,8 +27,19 @@ paths:
       x-daco-permission: catalog:read
       summary: List Datasets
       parameters:
-        - $ref: "#/components/parameters/PageSize"
-        - $ref: "#/components/parameters/PageToken"
+        - name: pageSize
+          in: query
+          description: Maximum number of Datasets to return; zero uses the default and values above 200 are capped.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: pageToken
+          in: query
+          description: Opaque continuation token from a previous response.
+          schema:
+            type: string
+            minLength: 1
       responses:
         "200":
           description: Page of Datasets in ascending bytewise URN order
@@ -82,6 +97,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
         "409":
@@ -335,6 +352,298 @@ paths:
         "500": { $ref: "#/components/responses/InternalServerError" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
         "504": { $ref: "#/components/responses/GatewayTimeout" }
+
+  /api/catalog/data-products:
+    get:
+      tags: [Data Products]
+      operationId: listDataProducts
+      x-daco-permission: catalog:read
+      summary: List Data Products
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Page of Data Products in ascending bytewise URN order
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProductList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+    post:
+      tags: [Data Products]
+      operationId: createDataProduct
+      x-daco-permission: catalog:write
+      summary: Create a Data Product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataProductInput"
+      responses:
+        "201":
+          description: Data Product created
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            Location:
+              $ref: "#/components/headers/Location"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProduct"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+  /api/catalog/data-products/{urn}:
+    parameters:
+      - $ref: "#/components/parameters/DataProductURN"
+    get:
+      tags: [Data Products]
+      operationId: getDataProduct
+      x-daco-permission: catalog:read
+      summary: Get a Data Product
+      responses:
+        "200":
+          description: Data Product found
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProduct"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+    patch:
+      tags: [Data Products]
+      operationId: patchDataProduct
+      x-daco-permission: catalog:write
+      summary: Update Data Product name and/or description
+      description: Does not change urn or ownerGroupUrn.
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataProductPatch"
+      responses:
+        "200":
+          description: Data Product updated
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProduct"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+    delete:
+      tags: [Data Products]
+      operationId: deleteDataProduct
+      x-daco-permission: catalog:write
+      summary: Delete a Data Product
+      description: Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "204":
+          description: Data Product deleted
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+  /api/catalog/data-products/{urn}/datasets:
+    parameters:
+      - $ref: "#/components/parameters/DataProductURN"
+    get:
+      tags: [Data Products]
+      operationId: listDataProductDatasets
+      x-daco-permission: catalog:read
+      summary: List Datasets in a Data Product
+      parameters:
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/PageToken"
+      responses:
+        "200":
+          description: Page of Dataset memberships
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProductDatasetList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+  /api/catalog/data-products/{urn}/datasets/{datasetUrn}:
+    parameters:
+      - $ref: "#/components/parameters/DataProductURN"
+      - $ref: "#/components/parameters/DataProductDatasetURN"
+    put:
+      tags: [Data Products]
+      operationId: addDataProductDataset
+      x-daco-permission: catalog:write
+      summary: Add a Dataset to a Data Product
+      description: >-
+        Accepts the membership only when the Dataset's ownerGroupUrn equals the
+        Data Product's ownerGroupUrn or identifies a descendant group (any depth)
+        of that owner group. Otherwise returns 400 or 409. Idempotent when the
+        membership already exists. Ownership is governance metadata only and does
+        not grant dataset access.
+      responses:
+        "200":
+          description: Membership present (created or already existed)
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataProductDatasetMembership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+    delete:
+      tags: [Data Products]
+      operationId: removeDataProductDataset
+      x-daco-permission: catalog:write
+      summary: Remove a Dataset from a Data Product
+      description: Removes the membership without deleting the Dataset or other products' memberships.
+      responses:
+        "204":
+          description: Membership removed
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/RequestID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/GatewayTimeout"
+
 components:
   securitySchemes:
     OAuthBearer:
@@ -345,6 +654,24 @@ components:
   parameters:
     DatasetURN:
       name: urn
+      in: path
+      required: true
+      description: Opaque, case-sensitive Dataset identity supplied in percent-encoded form.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
+    DataProductURN:
+      name: urn
+      in: path
+      required: true
+      description: Opaque, case-sensitive Data Product identity supplied in percent-encoded form.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
+    DataProductDatasetURN:
+      name: datasetUrn
       in: path
       required: true
       description: Opaque, case-sensitive Dataset identity supplied in percent-encoded form.
@@ -365,7 +692,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
     PageSize:
       name: pageSize
       in: query
@@ -439,7 +766,7 @@ components:
     Dataset:
       type: object
       additionalProperties: false
-      required: [urn, version, title, description, metadata, contract, revision, createdAt, updatedAt]
+      required: [urn, version, title, description, ownerGroupUrn, metadata, contract, revision, createdAt, updatedAt]
       properties:
         urn:
           type: string
@@ -453,6 +780,14 @@ components:
           type: string
         description:
           type: string
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: >-
+            Management group URN that owns this Dataset. Governance metadata only;
+            immutable after Dataset create; does not grant dataset access.
+          examples: ["urn:daco:group:sales"]
         metadata:
           $ref: "#/components/schemas/JSONMetadata"
         contract:
@@ -470,7 +805,7 @@ components:
     DatasetSummary:
       type: object
       additionalProperties: false
-      required: [urn, version, title]
+      required: [urn, version, title, ownerGroupUrn]
       properties:
         urn:
           type: string
@@ -480,10 +815,15 @@ components:
           $ref: "#/components/schemas/SemVer"
         title:
           type: string
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Management group URN that owns this Dataset (governance only).
     DatasetInput:
       type: object
       additionalProperties: false
-      required: [urn, version, title, description, metadata, contract]
+      required: [urn, version, title, description, ownerGroupUrn, metadata, contract]
       properties:
         urn:
           type: string
@@ -494,11 +834,18 @@ components:
         title:
           type: string
           minLength: 1
-          maxLength: 200
           description: Trimmed before validating the 200-character limit.
         description:
           type: string
           minLength: 1
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: >-
+            Required on initial Dataset create. Must reference an existing Management
+            group URN in the active organization. Immutable thereafter; additional
+            Versions must not retarget ownership.
         metadata:
           $ref: "#/components/schemas/JSONMetadata"
         contract:
@@ -511,7 +858,6 @@ components:
         title:
           type: string
           minLength: 1
-          maxLength: 200
           description: Trimmed before validating the 200-character limit.
         description:
           type: string
@@ -549,65 +895,39 @@ components:
         schema: { type: string, minLength: 1 }
         table: { type: string, minLength: 1 }
     MaterializationInput:
-      oneOf:
-        - type: object
-          additionalProperties: false
-          required: [kind, locator]
-          properties:
-            kind:
-              type: string
-              const: snowflake-table
-            locator:
-              $ref: "#/components/schemas/SnowflakeTableLocator"
-        - type: object
-          additionalProperties: false
-          required: [kind, locator]
-          properties:
-            kind:
-              type: string
-              const: databricks-table
-            locator:
-              $ref: "#/components/schemas/DatabricksTableLocator"
+      type: object
+      additionalProperties: false
+      required: [kind, locator]
+      properties:
+        kind:
+          type: string
+          enum: [snowflake-table, databricks-table]
+        locator:
+          oneOf:
+            - $ref: "#/components/schemas/SnowflakeTableLocator"
+            - $ref: "#/components/schemas/DatabricksTableLocator"
     Materialization:
-      oneOf:
-        - type: object
-          additionalProperties: false
-          required: [urn, kind, locator, revision, createdAt]
-          properties:
-            urn:
-              type: string
-              pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-            kind:
-              type: string
-              const: snowflake-table
-            locator:
-              $ref: "#/components/schemas/SnowflakeTableLocator"
-            revision:
-              type: integer
-              format: int64
-              minimum: 1
-            createdAt:
-              type: string
-              format: date-time
-        - type: object
-          additionalProperties: false
-          required: [urn, kind, locator, revision, createdAt]
-          properties:
-            urn:
-              type: string
-              pattern: '^urn:daco:materialization:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-            kind:
-              type: string
-              const: databricks-table
-            locator:
-              $ref: "#/components/schemas/DatabricksTableLocator"
-            revision:
-              type: integer
-              format: int64
-              minimum: 1
-            createdAt:
-              type: string
-              format: date-time
+      type: object
+      additionalProperties: false
+      required: [urn, kind, locator, revision, createdAt]
+      properties:
+        urn:
+          type: string
+          pattern: '^urn:daco:materialization:[0-9a-fA-F-]{36}$'
+        kind:
+          type: string
+          enum: [snowflake-table, databricks-table]
+        locator:
+          oneOf:
+            - $ref: "#/components/schemas/SnowflakeTableLocator"
+            - $ref: "#/components/schemas/DatabricksTableLocator"
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
     MaterializationList:
       type: object
       additionalProperties: false
@@ -630,6 +950,129 @@ components:
           type: string
           minLength: 1
           description: Opaque URL-safe continuation token; omitted on the final page.
+    DataProduct:
+      type: object
+      additionalProperties: false
+      required: [urn, name, description, ownerGroupUrn, revision, createdAt, updatedAt]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Immutable, opaque, case-sensitive Data Product identity.
+          examples: ["urn:daco:data-product:commerce"]
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Trimmed name at most 200 Unicode characters.
+        description:
+          type: string
+          minLength: 1
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: >-
+            Required Management group URN. Immutable after create. Governance only;
+            member datasets must have the same owner or a descendant group owner.
+          examples: ["urn:daco:group:sales"]
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DataProductSummary:
+      type: object
+      additionalProperties: false
+      required: [urn, name, ownerGroupUrn]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+    DataProductInput:
+      type: object
+      additionalProperties: false
+      required: [urn, name, description, ownerGroupUrn]
+      properties:
+        urn:
+          type: string
+          minLength: 1
+          maxLength: 512
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Trimmed before validating the 200-character limit.
+        description:
+          type: string
+          minLength: 1
+        ownerGroupUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Must reference an existing Management group URN in the active organization.
+    DataProductPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Trimmed before validating the 200-character limit.
+        description:
+          type: string
+          minLength: 1
+    DataProductList:
+      type: object
+      additionalProperties: false
+      required: [dataProducts]
+      properties:
+        dataProducts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataProductSummary"
+        nextPageToken:
+          type: string
+          minLength: 1
+          description: Opaque URL-safe continuation token; omitted on the final page.
+    DataProductDatasetMembership:
+      type: object
+      additionalProperties: false
+      required: [datasetUrn]
+      properties:
+        datasetUrn:
+          type: string
+          minLength: 1
+          maxLength: 512
+    DataProductDatasetList:
+      type: object
+      additionalProperties: false
+      required: [datasets]
+      properties:
+        datasets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataProductDatasetMembership"
+        nextPageToken:
+          type: string
+          minLength: 1
     Problem:
       type: object
       additionalProperties: false

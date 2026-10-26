@@ -17,60 +17,36 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for Materialization0Kind.
+// Defines values for MaterializationKind.
 const (
-	Materialization0KindSnowflakeTable Materialization0Kind = "snowflake-table"
+	MaterializationKindDatabricksTable MaterializationKind = "databricks-table"
+	MaterializationKindSnowflakeTable  MaterializationKind = "snowflake-table"
 )
 
-// Valid indicates whether the value is a known member of the Materialization0Kind enum.
-func (e Materialization0Kind) Valid() bool {
+// Valid indicates whether the value is a known member of the MaterializationKind enum.
+func (e MaterializationKind) Valid() bool {
 	switch e {
-	case Materialization0KindSnowflakeTable:
+	case MaterializationKindDatabricksTable:
+		return true
+	case MaterializationKindSnowflakeTable:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for Materialization1Kind.
+// Defines values for MaterializationInputKind.
 const (
-	Materialization1KindDatabricksTable Materialization1Kind = "databricks-table"
+	MaterializationInputKindDatabricksTable MaterializationInputKind = "databricks-table"
+	MaterializationInputKindSnowflakeTable  MaterializationInputKind = "snowflake-table"
 )
 
-// Valid indicates whether the value is a known member of the Materialization1Kind enum.
-func (e Materialization1Kind) Valid() bool {
+// Valid indicates whether the value is a known member of the MaterializationInputKind enum.
+func (e MaterializationInputKind) Valid() bool {
 	switch e {
-	case Materialization1KindDatabricksTable:
+	case MaterializationInputKindDatabricksTable:
 		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for MaterializationInput0Kind.
-const (
-	MaterializationInput0KindSnowflakeTable MaterializationInput0Kind = "snowflake-table"
-)
-
-// Valid indicates whether the value is a known member of the MaterializationInput0Kind enum.
-func (e MaterializationInput0Kind) Valid() bool {
-	switch e {
-	case MaterializationInput0KindSnowflakeTable:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for MaterializationInput1Kind.
-const (
-	MaterializationInput1KindDatabricksTable MaterializationInput1Kind = "databricks-table"
-)
-
-// Valid indicates whether the value is a known member of the MaterializationInput1Kind enum.
-func (e MaterializationInput1Kind) Valid() bool {
-	switch e {
-	case MaterializationInput1KindDatabricksTable:
+	case MaterializationInputKindSnowflakeTable:
 		return true
 	default:
 		return false
@@ -93,6 +69,73 @@ type ContractInput struct {
 	Schema map[string]interface{} `json:"schema"`
 }
 
+// DataProduct defines model for DataProduct.
+type DataProduct struct {
+	CreatedAt   time.Time `json:"createdAt"`
+	Description string    `json:"description"`
+
+	// Name Trimmed name at most 200 Unicode characters.
+	Name string `json:"name"`
+
+	// OwnerGroupUrn Required Management group URN. Immutable after create. Governance only; member datasets must have the same owner or a descendant group owner.
+	//
+	// Examples: urn:daco:group:sales
+	OwnerGroupUrn string    `json:"ownerGroupUrn"`
+	Revision      int64     `json:"revision"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+
+	// Urn Immutable, opaque, case-sensitive Data Product identity.
+	//
+	// Examples: urn:daco:data-product:commerce
+	Urn string `json:"urn"`
+}
+
+// DataProductDatasetList defines model for DataProductDatasetList.
+type DataProductDatasetList struct {
+	Datasets      []DataProductDatasetMembership `json:"datasets"`
+	NextPageToken *string                        `json:"nextPageToken,omitempty"`
+}
+
+// DataProductDatasetMembership defines model for DataProductDatasetMembership.
+type DataProductDatasetMembership struct {
+	DatasetUrn string `json:"datasetUrn"`
+}
+
+// DataProductInput defines model for DataProductInput.
+type DataProductInput struct {
+	Description string `json:"description"`
+
+	// Name Trimmed before validating the 200-character limit.
+	Name string `json:"name"`
+
+	// OwnerGroupUrn Must reference an existing Management group URN in the active organization.
+	OwnerGroupUrn string `json:"ownerGroupUrn"`
+	Urn           string `json:"urn"`
+}
+
+// DataProductList defines model for DataProductList.
+type DataProductList struct {
+	DataProducts []DataProductSummary `json:"dataProducts"`
+
+	// NextPageToken Opaque URL-safe continuation token; omitted on the final page.
+	NextPageToken *string `json:"nextPageToken,omitempty"`
+}
+
+// DataProductPatch defines model for DataProductPatch.
+type DataProductPatch struct {
+	Description *string `json:"description,omitempty"`
+
+	// Name Trimmed before validating the 200-character limit.
+	Name *string `json:"name,omitempty"`
+}
+
+// DataProductSummary defines model for DataProductSummary.
+type DataProductSummary struct {
+	Name          string `json:"name"`
+	OwnerGroupUrn string `json:"ownerGroupUrn"`
+	Urn           string `json:"urn"`
+}
+
 // DatabricksTableLocator defines model for DatabricksTableLocator.
 type DatabricksTableLocator struct {
 	Catalog      string `json:"catalog"`
@@ -108,10 +151,15 @@ type Dataset struct {
 	Description string    `json:"description"`
 
 	// Metadata A JSON object; arrays and scalars are invalid at the top level.
-	Metadata  JSONMetadata `json:"metadata"`
-	Revision  int64        `json:"revision"`
-	Title     string       `json:"title"`
-	UpdatedAt time.Time    `json:"updatedAt"`
+	Metadata JSONMetadata `json:"metadata"`
+
+	// OwnerGroupUrn Management group URN that owns this Dataset. Governance metadata only; immutable after Dataset create; does not grant dataset access.
+	//
+	// Examples: urn:daco:group:sales
+	OwnerGroupUrn string    `json:"ownerGroupUrn"`
+	Revision      int64     `json:"revision"`
+	Title         string    `json:"title"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 
 	// Urn Immutable, opaque, case-sensitive Dataset identity.
 	//
@@ -131,6 +179,9 @@ type DatasetInput struct {
 
 	// Metadata A JSON object; arrays and scalars are invalid at the top level.
 	Metadata JSONMetadata `json:"metadata"`
+
+	// OwnerGroupUrn Required on initial Dataset create. Must reference an existing Management group URN in the active organization. Immutable thereafter; additional Versions must not retarget ownership.
+	OwnerGroupUrn string `json:"ownerGroupUrn"`
 
 	// Title Trimmed before validating the 200-character limit.
 	Title string `json:"title"`
@@ -152,8 +203,10 @@ type DatasetList struct {
 
 // DatasetSummary defines model for DatasetSummary.
 type DatasetSummary struct {
-	Title string `json:"title"`
-	Urn   string `json:"urn"`
+	// OwnerGroupUrn Management group URN that owns this Dataset (governance only).
+	OwnerGroupUrn string `json:"ownerGroupUrn"`
+	Title         string `json:"title"`
+	Urn           string `json:"urn"`
 
 	// Version Stable numeric major.minor.patch without prerelease or build suffixes.
 	//
@@ -189,55 +242,34 @@ type JSONMetadata map[string]interface{}
 
 // Materialization defines model for Materialization.
 type Materialization struct {
+	CreatedAt time.Time               `json:"createdAt"`
+	Kind      MaterializationKind     `json:"kind"`
+	Locator   Materialization_Locator `json:"locator"`
+	Revision  int64                   `json:"revision"`
+	Urn       string                  `json:"urn"`
+}
+
+// MaterializationKind defines model for Materialization.Kind.
+type MaterializationKind string
+
+// Materialization_Locator defines model for Materialization.Locator.
+type Materialization_Locator struct {
 	union json.RawMessage
 }
-
-// Materialization0 defines model for Materialization.0.
-type Materialization0 struct {
-	CreatedAt time.Time             `json:"createdAt"`
-	Kind      Materialization0Kind  `json:"kind"`
-	Locator   SnowflakeTableLocator `json:"locator"`
-	Revision  int64                 `json:"revision"`
-	Urn       string                `json:"urn"`
-}
-
-// Materialization0Kind defines model for Materialization.0.Kind.
-type Materialization0Kind string
-
-// Materialization1 defines model for Materialization.1.
-type Materialization1 struct {
-	CreatedAt time.Time              `json:"createdAt"`
-	Kind      Materialization1Kind   `json:"kind"`
-	Locator   DatabricksTableLocator `json:"locator"`
-	Revision  int64                  `json:"revision"`
-	Urn       string                 `json:"urn"`
-}
-
-// Materialization1Kind defines model for Materialization.1.Kind.
-type Materialization1Kind string
 
 // MaterializationInput defines model for MaterializationInput.
 type MaterializationInput struct {
+	Kind    MaterializationInputKind     `json:"kind"`
+	Locator MaterializationInput_Locator `json:"locator"`
+}
+
+// MaterializationInputKind defines model for MaterializationInput.Kind.
+type MaterializationInputKind string
+
+// MaterializationInput_Locator defines model for MaterializationInput.Locator.
+type MaterializationInput_Locator struct {
 	union json.RawMessage
 }
-
-// MaterializationInput0 defines model for MaterializationInput.0.
-type MaterializationInput0 struct {
-	Kind    MaterializationInput0Kind `json:"kind"`
-	Locator SnowflakeTableLocator     `json:"locator"`
-}
-
-// MaterializationInput0Kind defines model for MaterializationInput.0.Kind.
-type MaterializationInput0Kind string
-
-// MaterializationInput1 defines model for MaterializationInput.1.
-type MaterializationInput1 struct {
-	Kind    MaterializationInput1Kind `json:"kind"`
-	Locator DatabricksTableLocator    `json:"locator"`
-}
-
-// MaterializationInput1Kind defines model for MaterializationInput.1.Kind.
-type MaterializationInput1Kind string
 
 // MaterializationList defines model for MaterializationList.
 type MaterializationList struct {
@@ -271,6 +303,12 @@ type SnowflakeTableLocator struct {
 	Schema   string `json:"schema"`
 	Table    string `json:"table"`
 }
+
+// DataProductDatasetURN defines model for DataProductDatasetURN.
+type DataProductDatasetURN = string
+
+// DataProductURN defines model for DataProductURN.
+type DataProductURN = string
 
 // DatasetURN defines model for DatasetURN.
 type DatasetURN = string
@@ -325,11 +363,39 @@ type ServiceUnavailable = Problem
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = Problem
 
-// ListDatasetsParams defines parameters for ListDatasets.
-type ListDatasetsParams struct {
+// ListDataProductsParams defines parameters for ListDataProducts.
+type ListDataProductsParams struct {
 	// PageSize Zero selects the default of 50; positive values are capped at 200.
 	PageSize  *PageSize  `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 	PageToken *PageToken `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// DeleteDataProductParams defines parameters for DeleteDataProduct.
+type DeleteDataProductParams struct {
+	// IfMatch Optional current ETag; mismatch prevents the command.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// PatchDataProductParams defines parameters for PatchDataProduct.
+type PatchDataProductParams struct {
+	// IfMatch Optional current ETag; mismatch prevents the command.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// ListDataProductDatasetsParams defines parameters for ListDataProductDatasets.
+type ListDataProductDatasetsParams struct {
+	// PageSize Zero selects the default of 50; positive values are capped at 200.
+	PageSize  *PageSize  `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+	PageToken *PageToken `form:"pageToken,omitempty" json:"pageToken,omitempty"`
+}
+
+// ListDatasetsParams defines parameters for ListDatasets.
+type ListDatasetsParams struct {
+	// PageSize Maximum number of Datasets to return; zero uses the default and values above 200 are capped.
+	PageSize *int32 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// PageToken Opaque continuation token from a previous response.
+	PageToken *string `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
 // ListDatasetVersionsParams defines parameters for ListDatasetVersions.
@@ -351,6 +417,12 @@ type DeleteMaterializationParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// CreateDataProductJSONRequestBody defines body for CreateDataProduct for application/json ContentType.
+type CreateDataProductJSONRequestBody = DataProductInput
+
+// PatchDataProductJSONRequestBody defines body for PatchDataProduct for application/json ContentType.
+type PatchDataProductJSONRequestBody = DataProductPatch
+
 // CreateDatasetJSONRequestBody defines body for CreateDataset for application/json ContentType.
 type CreateDatasetJSONRequestBody = DatasetInput
 
@@ -360,22 +432,22 @@ type PatchDatasetVersionApplicationMergePatchPlusJSONRequestBody = DatasetVersio
 // CreateMaterializationJSONRequestBody defines body for CreateMaterialization for application/json ContentType.
 type CreateMaterializationJSONRequestBody = MaterializationInput
 
-// AsMaterialization0 returns the union data inside the Materialization as a Materialization0
-func (t Materialization) AsMaterialization0() (Materialization0, error) {
-	var body Materialization0
+// AsSnowflakeTableLocator returns the union data inside the Materialization_Locator as a SnowflakeTableLocator
+func (t Materialization_Locator) AsSnowflakeTableLocator() (SnowflakeTableLocator, error) {
+	var body SnowflakeTableLocator
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMaterialization0 overwrites any union data inside the Materialization as the provided Materialization0
-func (t *Materialization) FromMaterialization0(v Materialization0) error {
+// FromSnowflakeTableLocator overwrites any union data inside the Materialization_Locator as the provided SnowflakeTableLocator
+func (t *Materialization_Locator) FromSnowflakeTableLocator(v SnowflakeTableLocator) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMaterialization0 performs a merge with any union data inside the Materialization, using the provided Materialization0
-func (t *Materialization) MergeMaterialization0(v Materialization0) error {
+// MergeSnowflakeTableLocator performs a merge with any union data inside the Materialization_Locator, using the provided SnowflakeTableLocator
+func (t *Materialization_Locator) MergeSnowflakeTableLocator(v SnowflakeTableLocator) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -386,22 +458,22 @@ func (t *Materialization) MergeMaterialization0(v Materialization0) error {
 	return err
 }
 
-// AsMaterialization1 returns the union data inside the Materialization as a Materialization1
-func (t Materialization) AsMaterialization1() (Materialization1, error) {
-	var body Materialization1
+// AsDatabricksTableLocator returns the union data inside the Materialization_Locator as a DatabricksTableLocator
+func (t Materialization_Locator) AsDatabricksTableLocator() (DatabricksTableLocator, error) {
+	var body DatabricksTableLocator
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMaterialization1 overwrites any union data inside the Materialization as the provided Materialization1
-func (t *Materialization) FromMaterialization1(v Materialization1) error {
+// FromDatabricksTableLocator overwrites any union data inside the Materialization_Locator as the provided DatabricksTableLocator
+func (t *Materialization_Locator) FromDatabricksTableLocator(v DatabricksTableLocator) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMaterialization1 performs a merge with any union data inside the Materialization, using the provided Materialization1
-func (t *Materialization) MergeMaterialization1(v Materialization1) error {
+// MergeDatabricksTableLocator performs a merge with any union data inside the Materialization_Locator, using the provided DatabricksTableLocator
+func (t *Materialization_Locator) MergeDatabricksTableLocator(v DatabricksTableLocator) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -412,32 +484,32 @@ func (t *Materialization) MergeMaterialization1(v Materialization1) error {
 	return err
 }
 
-func (t Materialization) MarshalJSON() ([]byte, error) {
+func (t Materialization_Locator) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *Materialization) UnmarshalJSON(b []byte) error {
+func (t *Materialization_Locator) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
 
-// AsMaterializationInput0 returns the union data inside the MaterializationInput as a MaterializationInput0
-func (t MaterializationInput) AsMaterializationInput0() (MaterializationInput0, error) {
-	var body MaterializationInput0
+// AsSnowflakeTableLocator returns the union data inside the MaterializationInput_Locator as a SnowflakeTableLocator
+func (t MaterializationInput_Locator) AsSnowflakeTableLocator() (SnowflakeTableLocator, error) {
+	var body SnowflakeTableLocator
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMaterializationInput0 overwrites any union data inside the MaterializationInput as the provided MaterializationInput0
-func (t *MaterializationInput) FromMaterializationInput0(v MaterializationInput0) error {
+// FromSnowflakeTableLocator overwrites any union data inside the MaterializationInput_Locator as the provided SnowflakeTableLocator
+func (t *MaterializationInput_Locator) FromSnowflakeTableLocator(v SnowflakeTableLocator) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMaterializationInput0 performs a merge with any union data inside the MaterializationInput, using the provided MaterializationInput0
-func (t *MaterializationInput) MergeMaterializationInput0(v MaterializationInput0) error {
+// MergeSnowflakeTableLocator performs a merge with any union data inside the MaterializationInput_Locator, using the provided SnowflakeTableLocator
+func (t *MaterializationInput_Locator) MergeSnowflakeTableLocator(v SnowflakeTableLocator) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -448,22 +520,22 @@ func (t *MaterializationInput) MergeMaterializationInput0(v MaterializationInput
 	return err
 }
 
-// AsMaterializationInput1 returns the union data inside the MaterializationInput as a MaterializationInput1
-func (t MaterializationInput) AsMaterializationInput1() (MaterializationInput1, error) {
-	var body MaterializationInput1
+// AsDatabricksTableLocator returns the union data inside the MaterializationInput_Locator as a DatabricksTableLocator
+func (t MaterializationInput_Locator) AsDatabricksTableLocator() (DatabricksTableLocator, error) {
+	var body DatabricksTableLocator
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromMaterializationInput1 overwrites any union data inside the MaterializationInput as the provided MaterializationInput1
-func (t *MaterializationInput) FromMaterializationInput1(v MaterializationInput1) error {
+// FromDatabricksTableLocator overwrites any union data inside the MaterializationInput_Locator as the provided DatabricksTableLocator
+func (t *MaterializationInput_Locator) FromDatabricksTableLocator(v DatabricksTableLocator) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeMaterializationInput1 performs a merge with any union data inside the MaterializationInput, using the provided MaterializationInput1
-func (t *MaterializationInput) MergeMaterializationInput1(v MaterializationInput1) error {
+// MergeDatabricksTableLocator performs a merge with any union data inside the MaterializationInput_Locator, using the provided DatabricksTableLocator
+func (t *MaterializationInput_Locator) MergeDatabricksTableLocator(v DatabricksTableLocator) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -474,12 +546,12 @@ func (t *MaterializationInput) MergeMaterializationInput1(v MaterializationInput
 	return err
 }
 
-func (t MaterializationInput) MarshalJSON() ([]byte, error) {
+func (t MaterializationInput_Locator) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
-func (t *MaterializationInput) UnmarshalJSON(b []byte) error {
+func (t *MaterializationInput_Locator) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -558,6 +630,74 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// ListDataProducts List Data Products
+	//
+	// Corresponds with GET /api/catalog/data-products (the `ListDataProducts` operationId).
+	ListDataProducts(ctx context.Context, params *ListDataProductsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateDataProductWithBody Create a Data Product
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+	CreateDataProductWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateDataProduct Create a Data Product
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+	CreateDataProduct(ctx context.Context, body CreateDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteDataProduct Delete a Data Product
+	//
+	// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+	//
+	// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
+	DeleteDataProduct(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetDataProduct Get a Data Product
+	//
+	// Corresponds with GET /api/catalog/data-products/{urn} (the `GetDataProduct` operationId).
+	GetDataProduct(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchDataProductWithBody Update Data Product name and/or description
+	//
+	// Does not change urn or ownerGroupUrn.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+	PatchDataProductWithBody(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchDataProduct Update Data Product name and/or description
+	//
+	// Does not change urn or ownerGroupUrn.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+	PatchDataProduct(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListDataProductDatasets List Datasets in a Data Product
+	//
+	// Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
+	ListDataProductDatasets(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveDataProductDataset Remove a Dataset from a Data Product
+	//
+	// Removes the membership without deleting the Dataset or other products' memberships.
+	//
+	// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
+	RemoveDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddDataProductDataset Add a Dataset to a Data Product
+	//
+	// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+	//
+	// Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
+	AddDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListDatasets List Datasets
 	//
 	// Corresponds with GET /api/catalog/datasets (the `ListDatasets` operationId).
@@ -634,6 +774,174 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /api/catalog/datasets/{urn}/versions/{version}/materializations/{materializationUrn} (the `GetMaterialization` operationId).
 	GetMaterialization(ctx context.Context, urn DatasetURN, version VersionPathParameter, materializationUrn MaterializationURN, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// ListDataProducts List Data Products
+//
+// Corresponds with GET /api/catalog/data-products (the `ListDataProducts` operationId).
+func (c *Client) ListDataProducts(ctx context.Context, params *ListDataProductsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDataProductsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateDataProductWithBody Create a Data Product
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+func (c *Client) CreateDataProductWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDataProductRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateDataProduct Create a Data Product
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+func (c *Client) CreateDataProduct(ctx context.Context, body CreateDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDataProductRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteDataProduct Delete a Data Product
+//
+// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+//
+// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
+func (c *Client) DeleteDataProduct(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteDataProductRequest(c.Server, urn, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetDataProduct Get a Data Product
+//
+// Corresponds with GET /api/catalog/data-products/{urn} (the `GetDataProduct` operationId).
+func (c *Client) GetDataProduct(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDataProductRequest(c.Server, urn)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PatchDataProductWithBody Update Data Product name and/or description
+//
+// Does not change urn or ownerGroupUrn.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+func (c *Client) PatchDataProductWithBody(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchDataProductRequestWithBody(c.Server, urn, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// PatchDataProduct Update Data Product name and/or description
+//
+// Does not change urn or ownerGroupUrn.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+func (c *Client) PatchDataProduct(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchDataProductRequest(c.Server, urn, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ListDataProductDatasets List Datasets in a Data Product
+//
+// Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
+func (c *Client) ListDataProductDatasets(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDataProductDatasetsRequest(c.Server, urn, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RemoveDataProductDataset Remove a Dataset from a Data Product
+//
+// Removes the membership without deleting the Dataset or other products' memberships.
+//
+// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
+func (c *Client) RemoveDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveDataProductDatasetRequest(c.Server, urn, datasetUrn)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AddDataProductDataset Add a Dataset to a Data Product
+//
+// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+//
+// Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
+func (c *Client) AddDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddDataProductDatasetRequest(c.Server, urn, datasetUrn)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // ListDatasets List Datasets
@@ -841,6 +1149,412 @@ func (c *Client) GetMaterialization(ctx context.Context, urn DatasetURN, version
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListDataProductsRequest constructs an http.Request for the ListDataProducts method
+func NewListDataProductsRequest(server string, params *ListDataProductsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateDataProductRequest calls the generic CreateDataProduct builder with application/json body
+func NewCreateDataProductRequest(server string, body CreateDataProductJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateDataProductRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateDataProductRequestWithBody constructs an http.Request for the CreateDataProduct method, with any body, and a specified content type
+func NewCreateDataProductRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteDataProductRequest constructs an http.Request for the DeleteDataProduct method
+func NewDeleteDataProductRequest(server string, urn DataProductURN, params *DeleteDataProductParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "If-Match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("If-Match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewGetDataProductRequest constructs an http.Request for the GetDataProduct method
+func NewGetDataProductRequest(server string, urn DataProductURN) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPatchDataProductRequest calls the generic PatchDataProduct builder with application/json body
+func NewPatchDataProductRequest(server string, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPatchDataProductRequestWithBody(server, urn, params, "application/json", bodyReader)
+}
+
+// NewPatchDataProductRequestWithBody constructs an http.Request for the PatchDataProduct method, with any body, and a specified content type
+func NewPatchDataProductRequestWithBody(server string, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	if params != nil {
+
+		if params.IfMatch != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "If-Match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("If-Match", headerParam0)
+		}
+
+	}
+
+	return req, nil
+}
+
+// NewListDataProductDatasetsRequest constructs an http.Request for the ListDataProductDatasets method
+func NewListDataProductDatasetsRequest(server string, urn DataProductURN, params *ListDataProductDatasetsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s/datasets", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageToken != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "pageToken", *params.PageToken, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRemoveDataProductDatasetRequest constructs an http.Request for the RemoveDataProductDataset method
+func NewRemoveDataProductDatasetRequest(server string, urn DataProductURN, datasetUrn DataProductDatasetURN) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "datasetUrn", datasetUrn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s/datasets/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAddDataProductDatasetRequest constructs an http.Request for the AddDataProductDataset method
+func NewAddDataProductDatasetRequest(server string, urn DataProductURN, datasetUrn DataProductDatasetURN) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "urn", urn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "datasetUrn", datasetUrn, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/catalog/data-products/%s/datasets/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListDatasetsRequest constructs an http.Request for the ListDatasets method
@@ -1416,6 +2130,86 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// ListDataProductsWithResponse List Data Products
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/catalog/data-products (the `ListDataProducts` operationId).
+	ListDataProductsWithResponse(ctx context.Context, params *ListDataProductsParams, reqEditors ...RequestEditorFn) (*ListDataProductsResponse, error)
+
+	// CreateDataProductWithBodyWithResponse Create a Data Product
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+	CreateDataProductWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDataProductResponse, error)
+
+	// CreateDataProductWithResponse Create a Data Product
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+	CreateDataProductWithResponse(ctx context.Context, body CreateDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDataProductResponse, error)
+
+	// DeleteDataProductWithResponse Delete a Data Product
+	//
+	// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
+	DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error)
+
+	// GetDataProductWithResponse Get a Data Product
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/catalog/data-products/{urn} (the `GetDataProduct` operationId).
+	GetDataProductWithResponse(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*GetDataProductResponse, error)
+
+	// PatchDataProductWithBodyWithResponse Update Data Product name and/or description
+	//
+	// Does not change urn or ownerGroupUrn.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+	PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
+
+	// PatchDataProductWithResponse Update Data Product name and/or description
+	//
+	// Does not change urn or ownerGroupUrn.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+	PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
+
+	// ListDataProductDatasetsWithResponse List Datasets in a Data Product
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
+	ListDataProductDatasetsWithResponse(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*ListDataProductDatasetsResponse, error)
+
+	// RemoveDataProductDatasetWithResponse Remove a Dataset from a Data Product
+	//
+	// Removes the membership without deleting the Dataset or other products' memberships.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
+	RemoveDataProductDatasetWithResponse(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*RemoveDataProductDatasetResponse, error)
+
+	// AddDataProductDatasetWithResponse Add a Dataset to a Data Product
+	//
+	// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
+	AddDataProductDatasetWithResponse(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*AddDataProductDatasetResponse, error)
+
 	// ListDatasetsWithResponse List Datasets
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -1506,6 +2300,1305 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /api/catalog/datasets/{urn}/versions/{version}/materializations/{materializationUrn} (the `GetMaterialization` operationId).
 	GetMaterializationWithResponse(ctx context.Context, urn DatasetURN, version VersionPathParameter, materializationUrn MaterializationURN, reqEditors ...RequestEditorFn) (*GetMaterializationResponse, error)
+}
+
+// ListDataProductsResponse200Headers the declared response headers of an HTTP 200 response for ListDataProducts
+type ListDataProductsResponse200Headers struct {
+	XRequestID string
+}
+
+// ListDataProductsResponse400Headers the declared response headers of an HTTP 400 response for ListDataProducts
+type ListDataProductsResponse400Headers struct {
+	XRequestID string
+}
+
+// ListDataProductsResponse401Headers the declared response headers of an HTTP 401 response for ListDataProducts
+type ListDataProductsResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// ListDataProductsResponse403Headers the declared response headers of an HTTP 403 response for ListDataProducts
+type ListDataProductsResponse403Headers struct {
+	XRequestID string
+}
+
+// ListDataProductsResponse405Headers the declared response headers of an HTTP 405 response for ListDataProducts
+type ListDataProductsResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// ListDataProductsResponse500Headers the declared response headers of an HTTP 500 response for ListDataProducts
+type ListDataProductsResponse500Headers struct {
+	XRequestID string
+}
+
+// ListDataProductsResponse503Headers the declared response headers of an HTTP 503 response for ListDataProducts
+type ListDataProductsResponse503Headers struct {
+	XRequestID string
+}
+
+// ListDataProductsResponse504Headers the declared response headers of an HTTP 504 response for ListDataProducts
+type ListDataProductsResponse504Headers struct {
+	XRequestID string
+}
+
+type ListDataProductsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DataProductList
+	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
+	ApplicationproblemJSON400 *BadRequest
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *ListDataProductsResponse200Headers
+	// Headers400 the parsed response headers for an HTTP 400 response
+	Headers400 *ListDataProductsResponse400Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListDataProductsResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListDataProductsResponse403Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *ListDataProductsResponse405Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *ListDataProductsResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListDataProductsResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *ListDataProductsResponse504Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListDataProductsResponse) GetJSON200() *DataProductList {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON400() *BadRequest {
+	return r.ApplicationproblemJSON400
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r ListDataProductsResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r ListDataProductsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDataProductsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDataProductsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListDataProductsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// CreateDataProductResponse201Headers the declared response headers of an HTTP 201 response for CreateDataProduct
+type CreateDataProductResponse201Headers struct {
+	Location   string
+	XRequestID string
+}
+
+// CreateDataProductResponse400Headers the declared response headers of an HTTP 400 response for CreateDataProduct
+type CreateDataProductResponse400Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse401Headers the declared response headers of an HTTP 401 response for CreateDataProduct
+type CreateDataProductResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// CreateDataProductResponse403Headers the declared response headers of an HTTP 403 response for CreateDataProduct
+type CreateDataProductResponse403Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse404Headers the declared response headers of an HTTP 404 response for CreateDataProduct
+type CreateDataProductResponse404Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse405Headers the declared response headers of an HTTP 405 response for CreateDataProduct
+type CreateDataProductResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// CreateDataProductResponse409Headers the declared response headers of an HTTP 409 response for CreateDataProduct
+type CreateDataProductResponse409Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse413Headers the declared response headers of an HTTP 413 response for CreateDataProduct
+type CreateDataProductResponse413Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse500Headers the declared response headers of an HTTP 500 response for CreateDataProduct
+type CreateDataProductResponse500Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse503Headers the declared response headers of an HTTP 503 response for CreateDataProduct
+type CreateDataProductResponse503Headers struct {
+	XRequestID string
+}
+
+// CreateDataProductResponse504Headers the declared response headers of an HTTP 504 response for CreateDataProduct
+type CreateDataProductResponse504Headers struct {
+	XRequestID string
+}
+
+type CreateDataProductResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *DataProduct
+	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
+	ApplicationproblemJSON400 *BadRequest
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
+	ApplicationproblemJSON409 *Conflict
+	// ApplicationproblemJSON413 the response for an HTTP 413 `application/problem+json` response
+	ApplicationproblemJSON413 *PayloadTooLarge
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers201 the parsed response headers for an HTTP 201 response
+	Headers201 *CreateDataProductResponse201Headers
+	// Headers400 the parsed response headers for an HTTP 400 response
+	Headers400 *CreateDataProductResponse400Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *CreateDataProductResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *CreateDataProductResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *CreateDataProductResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *CreateDataProductResponse405Headers
+	// Headers409 the parsed response headers for an HTTP 409 response
+	Headers409 *CreateDataProductResponse409Headers
+	// Headers413 the parsed response headers for an HTTP 413 response
+	Headers413 *CreateDataProductResponse413Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *CreateDataProductResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *CreateDataProductResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *CreateDataProductResponse504Headers
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateDataProductResponse) GetJSON201() *DataProduct {
+	return r.JSON201
+}
+
+// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON400() *BadRequest {
+	return r.ApplicationproblemJSON400
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON409() *Conflict {
+	return r.ApplicationproblemJSON409
+}
+
+// GetApplicationproblemJSON413 returns the response for an HTTP 413 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON413() *PayloadTooLarge {
+	return r.ApplicationproblemJSON413
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r CreateDataProductResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateDataProductResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateDataProductResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateDataProductResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateDataProductResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// DeleteDataProductResponse204Headers the declared response headers of an HTTP 204 response for DeleteDataProduct
+type DeleteDataProductResponse204Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse401Headers the declared response headers of an HTTP 401 response for DeleteDataProduct
+type DeleteDataProductResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// DeleteDataProductResponse403Headers the declared response headers of an HTTP 403 response for DeleteDataProduct
+type DeleteDataProductResponse403Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse404Headers the declared response headers of an HTTP 404 response for DeleteDataProduct
+type DeleteDataProductResponse404Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse405Headers the declared response headers of an HTTP 405 response for DeleteDataProduct
+type DeleteDataProductResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// DeleteDataProductResponse412Headers the declared response headers of an HTTP 412 response for DeleteDataProduct
+type DeleteDataProductResponse412Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse500Headers the declared response headers of an HTTP 500 response for DeleteDataProduct
+type DeleteDataProductResponse500Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse503Headers the declared response headers of an HTTP 503 response for DeleteDataProduct
+type DeleteDataProductResponse503Headers struct {
+	XRequestID string
+}
+
+// DeleteDataProductResponse504Headers the declared response headers of an HTTP 504 response for DeleteDataProduct
+type DeleteDataProductResponse504Headers struct {
+	XRequestID string
+}
+
+type DeleteDataProductResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON412 the response for an HTTP 412 `application/problem+json` response
+	ApplicationproblemJSON412 *PreconditionFailed
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers204 the parsed response headers for an HTTP 204 response
+	Headers204 *DeleteDataProductResponse204Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *DeleteDataProductResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *DeleteDataProductResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *DeleteDataProductResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *DeleteDataProductResponse405Headers
+	// Headers412 the parsed response headers for an HTTP 412 response
+	Headers412 *DeleteDataProductResponse412Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *DeleteDataProductResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *DeleteDataProductResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *DeleteDataProductResponse504Headers
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON412 returns the response for an HTTP 412 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON412() *PreconditionFailed {
+	return r.ApplicationproblemJSON412
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r DeleteDataProductResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteDataProductResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteDataProductResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteDataProductResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteDataProductResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetDataProductResponse200Headers the declared response headers of an HTTP 200 response for GetDataProduct
+type GetDataProductResponse200Headers struct {
+	ETag       string
+	XRequestID string
+}
+
+// GetDataProductResponse401Headers the declared response headers of an HTTP 401 response for GetDataProduct
+type GetDataProductResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// GetDataProductResponse403Headers the declared response headers of an HTTP 403 response for GetDataProduct
+type GetDataProductResponse403Headers struct {
+	XRequestID string
+}
+
+// GetDataProductResponse404Headers the declared response headers of an HTTP 404 response for GetDataProduct
+type GetDataProductResponse404Headers struct {
+	XRequestID string
+}
+
+// GetDataProductResponse405Headers the declared response headers of an HTTP 405 response for GetDataProduct
+type GetDataProductResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// GetDataProductResponse500Headers the declared response headers of an HTTP 500 response for GetDataProduct
+type GetDataProductResponse500Headers struct {
+	XRequestID string
+}
+
+// GetDataProductResponse503Headers the declared response headers of an HTTP 503 response for GetDataProduct
+type GetDataProductResponse503Headers struct {
+	XRequestID string
+}
+
+// GetDataProductResponse504Headers the declared response headers of an HTTP 504 response for GetDataProduct
+type GetDataProductResponse504Headers struct {
+	XRequestID string
+}
+
+type GetDataProductResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DataProduct
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *GetDataProductResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *GetDataProductResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *GetDataProductResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *GetDataProductResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *GetDataProductResponse405Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *GetDataProductResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *GetDataProductResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *GetDataProductResponse504Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetDataProductResponse) GetJSON200() *DataProduct {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r GetDataProductResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r GetDataProductResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDataProductResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDataProductResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetDataProductResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// PatchDataProductResponse200Headers the declared response headers of an HTTP 200 response for PatchDataProduct
+type PatchDataProductResponse200Headers struct {
+	ETag       string
+	XRequestID string
+}
+
+// PatchDataProductResponse400Headers the declared response headers of an HTTP 400 response for PatchDataProduct
+type PatchDataProductResponse400Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse401Headers the declared response headers of an HTTP 401 response for PatchDataProduct
+type PatchDataProductResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// PatchDataProductResponse403Headers the declared response headers of an HTTP 403 response for PatchDataProduct
+type PatchDataProductResponse403Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse404Headers the declared response headers of an HTTP 404 response for PatchDataProduct
+type PatchDataProductResponse404Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse405Headers the declared response headers of an HTTP 405 response for PatchDataProduct
+type PatchDataProductResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// PatchDataProductResponse412Headers the declared response headers of an HTTP 412 response for PatchDataProduct
+type PatchDataProductResponse412Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse413Headers the declared response headers of an HTTP 413 response for PatchDataProduct
+type PatchDataProductResponse413Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse500Headers the declared response headers of an HTTP 500 response for PatchDataProduct
+type PatchDataProductResponse500Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse503Headers the declared response headers of an HTTP 503 response for PatchDataProduct
+type PatchDataProductResponse503Headers struct {
+	XRequestID string
+}
+
+// PatchDataProductResponse504Headers the declared response headers of an HTTP 504 response for PatchDataProduct
+type PatchDataProductResponse504Headers struct {
+	XRequestID string
+}
+
+type PatchDataProductResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DataProduct
+	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
+	ApplicationproblemJSON400 *BadRequest
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON412 the response for an HTTP 412 `application/problem+json` response
+	ApplicationproblemJSON412 *PreconditionFailed
+	// ApplicationproblemJSON413 the response for an HTTP 413 `application/problem+json` response
+	ApplicationproblemJSON413 *PayloadTooLarge
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *PatchDataProductResponse200Headers
+	// Headers400 the parsed response headers for an HTTP 400 response
+	Headers400 *PatchDataProductResponse400Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *PatchDataProductResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *PatchDataProductResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *PatchDataProductResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *PatchDataProductResponse405Headers
+	// Headers412 the parsed response headers for an HTTP 412 response
+	Headers412 *PatchDataProductResponse412Headers
+	// Headers413 the parsed response headers for an HTTP 413 response
+	Headers413 *PatchDataProductResponse413Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *PatchDataProductResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *PatchDataProductResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *PatchDataProductResponse504Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PatchDataProductResponse) GetJSON200() *DataProduct {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON400() *BadRequest {
+	return r.ApplicationproblemJSON400
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON412 returns the response for an HTTP 412 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON412() *PreconditionFailed {
+	return r.ApplicationproblemJSON412
+}
+
+// GetApplicationproblemJSON413 returns the response for an HTTP 413 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON413() *PayloadTooLarge {
+	return r.ApplicationproblemJSON413
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r PatchDataProductResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r PatchDataProductResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchDataProductResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchDataProductResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PatchDataProductResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// ListDataProductDatasetsResponse200Headers the declared response headers of an HTTP 200 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse200Headers struct {
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse401Headers the declared response headers of an HTTP 401 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// ListDataProductDatasetsResponse403Headers the declared response headers of an HTTP 403 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse403Headers struct {
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse404Headers the declared response headers of an HTTP 404 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse404Headers struct {
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse405Headers the declared response headers of an HTTP 405 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse500Headers the declared response headers of an HTTP 500 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse500Headers struct {
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse503Headers the declared response headers of an HTTP 503 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse503Headers struct {
+	XRequestID string
+}
+
+// ListDataProductDatasetsResponse504Headers the declared response headers of an HTTP 504 response for ListDataProductDatasets
+type ListDataProductDatasetsResponse504Headers struct {
+	XRequestID string
+}
+
+type ListDataProductDatasetsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DataProductDatasetList
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *ListDataProductDatasetsResponse200Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *ListDataProductDatasetsResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *ListDataProductDatasetsResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *ListDataProductDatasetsResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *ListDataProductDatasetsResponse405Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *ListDataProductDatasetsResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *ListDataProductDatasetsResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *ListDataProductDatasetsResponse504Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListDataProductDatasetsResponse) GetJSON200() *DataProductDatasetList {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r ListDataProductDatasetsResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r ListDataProductDatasetsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDataProductDatasetsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDataProductDatasetsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListDataProductDatasetsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// RemoveDataProductDatasetResponse204Headers the declared response headers of an HTTP 204 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse204Headers struct {
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse401Headers the declared response headers of an HTTP 401 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// RemoveDataProductDatasetResponse403Headers the declared response headers of an HTTP 403 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse403Headers struct {
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse404Headers the declared response headers of an HTTP 404 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse404Headers struct {
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse405Headers the declared response headers of an HTTP 405 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse500Headers the declared response headers of an HTTP 500 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse500Headers struct {
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse503Headers the declared response headers of an HTTP 503 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse503Headers struct {
+	XRequestID string
+}
+
+// RemoveDataProductDatasetResponse504Headers the declared response headers of an HTTP 504 response for RemoveDataProductDataset
+type RemoveDataProductDatasetResponse504Headers struct {
+	XRequestID string
+}
+
+type RemoveDataProductDatasetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers204 the parsed response headers for an HTTP 204 response
+	Headers204 *RemoveDataProductDatasetResponse204Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *RemoveDataProductDatasetResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *RemoveDataProductDatasetResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *RemoveDataProductDatasetResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *RemoveDataProductDatasetResponse405Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *RemoveDataProductDatasetResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *RemoveDataProductDatasetResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *RemoveDataProductDatasetResponse504Headers
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r RemoveDataProductDatasetResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r RemoveDataProductDatasetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveDataProductDatasetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveDataProductDatasetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveDataProductDatasetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// AddDataProductDatasetResponse200Headers the declared response headers of an HTTP 200 response for AddDataProductDataset
+type AddDataProductDatasetResponse200Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse400Headers the declared response headers of an HTTP 400 response for AddDataProductDataset
+type AddDataProductDatasetResponse400Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse401Headers the declared response headers of an HTTP 401 response for AddDataProductDataset
+type AddDataProductDatasetResponse401Headers struct {
+	WWWAuthenticate string
+	XRequestID      string
+}
+
+// AddDataProductDatasetResponse403Headers the declared response headers of an HTTP 403 response for AddDataProductDataset
+type AddDataProductDatasetResponse403Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse404Headers the declared response headers of an HTTP 404 response for AddDataProductDataset
+type AddDataProductDatasetResponse404Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse405Headers the declared response headers of an HTTP 405 response for AddDataProductDataset
+type AddDataProductDatasetResponse405Headers struct {
+	Allow      string
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse409Headers the declared response headers of an HTTP 409 response for AddDataProductDataset
+type AddDataProductDatasetResponse409Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse500Headers the declared response headers of an HTTP 500 response for AddDataProductDataset
+type AddDataProductDatasetResponse500Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse503Headers the declared response headers of an HTTP 503 response for AddDataProductDataset
+type AddDataProductDatasetResponse503Headers struct {
+	XRequestID string
+}
+
+// AddDataProductDatasetResponse504Headers the declared response headers of an HTTP 504 response for AddDataProductDataset
+type AddDataProductDatasetResponse504Headers struct {
+	XRequestID string
+}
+
+type AddDataProductDatasetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *DataProductDatasetMembership
+	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
+	ApplicationproblemJSON400 *BadRequest
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
+	ApplicationproblemJSON405 *MethodNotAllowed
+	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
+	ApplicationproblemJSON409 *Conflict
+	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
+	ApplicationproblemJSON500 *InternalServerError
+	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
+	ApplicationproblemJSON503 *ServiceUnavailable
+	// ApplicationproblemJSON504 the response for an HTTP 504 `application/problem+json` response
+	ApplicationproblemJSON504 *GatewayTimeout
+	// Headers200 the parsed response headers for an HTTP 200 response
+	Headers200 *AddDataProductDatasetResponse200Headers
+	// Headers400 the parsed response headers for an HTTP 400 response
+	Headers400 *AddDataProductDatasetResponse400Headers
+	// Headers401 the parsed response headers for an HTTP 401 response
+	Headers401 *AddDataProductDatasetResponse401Headers
+	// Headers403 the parsed response headers for an HTTP 403 response
+	Headers403 *AddDataProductDatasetResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *AddDataProductDatasetResponse404Headers
+	// Headers405 the parsed response headers for an HTTP 405 response
+	Headers405 *AddDataProductDatasetResponse405Headers
+	// Headers409 the parsed response headers for an HTTP 409 response
+	Headers409 *AddDataProductDatasetResponse409Headers
+	// Headers500 the parsed response headers for an HTTP 500 response
+	Headers500 *AddDataProductDatasetResponse500Headers
+	// Headers503 the parsed response headers for an HTTP 503 response
+	Headers503 *AddDataProductDatasetResponse503Headers
+	// Headers504 the parsed response headers for an HTTP 504 response
+	Headers504 *AddDataProductDatasetResponse504Headers
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AddDataProductDatasetResponse) GetJSON200() *DataProductDatasetMembership {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON400 returns the response for an HTTP 400 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON400() *BadRequest {
+	return r.ApplicationproblemJSON400
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
+	return r.ApplicationproblemJSON405
+}
+
+// GetApplicationproblemJSON409 returns the response for an HTTP 409 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON409() *Conflict {
+	return r.ApplicationproblemJSON409
+}
+
+// GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON500() *InternalServerError {
+	return r.ApplicationproblemJSON500
+}
+
+// GetApplicationproblemJSON503 returns the response for an HTTP 503 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON503() *ServiceUnavailable {
+	return r.ApplicationproblemJSON503
+}
+
+// GetApplicationproblemJSON504 returns the response for an HTTP 504 `application/problem+json` response
+func (r AddDataProductDatasetResponse) GetApplicationproblemJSON504() *GatewayTimeout {
+	return r.ApplicationproblemJSON504
+}
+
+// GetBody returns the raw response body bytes
+func (r AddDataProductDatasetResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AddDataProductDatasetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddDataProductDatasetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AddDataProductDatasetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 // ListDatasetsResponse200Headers the declared response headers of an HTTP 200 response for ListDatasets
@@ -1678,6 +3771,11 @@ type CreateDatasetResponse403Headers struct {
 	XRequestID string
 }
 
+// CreateDatasetResponse404Headers the declared response headers of an HTTP 404 response for CreateDataset
+type CreateDatasetResponse404Headers struct {
+	XRequestID string
+}
+
 // CreateDatasetResponse405Headers the declared response headers of an HTTP 405 response for CreateDataset
 type CreateDatasetResponse405Headers struct {
 	Allow      string
@@ -1720,6 +3818,8 @@ type CreateDatasetResponse struct {
 	ApplicationproblemJSON401 *Unauthorized
 	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
 	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
 	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
 	ApplicationproblemJSON405 *MethodNotAllowed
 	// ApplicationproblemJSON409 the response for an HTTP 409 `application/problem+json` response
@@ -1740,6 +3840,8 @@ type CreateDatasetResponse struct {
 	Headers401 *CreateDatasetResponse401Headers
 	// Headers403 the parsed response headers for an HTTP 403 response
 	Headers403 *CreateDatasetResponse403Headers
+	// Headers404 the parsed response headers for an HTTP 404 response
+	Headers404 *CreateDatasetResponse404Headers
 	// Headers405 the parsed response headers for an HTTP 405 response
 	Headers405 *CreateDatasetResponse405Headers
 	// Headers409 the parsed response headers for an HTTP 409 response
@@ -1772,6 +3874,11 @@ func (r CreateDatasetResponse) GetApplicationproblemJSON401() *Unauthorized {
 // GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
 func (r CreateDatasetResponse) GetApplicationproblemJSON403() *Forbidden {
 	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r CreateDatasetResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
 }
 
 // GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
@@ -3197,6 +5304,146 @@ func (r GetMaterializationResponse) ContentType() string {
 	return ""
 }
 
+// ListDataProductsWithResponse List Data Products
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/catalog/data-products (the `ListDataProducts` operationId).
+func (c *ClientWithResponses) ListDataProductsWithResponse(ctx context.Context, params *ListDataProductsParams, reqEditors ...RequestEditorFn) (*ListDataProductsResponse, error) {
+	rsp, err := c.ListDataProducts(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDataProductsResponse(rsp)
+}
+
+// CreateDataProductWithBodyWithResponse Create a Data Product
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+func (c *ClientWithResponses) CreateDataProductWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDataProductResponse, error) {
+	rsp, err := c.CreateDataProductWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateDataProductResponse(rsp)
+}
+
+// CreateDataProductWithResponse Create a Data Product
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
+func (c *ClientWithResponses) CreateDataProductWithResponse(ctx context.Context, body CreateDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDataProductResponse, error) {
+	rsp, err := c.CreateDataProduct(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateDataProductResponse(rsp)
+}
+
+// DeleteDataProductWithResponse Delete a Data Product
+//
+// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
+func (c *ClientWithResponses) DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error) {
+	rsp, err := c.DeleteDataProduct(ctx, urn, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteDataProductResponse(rsp)
+}
+
+// GetDataProductWithResponse Get a Data Product
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/catalog/data-products/{urn} (the `GetDataProduct` operationId).
+func (c *ClientWithResponses) GetDataProductWithResponse(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*GetDataProductResponse, error) {
+	rsp, err := c.GetDataProduct(ctx, urn, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetDataProductResponse(rsp)
+}
+
+// PatchDataProductWithBodyWithResponse Update Data Product name and/or description
+//
+// Does not change urn or ownerGroupUrn.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+func (c *ClientWithResponses) PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
+	rsp, err := c.PatchDataProductWithBody(ctx, urn, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchDataProductResponse(rsp)
+}
+
+// PatchDataProductWithResponse Update Data Product name and/or description
+//
+// Does not change urn or ownerGroupUrn.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
+func (c *ClientWithResponses) PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
+	rsp, err := c.PatchDataProduct(ctx, urn, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchDataProductResponse(rsp)
+}
+
+// ListDataProductDatasetsWithResponse List Datasets in a Data Product
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
+func (c *ClientWithResponses) ListDataProductDatasetsWithResponse(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*ListDataProductDatasetsResponse, error) {
+	rsp, err := c.ListDataProductDatasets(ctx, urn, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDataProductDatasetsResponse(rsp)
+}
+
+// RemoveDataProductDatasetWithResponse Remove a Dataset from a Data Product
+//
+// Removes the membership without deleting the Dataset or other products' memberships.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
+func (c *ClientWithResponses) RemoveDataProductDatasetWithResponse(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*RemoveDataProductDatasetResponse, error) {
+	rsp, err := c.RemoveDataProductDataset(ctx, urn, datasetUrn, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveDataProductDatasetResponse(rsp)
+}
+
+// AddDataProductDatasetWithResponse Add a Dataset to a Data Product
+//
+// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
+func (c *ClientWithResponses) AddDataProductDatasetWithResponse(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*AddDataProductDatasetResponse, error) {
+	rsp, err := c.AddDataProductDataset(ctx, urn, datasetUrn, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddDataProductDatasetResponse(rsp)
+}
+
 // ListDatasetsWithResponse List Datasets
 //
 // Returns a wrapper object for the known response body format(s).
@@ -3364,6 +5611,1548 @@ func (c *ClientWithResponses) GetMaterializationWithResponse(ctx context.Context
 		return nil, err
 	}
 	return ParseGetMaterializationResponse(rsp)
+}
+
+// ParseListDataProductsResponse parses an HTTP response from a ListDataProductsWithResponse call
+func ParseListDataProductsResponse(rsp *http.Response) (*ListDataProductsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDataProductsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DataProductList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers ListDataProductsResponse200Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 400:
+		var headers ListDataProductsResponse400Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers400 = &headers
+	case rsp.StatusCode == 401:
+		var headers ListDataProductsResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListDataProductsResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 405:
+		var headers ListDataProductsResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 500:
+		var headers ListDataProductsResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListDataProductsResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers ListDataProductsResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseCreateDataProductResponse parses an HTTP response from a CreateDataProductWithResponse call
+func ParseCreateDataProductResponse(rsp *http.Response) (*CreateDataProductResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateDataProductResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest DataProduct
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest PayloadTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 201:
+		var headers CreateDataProductResponse201Headers
+		if values := rsp.Header.Values("Location"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Location", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: "uri-reference"}); err != nil {
+				return nil, err
+			}
+			headers.Location = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers201 = &headers
+	case rsp.StatusCode == 400:
+		var headers CreateDataProductResponse400Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers400 = &headers
+	case rsp.StatusCode == 401:
+		var headers CreateDataProductResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers CreateDataProductResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers CreateDataProductResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers CreateDataProductResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 409:
+		var headers CreateDataProductResponse409Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers409 = &headers
+	case rsp.StatusCode == 413:
+		var headers CreateDataProductResponse413Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers413 = &headers
+	case rsp.StatusCode == 500:
+		var headers CreateDataProductResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers CreateDataProductResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers CreateDataProductResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseDeleteDataProductResponse parses an HTTP response from a DeleteDataProductWithResponse call
+func ParseDeleteDataProductResponse(rsp *http.Response) (*DeleteDataProductResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteDataProductResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest PreconditionFailed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		var headers DeleteDataProductResponse204Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers204 = &headers
+	case rsp.StatusCode == 401:
+		var headers DeleteDataProductResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers DeleteDataProductResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers DeleteDataProductResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers DeleteDataProductResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 412:
+		var headers DeleteDataProductResponse412Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers412 = &headers
+	case rsp.StatusCode == 500:
+		var headers DeleteDataProductResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers DeleteDataProductResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers DeleteDataProductResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseGetDataProductResponse parses an HTTP response from a GetDataProductWithResponse call
+func ParseGetDataProductResponse(rsp *http.Response) (*GetDataProductResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDataProductResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DataProduct
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers GetDataProductResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers GetDataProductResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers GetDataProductResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers GetDataProductResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers GetDataProductResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 500:
+		var headers GetDataProductResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers GetDataProductResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers GetDataProductResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParsePatchDataProductResponse parses an HTTP response from a PatchDataProductWithResponse call
+func ParsePatchDataProductResponse(rsp *http.Response) (*PatchDataProductResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchDataProductResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DataProduct
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest PreconditionFailed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON412 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
+		var dest PayloadTooLarge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON413 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers PatchDataProductResponse200Headers
+		if values := rsp.Header.Values("ETag"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.ETag = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 400:
+		var headers PatchDataProductResponse400Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers400 = &headers
+	case rsp.StatusCode == 401:
+		var headers PatchDataProductResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers PatchDataProductResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers PatchDataProductResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers PatchDataProductResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 412:
+		var headers PatchDataProductResponse412Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers412 = &headers
+	case rsp.StatusCode == 413:
+		var headers PatchDataProductResponse413Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers413 = &headers
+	case rsp.StatusCode == 500:
+		var headers PatchDataProductResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers PatchDataProductResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers PatchDataProductResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseListDataProductDatasetsResponse parses an HTTP response from a ListDataProductDatasetsWithResponse call
+func ParseListDataProductDatasetsResponse(rsp *http.Response) (*ListDataProductDatasetsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDataProductDatasetsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DataProductDatasetList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers ListDataProductDatasetsResponse200Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 401:
+		var headers ListDataProductDatasetsResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers ListDataProductDatasetsResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers ListDataProductDatasetsResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers ListDataProductDatasetsResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 500:
+		var headers ListDataProductDatasetsResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers ListDataProductDatasetsResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers ListDataProductDatasetsResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseRemoveDataProductDatasetResponse parses an HTTP response from a RemoveDataProductDatasetWithResponse call
+func ParseRemoveDataProductDatasetResponse(rsp *http.Response) (*RemoveDataProductDatasetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveDataProductDatasetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		var headers RemoveDataProductDatasetResponse204Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers204 = &headers
+	case rsp.StatusCode == 401:
+		var headers RemoveDataProductDatasetResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers RemoveDataProductDatasetResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers RemoveDataProductDatasetResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers RemoveDataProductDatasetResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 500:
+		var headers RemoveDataProductDatasetResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers RemoveDataProductDatasetResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers RemoveDataProductDatasetResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
+}
+
+// ParseAddDataProductDatasetResponse parses an HTTP response from a AddDataProductDatasetWithResponse call
+func ParseAddDataProductDatasetResponse(rsp *http.Response) (*AddDataProductDatasetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddDataProductDatasetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DataProductDatasetMembership
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
+		var dest MethodNotAllowed
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON405 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest Conflict
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 504:
+		var dest GatewayTimeout
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON504 = &dest
+
+	}
+
+	switch {
+	case rsp.StatusCode == 200:
+		var headers AddDataProductDatasetResponse200Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers200 = &headers
+	case rsp.StatusCode == 400:
+		var headers AddDataProductDatasetResponse400Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers400 = &headers
+	case rsp.StatusCode == 401:
+		var headers AddDataProductDatasetResponse401Headers
+		if values := rsp.Header.Values("WWW-Authenticate"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "WWW-Authenticate", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.WWWAuthenticate = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers401 = &headers
+	case rsp.StatusCode == 403:
+		var headers AddDataProductDatasetResponse403Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers AddDataProductDatasetResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
+	case rsp.StatusCode == 405:
+		var headers AddDataProductDatasetResponse405Headers
+		if values := rsp.Header.Values("Allow"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "Allow", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.Allow = value
+		}
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers405 = &headers
+	case rsp.StatusCode == 409:
+		var headers AddDataProductDatasetResponse409Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers409 = &headers
+	case rsp.StatusCode == 500:
+		var headers AddDataProductDatasetResponse500Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers500 = &headers
+	case rsp.StatusCode == 503:
+		var headers AddDataProductDatasetResponse503Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers503 = &headers
+	case rsp.StatusCode == 504:
+		var headers AddDataProductDatasetResponse504Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers504 = &headers
+	}
+
+	return response, nil
 }
 
 // ParseListDatasetsResponse parses an HTTP response from a ListDatasetsWithResponse call
@@ -3580,6 +7369,13 @@ func ParseCreateDatasetResponse(rsp *http.Response) (*CreateDatasetResponse, err
 		}
 		response.ApplicationproblemJSON403 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 405:
 		var dest MethodNotAllowed
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -3679,6 +7475,16 @@ func ParseCreateDatasetResponse(rsp *http.Response) (*CreateDatasetResponse, err
 			headers.XRequestID = value
 		}
 		response.Headers403 = &headers
+	case rsp.StatusCode == 404:
+		var headers CreateDatasetResponse404Headers
+		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XRequestID = value
+		}
+		response.Headers404 = &headers
 	case rsp.StatusCode == 405:
 		var headers CreateDatasetResponse405Headers
 		if values := rsp.Header.Values("Allow"); len(values) > 0 {
