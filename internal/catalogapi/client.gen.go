@@ -77,11 +77,10 @@ type DataProduct struct {
 	// Name Trimmed name at most 200 Unicode characters.
 	Name string `json:"name"`
 
-	// OwnerGroupUrn Required Management group URN. Immutable after create. Governance only; member datasets must have the same owner or a descendant group owner.
+	// OwnerGroupUrn Required Management group URN. Immutable after create. Governance only; included datasets must have the same owner or a descendant group owner.
 	//
 	// Examples: urn:daco:group:sales
 	OwnerGroupUrn string    `json:"ownerGroupUrn"`
-	Revision      int64     `json:"revision"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 
 	// Urn Immutable, opaque, case-sensitive Data Product identity.
@@ -90,14 +89,15 @@ type DataProduct struct {
 	Urn string `json:"urn"`
 }
 
-// DataProductDatasetList defines model for DataProductDatasetList.
+// DataProductDatasetList Page of dataset URNs included in the data product (no separate membership resource).
 type DataProductDatasetList struct {
-	Datasets      []DataProductDatasetMembership `json:"datasets"`
-	NextPageToken *string                        `json:"nextPageToken,omitempty"`
+	Datasets      []DataProductDatasetRef `json:"datasets"`
+	NextPageToken *string                 `json:"nextPageToken,omitempty"`
 }
 
-// DataProductDatasetMembership defines model for DataProductDatasetMembership.
-type DataProductDatasetMembership struct {
+// DataProductDatasetRef defines model for DataProductDatasetRef.
+type DataProductDatasetRef struct {
+	// DatasetUrn Dataset URN included in the data product.
 	DatasetUrn string `json:"datasetUrn"`
 }
 
@@ -370,18 +370,6 @@ type ListDataProductsParams struct {
 	PageToken *PageToken `form:"pageToken,omitempty" json:"pageToken,omitempty"`
 }
 
-// DeleteDataProductParams defines parameters for DeleteDataProduct.
-type DeleteDataProductParams struct {
-	// IfMatch Optional current ETag; mismatch prevents the command.
-	IfMatch *IfMatch `json:"If-Match,omitempty"`
-}
-
-// PatchDataProductParams defines parameters for PatchDataProduct.
-type PatchDataProductParams struct {
-	// IfMatch Optional current ETag; mismatch prevents the command.
-	IfMatch *IfMatch `json:"If-Match,omitempty"`
-}
-
 // ListDataProductDatasetsParams defines parameters for ListDataProductDatasets.
 type ListDataProductDatasetsParams struct {
 	// PageSize Zero selects the default of 50; positive values are capped at 200.
@@ -637,12 +625,16 @@ type ClientInterface interface {
 
 	// CreateDataProductWithBody Create a Data Product
 	//
+	// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
+	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
 	CreateDataProductWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateDataProduct Create a Data Product
+	//
+	// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -651,10 +643,10 @@ type ClientInterface interface {
 
 	// DeleteDataProduct Delete a Data Product
 	//
-	// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+	// Removes the Data Product and its dataset inclusions without deleting Datasets or groups.
 	//
 	// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
-	DeleteDataProduct(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteDataProduct(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetDataProduct Get a Data Product
 	//
@@ -663,37 +655,39 @@ type ClientInterface interface {
 
 	// PatchDataProductWithBody Update Data Product name and/or description
 	//
-	// Does not change urn or ownerGroupUrn.
+	// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 	//
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-	PatchDataProductWithBody(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PatchDataProductWithBody(ctx context.Context, urn DataProductURN, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PatchDataProduct Update Data Product name and/or description
 	//
-	// Does not change urn or ownerGroupUrn.
+	// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 	//
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-	PatchDataProduct(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PatchDataProduct(ctx context.Context, urn DataProductURN, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListDataProductDatasets List Datasets in a Data Product
+	// ListDataProductDatasets List Dataset URNs in a Data Product
+	//
+	// Returns included dataset URNs only (no separate membership resource).
 	//
 	// Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
 	ListDataProductDatasets(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RemoveDataProductDataset Remove a Dataset from a Data Product
 	//
-	// Removes the membership without deleting the Dataset or other products' memberships.
+	// Removes the inclusion without deleting the Dataset or other products' inclusions.
 	//
 	// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
 	RemoveDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// AddDataProductDataset Add a Dataset to a Data Product
+	// AddDataProductDataset Include a Dataset in a Data Product
 	//
-	// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+	// Accepts the inclusion only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409 (ownership conflict), not for duplicates. Idempotent when the dataset is already included. Ownership is governance metadata only and does not grant dataset access.
 	//
 	// Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
 	AddDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -793,6 +787,8 @@ func (c *Client) ListDataProducts(ctx context.Context, params *ListDataProductsP
 
 // CreateDataProductWithBody Create a Data Product
 //
+// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
+//
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
@@ -809,6 +805,8 @@ func (c *Client) CreateDataProductWithBody(ctx context.Context, contentType stri
 }
 
 // CreateDataProduct Create a Data Product
+//
+// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
 //
 // Takes a body of the `application/json` content type.
 //
@@ -827,11 +825,11 @@ func (c *Client) CreateDataProduct(ctx context.Context, body CreateDataProductJS
 
 // DeleteDataProduct Delete a Data Product
 //
-// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+// Removes the Data Product and its dataset inclusions without deleting Datasets or groups.
 //
 // Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
-func (c *Client) DeleteDataProduct(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteDataProductRequest(c.Server, urn, params)
+func (c *Client) DeleteDataProduct(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteDataProductRequest(c.Server, urn)
 	if err != nil {
 		return nil, err
 	}
@@ -859,13 +857,13 @@ func (c *Client) GetDataProduct(ctx context.Context, urn DataProductURN, reqEdit
 
 // PatchDataProductWithBody Update Data Product name and/or description
 //
-// Does not change urn or ownerGroupUrn.
+// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 //
 // Takes any type of body and a specified content type.
 //
 // Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-func (c *Client) PatchDataProductWithBody(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPatchDataProductRequestWithBody(c.Server, urn, params, contentType, body)
+func (c *Client) PatchDataProductWithBody(ctx context.Context, urn DataProductURN, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchDataProductRequestWithBody(c.Server, urn, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -878,13 +876,13 @@ func (c *Client) PatchDataProductWithBody(ctx context.Context, urn DataProductUR
 
 // PatchDataProduct Update Data Product name and/or description
 //
-// Does not change urn or ownerGroupUrn.
+// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 //
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-func (c *Client) PatchDataProduct(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPatchDataProductRequest(c.Server, urn, params, body)
+func (c *Client) PatchDataProduct(ctx context.Context, urn DataProductURN, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchDataProductRequest(c.Server, urn, body)
 	if err != nil {
 		return nil, err
 	}
@@ -895,7 +893,9 @@ func (c *Client) PatchDataProduct(ctx context.Context, urn DataProductURN, param
 	return c.Client.Do(req)
 }
 
-// ListDataProductDatasets List Datasets in a Data Product
+// ListDataProductDatasets List Dataset URNs in a Data Product
+//
+// Returns included dataset URNs only (no separate membership resource).
 //
 // Corresponds with GET /api/catalog/data-products/{urn}/datasets (the `ListDataProductDatasets` operationId).
 func (c *Client) ListDataProductDatasets(ctx context.Context, urn DataProductURN, params *ListDataProductDatasetsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -912,7 +912,7 @@ func (c *Client) ListDataProductDatasets(ctx context.Context, urn DataProductURN
 
 // RemoveDataProductDataset Remove a Dataset from a Data Product
 //
-// Removes the membership without deleting the Dataset or other products' memberships.
+// Removes the inclusion without deleting the Dataset or other products' inclusions.
 //
 // Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
 func (c *Client) RemoveDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -927,9 +927,9 @@ func (c *Client) RemoveDataProductDataset(ctx context.Context, urn DataProductUR
 	return c.Client.Do(req)
 }
 
-// AddDataProductDataset Add a Dataset to a Data Product
+// AddDataProductDataset Include a Dataset in a Data Product
 //
-// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+// Accepts the inclusion only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409 (ownership conflict), not for duplicates. Idempotent when the dataset is already included. Ownership is governance metadata only and does not grant dataset access.
 //
 // Corresponds with PUT /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `AddDataProductDataset` operationId).
 func (c *Client) AddDataProductDataset(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1258,7 +1258,7 @@ func NewCreateDataProductRequestWithBody(server string, contentType string, body
 }
 
 // NewDeleteDataProductRequest constructs an http.Request for the DeleteDataProduct method
-func NewDeleteDataProductRequest(server string, urn DataProductURN, params *DeleteDataProductParams) (*http.Request, error) {
+func NewDeleteDataProductRequest(server string, urn DataProductURN) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1286,21 +1286,6 @@ func NewDeleteDataProductRequest(server string, urn DataProductURN, params *Dele
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if params != nil {
-
-		if params.IfMatch != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "If-Match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("If-Match", headerParam0)
-		}
-
 	}
 
 	return req, nil
@@ -1341,18 +1326,18 @@ func NewGetDataProductRequest(server string, urn DataProductURN) (*http.Request,
 }
 
 // NewPatchDataProductRequest calls the generic PatchDataProduct builder with application/json body
-func NewPatchDataProductRequest(server string, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody) (*http.Request, error) {
+func NewPatchDataProductRequest(server string, urn DataProductURN, body PatchDataProductJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPatchDataProductRequestWithBody(server, urn, params, "application/json", bodyReader)
+	return NewPatchDataProductRequestWithBody(server, urn, "application/json", bodyReader)
 }
 
 // NewPatchDataProductRequestWithBody constructs an http.Request for the PatchDataProduct method, with any body, and a specified content type
-func NewPatchDataProductRequestWithBody(server string, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader) (*http.Request, error) {
+func NewPatchDataProductRequestWithBody(server string, urn DataProductURN, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1383,21 +1368,6 @@ func NewPatchDataProductRequestWithBody(server string, urn DataProductURN, param
 	}
 
 	req.Header.Add("Content-Type", contentType)
-
-	if params != nil {
-
-		if params.IfMatch != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithOptions("simple", false, "If-Match", *params.IfMatch, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("If-Match", headerParam0)
-		}
-
-	}
 
 	return req, nil
 }
@@ -2139,12 +2109,16 @@ type ClientWithResponsesInterface interface {
 
 	// CreateDataProductWithBodyWithResponse Create a Data Product
 	//
+	// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
+	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
 	CreateDataProductWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDataProductResponse, error)
 
 	// CreateDataProductWithResponse Create a Data Product
+	//
+	// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -2153,12 +2127,12 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteDataProductWithResponse Delete a Data Product
 	//
-	// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+	// Removes the Data Product and its dataset inclusions without deleting Datasets or groups.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
-	DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error)
+	DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error)
 
 	// GetDataProductWithResponse Get a Data Product
 	//
@@ -2169,23 +2143,25 @@ type ClientWithResponsesInterface interface {
 
 	// PatchDataProductWithBodyWithResponse Update Data Product name and/or description
 	//
-	// Does not change urn or ownerGroupUrn.
+	// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-	PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
+	PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
 
 	// PatchDataProductWithResponse Update Data Product name and/or description
 	//
-	// Does not change urn or ownerGroupUrn.
+	// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-	PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
+	PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error)
 
-	// ListDataProductDatasetsWithResponse List Datasets in a Data Product
+	// ListDataProductDatasetsWithResponse List Dataset URNs in a Data Product
+	//
+	// Returns included dataset URNs only (no separate membership resource).
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -2194,16 +2170,16 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveDataProductDatasetWithResponse Remove a Dataset from a Data Product
 	//
-	// Removes the membership without deleting the Dataset or other products' memberships.
+	// Removes the inclusion without deleting the Dataset or other products' inclusions.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with DELETE /api/catalog/data-products/{urn}/datasets/{datasetUrn} (the `RemoveDataProductDataset` operationId).
 	RemoveDataProductDatasetWithResponse(ctx context.Context, urn DataProductURN, datasetUrn DataProductDatasetURN, reqEditors ...RequestEditorFn) (*RemoveDataProductDatasetResponse, error)
 
-	// AddDataProductDatasetWithResponse Add a Dataset to a Data Product
+	// AddDataProductDatasetWithResponse Include a Dataset in a Data Product
 	//
-	// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+	// Accepts the inclusion only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409 (ownership conflict), not for duplicates. Idempotent when the dataset is already included. Ownership is governance metadata only and does not grant dataset access.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -2668,11 +2644,6 @@ type DeleteDataProductResponse405Headers struct {
 	XRequestID string
 }
 
-// DeleteDataProductResponse412Headers the declared response headers of an HTTP 412 response for DeleteDataProduct
-type DeleteDataProductResponse412Headers struct {
-	XRequestID string
-}
-
 // DeleteDataProductResponse500Headers the declared response headers of an HTTP 500 response for DeleteDataProduct
 type DeleteDataProductResponse500Headers struct {
 	XRequestID string
@@ -2699,8 +2670,6 @@ type DeleteDataProductResponse struct {
 	ApplicationproblemJSON404 *NotFound
 	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
 	ApplicationproblemJSON405 *MethodNotAllowed
-	// ApplicationproblemJSON412 the response for an HTTP 412 `application/problem+json` response
-	ApplicationproblemJSON412 *PreconditionFailed
 	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
 	ApplicationproblemJSON500 *InternalServerError
 	// ApplicationproblemJSON503 the response for an HTTP 503 `application/problem+json` response
@@ -2717,8 +2686,6 @@ type DeleteDataProductResponse struct {
 	Headers404 *DeleteDataProductResponse404Headers
 	// Headers405 the parsed response headers for an HTTP 405 response
 	Headers405 *DeleteDataProductResponse405Headers
-	// Headers412 the parsed response headers for an HTTP 412 response
-	Headers412 *DeleteDataProductResponse412Headers
 	// Headers500 the parsed response headers for an HTTP 500 response
 	Headers500 *DeleteDataProductResponse500Headers
 	// Headers503 the parsed response headers for an HTTP 503 response
@@ -2745,11 +2712,6 @@ func (r DeleteDataProductResponse) GetApplicationproblemJSON404() *NotFound {
 // GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
 func (r DeleteDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
 	return r.ApplicationproblemJSON405
-}
-
-// GetApplicationproblemJSON412 returns the response for an HTTP 412 `application/problem+json` response
-func (r DeleteDataProductResponse) GetApplicationproblemJSON412() *PreconditionFailed {
-	return r.ApplicationproblemJSON412
 }
 
 // GetApplicationproblemJSON500 returns the response for an HTTP 500 `application/problem+json` response
@@ -2798,7 +2760,6 @@ func (r DeleteDataProductResponse) ContentType() string {
 
 // GetDataProductResponse200Headers the declared response headers of an HTTP 200 response for GetDataProduct
 type GetDataProductResponse200Headers struct {
-	ETag       string
 	XRequestID string
 }
 
@@ -2947,7 +2908,6 @@ func (r GetDataProductResponse) ContentType() string {
 
 // PatchDataProductResponse200Headers the declared response headers of an HTTP 200 response for PatchDataProduct
 type PatchDataProductResponse200Headers struct {
-	ETag       string
 	XRequestID string
 }
 
@@ -2975,11 +2935,6 @@ type PatchDataProductResponse404Headers struct {
 // PatchDataProductResponse405Headers the declared response headers of an HTTP 405 response for PatchDataProduct
 type PatchDataProductResponse405Headers struct {
 	Allow      string
-	XRequestID string
-}
-
-// PatchDataProductResponse412Headers the declared response headers of an HTTP 412 response for PatchDataProduct
-type PatchDataProductResponse412Headers struct {
 	XRequestID string
 }
 
@@ -3018,8 +2973,6 @@ type PatchDataProductResponse struct {
 	ApplicationproblemJSON404 *NotFound
 	// ApplicationproblemJSON405 the response for an HTTP 405 `application/problem+json` response
 	ApplicationproblemJSON405 *MethodNotAllowed
-	// ApplicationproblemJSON412 the response for an HTTP 412 `application/problem+json` response
-	ApplicationproblemJSON412 *PreconditionFailed
 	// ApplicationproblemJSON413 the response for an HTTP 413 `application/problem+json` response
 	ApplicationproblemJSON413 *PayloadTooLarge
 	// ApplicationproblemJSON500 the response for an HTTP 500 `application/problem+json` response
@@ -3040,8 +2993,6 @@ type PatchDataProductResponse struct {
 	Headers404 *PatchDataProductResponse404Headers
 	// Headers405 the parsed response headers for an HTTP 405 response
 	Headers405 *PatchDataProductResponse405Headers
-	// Headers412 the parsed response headers for an HTTP 412 response
-	Headers412 *PatchDataProductResponse412Headers
 	// Headers413 the parsed response headers for an HTTP 413 response
 	Headers413 *PatchDataProductResponse413Headers
 	// Headers500 the parsed response headers for an HTTP 500 response
@@ -3080,11 +3031,6 @@ func (r PatchDataProductResponse) GetApplicationproblemJSON404() *NotFound {
 // GetApplicationproblemJSON405 returns the response for an HTTP 405 `application/problem+json` response
 func (r PatchDataProductResponse) GetApplicationproblemJSON405() *MethodNotAllowed {
 	return r.ApplicationproblemJSON405
-}
-
-// GetApplicationproblemJSON412 returns the response for an HTTP 412 `application/problem+json` response
-func (r PatchDataProductResponse) GetApplicationproblemJSON412() *PreconditionFailed {
-	return r.ApplicationproblemJSON412
 }
 
 // GetApplicationproblemJSON413 returns the response for an HTTP 413 `application/problem+json` response
@@ -3481,7 +3427,7 @@ type AddDataProductDatasetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DataProductDatasetMembership
+	JSON200 *DataProductDatasetRef
 	// ApplicationproblemJSON400 the response for an HTTP 400 `application/problem+json` response
 	ApplicationproblemJSON400 *BadRequest
 	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
@@ -3523,7 +3469,7 @@ type AddDataProductDatasetResponse struct {
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r AddDataProductDatasetResponse) GetJSON200() *DataProductDatasetMembership {
+func (r AddDataProductDatasetResponse) GetJSON200() *DataProductDatasetRef {
 	return r.JSON200
 }
 
@@ -5319,6 +5265,8 @@ func (c *ClientWithResponses) ListDataProductsWithResponse(ctx context.Context, 
 
 // CreateDataProductWithBodyWithResponse Create a Data Product
 //
+// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
+//
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /api/catalog/data-products (the `CreateDataProduct` operationId).
@@ -5331,6 +5279,8 @@ func (c *ClientWithResponses) CreateDataProductWithBodyWithResponse(ctx context.
 }
 
 // CreateDataProductWithResponse Create a Data Product
+//
+// Idempotent when the urn already exists with compatible attributes (success without a duplicate product).
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -5345,13 +5295,13 @@ func (c *ClientWithResponses) CreateDataProductWithResponse(ctx context.Context,
 
 // DeleteDataProductWithResponse Delete a Data Product
 //
-// Removes the Data Product and its dataset memberships without deleting Datasets or groups.
+// Removes the Data Product and its dataset inclusions without deleting Datasets or groups.
 //
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with DELETE /api/catalog/data-products/{urn} (the `DeleteDataProduct` operationId).
-func (c *ClientWithResponses) DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, params *DeleteDataProductParams, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error) {
-	rsp, err := c.DeleteDataProduct(ctx, urn, params, reqEditors...)
+func (c *ClientWithResponses) DeleteDataProductWithResponse(ctx context.Context, urn DataProductURN, reqEditors ...RequestEditorFn) (*DeleteDataProductResponse, error) {
+	rsp, err := c.DeleteDataProduct(ctx, urn, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -5373,13 +5323,13 @@ func (c *ClientWithResponses) GetDataProductWithResponse(ctx context.Context, ur
 
 // PatchDataProductWithBodyWithResponse Update Data Product name and/or description
 //
-// Does not change urn or ownerGroupUrn.
+// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-func (c *ClientWithResponses) PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
-	rsp, err := c.PatchDataProductWithBody(ctx, urn, params, contentType, body, reqEditors...)
+func (c *ClientWithResponses) PatchDataProductWithBodyWithResponse(ctx context.Context, urn DataProductURN, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
+	rsp, err := c.PatchDataProductWithBody(ctx, urn, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -5388,20 +5338,22 @@ func (c *ClientWithResponses) PatchDataProductWithBodyWithResponse(ctx context.C
 
 // PatchDataProductWithResponse Update Data Product name and/or description
 //
-// Does not change urn or ownerGroupUrn.
+// Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with PATCH /api/catalog/data-products/{urn} (the `PatchDataProduct` operationId).
-func (c *ClientWithResponses) PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, params *PatchDataProductParams, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
-	rsp, err := c.PatchDataProduct(ctx, urn, params, body, reqEditors...)
+func (c *ClientWithResponses) PatchDataProductWithResponse(ctx context.Context, urn DataProductURN, body PatchDataProductJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchDataProductResponse, error) {
+	rsp, err := c.PatchDataProduct(ctx, urn, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParsePatchDataProductResponse(rsp)
 }
 
-// ListDataProductDatasetsWithResponse List Datasets in a Data Product
+// ListDataProductDatasetsWithResponse List Dataset URNs in a Data Product
+//
+// Returns included dataset URNs only (no separate membership resource).
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -5416,7 +5368,7 @@ func (c *ClientWithResponses) ListDataProductDatasetsWithResponse(ctx context.Co
 
 // RemoveDataProductDatasetWithResponse Remove a Dataset from a Data Product
 //
-// Removes the membership without deleting the Dataset or other products' memberships.
+// Removes the inclusion without deleting the Dataset or other products' inclusions.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -5429,9 +5381,9 @@ func (c *ClientWithResponses) RemoveDataProductDatasetWithResponse(ctx context.C
 	return ParseRemoveDataProductDatasetResponse(rsp)
 }
 
-// AddDataProductDatasetWithResponse Add a Dataset to a Data Product
+// AddDataProductDatasetWithResponse Include a Dataset in a Data Product
 //
-// Accepts the membership only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409. Idempotent when the membership already exists. Ownership is governance metadata only and does not grant dataset access.
+// Accepts the inclusion only when the Dataset's ownerGroupUrn equals the Data Product's ownerGroupUrn or identifies a descendant group (any depth) of that owner group. Otherwise returns 400 or 409 (ownership conflict), not for duplicates. Idempotent when the dataset is already included. Ownership is governance metadata only and does not grant dataset access.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -6060,13 +6012,6 @@ func ParseDeleteDataProductResponse(rsp *http.Response) (*DeleteDataProductRespo
 		}
 		response.ApplicationproblemJSON405 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
-		var dest PreconditionFailed
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.ApplicationproblemJSON412 = &dest
-
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest InternalServerError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -6155,16 +6100,6 @@ func ParseDeleteDataProductResponse(rsp *http.Response) (*DeleteDataProductRespo
 			headers.XRequestID = value
 		}
 		response.Headers405 = &headers
-	case rsp.StatusCode == 412:
-		var headers DeleteDataProductResponse412Headers
-		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.XRequestID = value
-		}
-		response.Headers412 = &headers
 	case rsp.StatusCode == 500:
 		var headers DeleteDataProductResponse500Headers
 		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
@@ -6275,13 +6210,6 @@ func ParseGetDataProductResponse(rsp *http.Response) (*GetDataProductResponse, e
 	switch {
 	case rsp.StatusCode == 200:
 		var headers GetDataProductResponse200Headers
-		if values := rsp.Header.Values("ETag"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.ETag = value
-		}
 		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
 			var value string
 			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
@@ -6435,13 +6363,6 @@ func ParsePatchDataProductResponse(rsp *http.Response) (*PatchDataProductRespons
 		}
 		response.ApplicationproblemJSON405 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
-		var dest PreconditionFailed
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.ApplicationproblemJSON412 = &dest
-
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 413:
 		var dest PayloadTooLarge
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -6475,13 +6396,6 @@ func ParsePatchDataProductResponse(rsp *http.Response) (*PatchDataProductRespons
 	switch {
 	case rsp.StatusCode == 200:
 		var headers PatchDataProductResponse200Headers
-		if values := rsp.Header.Values("ETag"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "ETag", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.ETag = value
-		}
 		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
 			var value string
 			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
@@ -6554,16 +6468,6 @@ func ParsePatchDataProductResponse(rsp *http.Response) (*PatchDataProductRespons
 			headers.XRequestID = value
 		}
 		response.Headers405 = &headers
-	case rsp.StatusCode == 412:
-		var headers PatchDataProductResponse412Headers
-		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
-			var value string
-			if err := runtime.BindStyledParameterWithOptions("simple", "X-Request-ID", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			}
-			headers.XRequestID = value
-		}
-		response.Headers412 = &headers
 	case rsp.StatusCode == 413:
 		var headers PatchDataProductResponse413Headers
 		if values := rsp.Header.Values("X-Request-ID"); len(values) > 0 {
@@ -6964,7 +6868,7 @@ func ParseAddDataProductDatasetResponse(rsp *http.Response) (*AddDataProductData
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DataProductDatasetMembership
+		var dest DataProductDatasetRef
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

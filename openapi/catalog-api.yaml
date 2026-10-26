@@ -391,6 +391,9 @@ paths:
       operationId: createDataProduct
       x-daco-permission: catalog:write
       summary: Create a Data Product
+      description: >-
+        Idempotent when the urn already exists with compatible attributes (success
+        without a duplicate product).
       requestBody:
         required: true
         content:
@@ -443,8 +446,6 @@ paths:
           headers:
             X-Request-ID:
               $ref: "#/components/headers/RequestID"
-            ETag:
-              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -468,9 +469,7 @@ paths:
       operationId: patchDataProduct
       x-daco-permission: catalog:write
       summary: Update Data Product name and/or description
-      description: Does not change urn or ownerGroupUrn.
-      parameters:
-        - $ref: "#/components/parameters/IfMatch"
+      description: Does not change urn or ownerGroupUrn. No revision/ETag concurrency on data products.
       requestBody:
         required: true
         content:
@@ -483,8 +482,6 @@ paths:
           headers:
             X-Request-ID:
               $ref: "#/components/headers/RequestID"
-            ETag:
-              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -499,8 +496,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
-        "412":
-          $ref: "#/components/responses/PreconditionFailed"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
@@ -514,9 +509,7 @@ paths:
       operationId: deleteDataProduct
       x-daco-permission: catalog:write
       summary: Delete a Data Product
-      description: Removes the Data Product and its dataset memberships without deleting Datasets or groups.
-      parameters:
-        - $ref: "#/components/parameters/IfMatch"
+      description: Removes the Data Product and its dataset inclusions without deleting Datasets or groups.
       responses:
         "204":
           description: Data Product deleted
@@ -531,8 +524,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
-        "412":
-          $ref: "#/components/responses/PreconditionFailed"
         "500":
           $ref: "#/components/responses/InternalServerError"
         "503":
@@ -546,7 +537,8 @@ paths:
       tags: [Data Products]
       operationId: listDataProductDatasets
       x-daco-permission: catalog:read
-      summary: List Datasets in a Data Product
+      summary: List Dataset URNs in a Data Product
+      description: Returns included dataset URNs only (no separate membership resource).
       parameters:
         - $ref: "#/components/parameters/PageSize"
         - $ref: "#/components/parameters/PageToken"
@@ -582,13 +574,13 @@ paths:
       tags: [Data Products]
       operationId: addDataProductDataset
       x-daco-permission: catalog:write
-      summary: Add a Dataset to a Data Product
+      summary: Include a Dataset in a Data Product
       description: >-
-        Accepts the membership only when the Dataset's ownerGroupUrn equals the
+        Accepts the inclusion only when the Dataset's ownerGroupUrn equals the
         Data Product's ownerGroupUrn or identifies a descendant group (any depth)
-        of that owner group. Otherwise returns 400 or 409. Idempotent when the
-        membership already exists. Ownership is governance metadata only and does
-        not grant dataset access.
+        of that owner group. Otherwise returns 400 or 409 (ownership conflict),
+        not for duplicates. Idempotent when the dataset is already included.
+        Ownership is governance metadata only and does not grant dataset access.
       responses:
         "200":
           description: Membership present (created or already existed)
@@ -598,7 +590,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataProductDatasetMembership"
+                $ref: "#/components/schemas/DataProductDatasetRef"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -622,7 +614,7 @@ paths:
       operationId: removeDataProductDataset
       x-daco-permission: catalog:write
       summary: Remove a Dataset from a Data Product
-      description: Removes the membership without deleting the Dataset or other products' memberships.
+      description: Removes the inclusion without deleting the Dataset or other products' inclusions.
       responses:
         "204":
           description: Membership removed
@@ -953,7 +945,7 @@ components:
     DataProduct:
       type: object
       additionalProperties: false
-      required: [urn, name, description, ownerGroupUrn, revision, createdAt, updatedAt]
+      required: [urn, name, description, ownerGroupUrn, createdAt, updatedAt]
       properties:
         urn:
           type: string
@@ -975,12 +967,8 @@ components:
           maxLength: 512
           description: >-
             Required Management group URN. Immutable after create. Governance only;
-            member datasets must have the same owner or a descendant group owner.
+            included datasets must have the same owner or a descendant group owner.
           examples: ["urn:daco:group:sales"]
-        revision:
-          type: integer
-          format: int64
-          minimum: 1
         createdAt:
           type: string
           format: date-time
@@ -1052,7 +1040,7 @@ components:
           type: string
           minLength: 1
           description: Opaque URL-safe continuation token; omitted on the final page.
-    DataProductDatasetMembership:
+    DataProductDatasetRef:
       type: object
       additionalProperties: false
       required: [datasetUrn]
@@ -1061,15 +1049,17 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+          description: Dataset URN included in the data product.
     DataProductDatasetList:
       type: object
       additionalProperties: false
       required: [datasets]
+      description: Page of dataset URNs included in the data product (no separate membership resource).
       properties:
         datasets:
           type: array
           items:
-            $ref: "#/components/schemas/DataProductDatasetMembership"
+            $ref: "#/components/schemas/DataProductDatasetRef"
         nextPageToken:
           type: string
           minLength: 1
